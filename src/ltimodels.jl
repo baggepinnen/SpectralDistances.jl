@@ -1,23 +1,80 @@
-function ls(yA)
+const AbstractTuple = Union{Tuple, Flux.Tracker.TrackedTuple}
+
+abstract type AbstractModel end
+struct AR{T} <: AbstractModel
+    a::T
+    p::DiscreteRoots
+    function AR(xo::AbstractTuple,λ=1e-2)
+        a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
+        r = roots(reverse(nograd(a)))
+        new{typeof(a)}(a, r)
+    end
+end
+
+struct ARMA{T} <: AbstractModel
+    c::T
+    a::T
+    z::DiscreteRoots
+    p::DiscreteRoots
+end
+
+ControlSystems.tf(m::AR) = tf(1, m.a, 1)
+ControlSystems.tf(m::ARMA) = tf(m.c, m.a, 1)
+PolynomialRoots.roots(m::AR) = m.p
+ControlSystems.pole(m::AR) = m.p
+ControlSystems.pole(m::ARMA) = m.p
+ControlSystems.tzero(m::ARMA) = m.z
+coefficients(m::AR) = m.a[2:end]
+coefficients(m::ARMA) = [m.a[2:end]; m.c]
+
+abstract type FitMethod end
+
+fitmodel(fm,X::AbstractModel) = X
+
+@kwdef struct PLR <: FitMethod
+    nc::Int
+    na::Int
+    initial_order::Int = 100
+    λ::Float64 = 1e-2
+end
+function fitmodel(fm::PLR,X::AbstractArray)
+    plr(X,fm.na,fm.nc; initial_order = fm.initial_order)
+end
+(fm::PLR)(X) = fitmodel(fm, X)
+
+@kwdef struct LS <: FitMethod
+    na::Int
+    λ::Float64 = 1e-2
+end
+function fitmodel(fm::LS,X::AbstractArray)
+    AR(X,fm.na)
+end
+(fm::LS)(X) = fitmodel(fm, X)
+
+
+function ls(yA::AbstractTuple,λ=1e-2)
     y,A = yA[1], yA[2]
     # (A'A + 1e-9I)\(A'y) #src
-    A2 = [A; 1e-2I]
+    A2 = [A; λ*I]
     (A2'A2)\(A'y)
 end
 
-function plr(y,na,nc; initial_order = 20)
+AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
+
+function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
     na -= 1
     y_trainA = getARregressor(y,initial_order)
     y_train,A = y_trainA[1], y_trainA[2]
-    w1 = ls((y_train, A))
+    w1 = ls((y_train, A),λ)
     yhat = A*w1
     ehat = yhat - y_train
     ΔN = length(y)-length(ehat)
     y_trainA = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
     y_train,A = y_trainA[1], y_trainA[2]
-    w = ls((y_train,A))
+    w = ls((y_train,A),λ)
     a,c = params2poly(w,na,nc)
+    ARMA(c,a,roots(reverse(c)),roots(reverse(a)))
 end
 
 function params2poly(w,na,nb)
@@ -112,8 +169,7 @@ end
 end
 
 
-ar(X,order) = ar((X,order))
-ar(xo) = ls(getARregressor(xo[1], xo[2]))
+
 
 poly(w) = [-reverse(w); 1]
 polyvec(w) = [1; -w]
@@ -134,6 +190,7 @@ Flux.Tracker.@grad function riroots(p::TrackedArray)
 end
 
 function d2c(a,c=1)
+    error("This method should go")
     @assert a[1] == 1 "Convert to polynomial first"
     Gd = ss(tf(c,a,1))
     n = Gd.nx

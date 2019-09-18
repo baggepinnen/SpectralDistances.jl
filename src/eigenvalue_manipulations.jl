@@ -1,3 +1,19 @@
+abstract type TimeDomain end
+struct Continuous <: TimeDomain end
+struct Discrete <: TimeDomain end
+
+abstract type AbstractAssignmentMethod end
+
+struct SortAssignement{F} <: AbstractAssignmentMethod
+    by::F
+end
+(a::SortAssignement)(e1,e2) = sortperm(nograd(e1), by=a.by), sortperm(nograd(e2), by=a.by)
+
+struct HungarianAssignement <: AbstractAssignmentMethod
+end
+
+(a::HungarianAssignement)(e1,e2) = 1:length(e1), hungarian(distmat_euclidean(e1,e2))[1]
+
 abstract type AbstractRoots{T} <: AbstractVector{T} end
 
 struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
@@ -7,6 +23,15 @@ end
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
 end
+
+Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
+Base.convert(::Type{ContinuousRoots}, r::Vector{<: Complex}) = ContinuousRoots(r)
+
+domain_transform(d::Continuous,e::ContinuousRoots) = e
+domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
+domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
+domain_transform(d::Discrete,e::DiscreteRoots) = e
+domain_transform(d, e) = domain_transform(domain(d), e)
 
 Base.Vector(r::AbstractRoots) = r.r
 Base.log(r::DiscreteRoots) = ContinuousRoots(log.(r.r))

@@ -1,3 +1,60 @@
+import Distances.evaluate
+
+abstract type AbstractDistance <: Distances.Metric end
+abstract type AbstractModelDistance <: AbstractDistance end
+abstract type AbstractRootDistance <: AbstractDistance end
+abstract type AbstractCoefficientDistance <: AbstractDistance end
+
+const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
+
+evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
+
+struct EuclideanCoefficientDistance <: AbstractCoefficientDistance
+end
+struct InnerProductCoefficientDistance <: AbstractCoefficientDistance
+end
+
+struct ModelDistance <: AbstractModelDistance
+    fitmethod::FitMethod
+    distance::AbstractDistance
+end
+
+@kwdef struct EuclideanRootDistance{D,A,F} <: AbstractRootDistance
+    domain::D
+    assignement::A = SortAssignement(imag)
+    transform::F = identity
+end
+
+struct HungarianRootDistance{D} <: AbstractRootDistance
+    domain::D
+end
+
+@kwdef struct KernelWassersteinRootDistance{D,F} <: AbstractRootDistance
+    domain::D
+    λ::Float64   = 1.
+    transform::F = identity
+end
+
+struct OptimalTransportModelDistance{WT,DT} <: AbstractDistance
+    w::WT
+    distmat::DT
+end
+
+struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
+    distmat::DT
+end
+
+struct EnergyDistance <: AbstractDistance
+end
+
+
+
+domain(d::AbstractRootDistance) = d.domain
+domain(d::AbstractModelDistance) = domain(d.distance)
+domain(d) = throw(ArgumentError("This type does not define domain"))
+
+transform(d::AbstractRootDistance) = d.transform
+transform(d::AbstractRootDistance, x) = d.transform(x)
 
 
 distmat_euclidean(e1::AbstractArray,e2::AbstractArray) = abs2.(e1 .- transpose(e2))
@@ -5,13 +62,18 @@ distmat_euclidean(e1,e2) = (n = length(e1[1]); [(e1[1][i]-e2[1][j])^2 + (e1[2][i
 
 distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
 
-function eigval_dist_hungarian(e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
+evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, roots(w1), roots(w2))
+evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA) = evaluate(d, pole(w1), pole(w2)) + evaluate(d, tzero(w1), tzero(w2))
+
+function evaluate(::HungarianRootDistance, e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     dm    = distmat_euclidean(e1,e2)
     hungarian(dm)[2]
 end
 
 
-function eigval_dist_hungarian(e1,e2)
+function evaluate(::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     e1,e2 = toreim(e1), toreim(e2)
     n = length(e1[1])
     dm = [(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=1:n]
@@ -46,13 +108,15 @@ function logkernelsum(e1,e2,λ)
     s / length(e1)^2
 end
 
-function eigval_dist_euclidean(e1,e2)
-    e1 = sort(e1, by=imag)
-    e2 = sort(e2, by=imag)
-    sum(abs, e1-e2)
+function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    I1,I2 = d.assignment(e1, e2)
+    sum(abs, e1[I1]-e2[I2])
 end
 
-function eigval_dist_wass_logmag_defective(e1,e2,λ=1)
+function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    λ     = d.λ
     error("this does not yield symmetric results")
     # e1 = [complex((logmag(magangle(e1)))...) for e1 in e1]
     # e2 = [complex((logmag(magangle(e2)))...) for e2 in e2]
@@ -65,64 +129,55 @@ function eigval_dist_wass_logmag_defective(e1,e2,λ=1)
     dm12  = logkernelsum(e1,e2,λ)
     dm1 - 2dm12 + dm2
 end
-function eigval_dist_wass_logmag(e1,e2,λ=1)
-    e1    = logreim.(e1)
-    e2    = logreim.(e2)
+function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    λ     = d.λ
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
     dm1   = exp.(.- λ .* distmat_euclidean(e1,e1))
     dm2   = exp.(.- λ .* distmat_euclidean(e2,e2))
     dm12  = exp.(.- λ .* distmat_euclidean(e1,e2))
     mean(dm1) - 2mean(dm12) + mean(dm2)
 end
-function eigval_dist_wass(e1,e2,λ=1)
-    e1,e2 = toreim(e1), toreim(e2)
-    dm1   = exp.(.- λ .* distmat_euclidean(e1,e1))
-    dm2   = exp.(.- λ .* distmat_euclidean(e2,e2))
-    dm12  = exp.(.- λ .* distmat_euclidean(e1,e2))
-    mean(dm1) - 2mean(dm12) + mean(dm2)
+
+evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, coefficients(w1), coefficients(w2))
+
+function evaluate(d::EuclideanCoefficientDistance,w1::AbstractArray,w2::AbstractArray)
+    sqrt(mean(abs2,w1-w2))
+end
+
+function evaluate(d::ModelDistance,X,Xh)
+    w = fitmodel(d.fitmethod, X)
+    wh = fitmodel(d.fitmethod, Xh)
+    evaluate(d.distance, w, wh)
 end
 
 
-# NOTE λ for wass dist can be used as annealing parameter
-# TODO: figure out weighted wass dist. Maybe change the kernel function to accomodate for this
-
-function ls_loss_eigvals_disc(X,Xh,order,λ)
-    r = ar(X, order) |> polyroots
-    rh = ar(Xh, order) |> polyroots
-    eigval_dist_wass(r,rh,λ)
+function evaluate(d::InnerProductCoefficientDistance,w1::AbstractArray,w2::AbstractArray)
+    (1-w1'w2/norm(w1)/norm(w2))
 end
 
+# function ls_loss_eigvals_disc(d,X,Xh,order)
+#     r = ar(X, order) |> polyroots
+#     rh = ar(Xh, order) |> polyroots
+#     eigval_dist_wass(d,r,rh)
+# end
+#
+#
+# function ls_loss_eigvals_cont(d,X,Xh,order)
+#     r = ar(X, order) |> polyroots .|> log
+#     rh = ar(Xh, order) |> polyroots .|> log
+#     # weighted_eigval_dist_hungarian(r,rh)
+#     eigval_dist_wass(d,r,rh)
+# end
+#
+# function ls_loss_eigvals_cont_logmag(d,X,Xh,order)
+#     r = ar(X, order) |> polyroots .|> log
+#     rh = ar(Xh, order) |> polyroots .|> log
+#     # weighted_eigval_dist_hungarian(r,rh)
+#     eigval_dist_wass_logmag(d,r,rh)
+# end
 
-function ls_loss_eigvals_cont(X,Xh,order,λ)
-    r = ar(X, order) |> polyroots .|> log
-    rh = ar(Xh, order) |> polyroots .|> log
-    # weighted_eigval_dist_hungarian(r,rh)
-    eigval_dist_wass(r,rh,λ)
-end
-
-function ls_loss_eigvals_cont_logmag(X,Xh,order,λ)
-    r = ar(X, order) |> polyroots .|> log
-    rh = ar(Xh, order) |> polyroots .|> log
-    # weighted_eigval_dist_hungarian(r,rh)
-    eigval_dist_wass_logmag(r,rh,λ)
-end
-
-function ls_loss(X,Xh,order)
-    w = ar(X, order)
-    wh = ar(Xh, order)
-    sqrt(mean(abs2,w-wh))
-end
-
-function plr_loss(X,Xh,na, nc, initial_order=100)
-    a,c = plr(X, na, nc, initial_order=initial_order)
-    ah,ch = plr(Xh, na, nc, initial_order=initial_order)
-    sqrt(mean(abs2,a-ah)) + sqrt(mean(abs2,c-ch))
-end
-
-function ls_loss_angle(X,Xh,order)
-    w = ar(X, order)
-    wh = ar(Xh, order)
-    (1-w'wh/norm(w)/norm(wh))
-end
 
 function batch_loss(bs::Int, loss, X, Xh)
     l = zero(eltype(Xh))
@@ -142,33 +197,79 @@ function batch_loss(bs::Int, loss, X, Xh)
     l / n_batches
 end
 
-energyloss(X,Xh) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
+evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
 
 
-function loss_spectral_ot(a1,c1,a2,c2,w=exp10.(LinRange(1, log10(fs::Int/2), 300)))
-    n = length(w)
-    distmat = zeros(n,n)
+
+function OptimalTransportModelDistance(w = exp10.(LinRange(-3, 0.5, 300)))
+    distmat = zeros(length(w), length(w))
     for i=1:n
         for j=1:n
             distmat[i, j] = abs((i/n)-(j/n))
         end
     end
-    loss_spectral_ot!(distmat,a1,c1,a2,c2,w), distmat
+    OptimalTransportModelDistance(w,distmat)
 end
-function loss_spectral_ot!(distmat,a1,c1,a2,c2,w=exp10.(LinRange(1, log10(fs::Int/2), 300)))
-    n = length(w)
-    noise_model = tf(c1,a1,1/fs)
+
+function OptimalTransportSpectralDistance(w)
+    distmat = zeros(length(w), length(w))
+    for i=1:n
+        for j=1:n
+            distmat[i, j] = abs((i/n)-(j/n))
+        end
+    end
+    OptimalTransportSpectralDistance(distmat)
+end
+
+
+function evaluate(d::OptimalTransportModelDistance, m1, m2)
+    noise_model = tf(m1)
     b1,_,_ = bode(noise_model, w.*2pi) .|> vec
     b1 .= log.(b1)
     b1 .-= minimum(b1)
     b1 ./= sum(b1)
-    noise_model = tf(c2,a2,1/fs)
+    noise_model = tf(m2)
     b2,_,_ = bode(noise_model, w.*2pi) .|> vec
     b2 .= log.(b2)
     b2 .-= minimum(b2)
     b2 ./= sum(b2)
-    plan = sinkhorn_plan(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    plan = sinkhorn_plan(d.distmat, b1, b2; ϵ=1e-2, rounds=300)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    cost = sum(plan .* d.distmat)
+end
+
+function evaluate(d::OptimalTransportSpectralDistance, w1, w2)
+    plan = sinkhorn_plan(d.distmat, w1, w2; ϵ=1e-2, rounds=300)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    cost = sum(plan .* d.distmat)
+end
+
+
+centers(x) = 0.5*(x[1:end-1] + x[2:end])
+function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
+    h1 = fit(Histogram,x1)
+    h2 = fit(Histogram,x2)
+    distmat = [abs(e1-e2) for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
+    plan = sinkhorn_plan(distmat, s1(h1.weights), s1(h2.weights); ϵ=1e-2, rounds=300)
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
     cost = sum(plan .* distmat)
 end
+
+
+
+# for dt in [ EuclideanCoefficientDistance,
+#             InnerProductCoefficientDistance,
+#             ModelDistance,
+#             EuclideanRootDistance,
+#             HungarianRootDistance,
+#             KernelWassersteinRootDistance,
+#             OptimalTransportModelDistance,
+#             OptimalTransportSpectralDistance,
+#             EnergyDistance,
+#             DistanceCollection]
+#     @eval (d::$dt)(x,y) = evaluate(d, x, y)
+# end
+
+(d::AbstractDistance)(x,y) = evaluate(d, x, y)
+(d::DistanceCollection)(x,y) = evaluate(d, x, y)

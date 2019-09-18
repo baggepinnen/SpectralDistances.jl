@@ -13,3 +13,18 @@ function v1(x, dims=:)
     x = x .- mean(x, dims=dims)
     x .= x./std(x, dims=dims)
 end
+
+function bp_filter(x, passband)
+    responsetype = Bandpass(passband..., fs=1)
+    designmethod = Butterworth(2)
+    filt(digitalfilter(responsetype, designmethod), x)
+end
+
+function lp_filter(x, cutoff)
+    responsetype = Lowpass(cutoff, fs=1)
+    designmethod = Butterworth(2)
+    filt(digitalfilter(responsetype, designmethod), x)
+end
+
+
+@inline nograd(x) = Flux.data(x)

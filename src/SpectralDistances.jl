@@ -1,15 +1,38 @@
 module SpectralDistances
 
-using DSP, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, Flux, Optim, Clustering, Lazy, RecipesBase
+using LinearAlgebra, Statistics
+using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, Flux, Optim, Clustering, Lazy, RecipesBase, StatsBase
 import FiniteDifferences
+import Base.@kwdef
 
-export ls, plr
+export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1
 
-export loss_spectral_ot, loss_spectral_ot!, ls_loss, ls_loss_angle, ls_loss_eigvals_cont, ls_loss_eigvals_cont_logmag, ls_loss_eigvals_disc
+export EuclideanCoefficientDistance,
+InnerProductCoefficientDistance,
+ModelDistance,
+EuclideanRootDistance,
+HungarianRootDistance,
+KernelWassersteinRootDistance,
+OptimalTransportModelDistance,
+OptimalTransportSpectralDistance,
+EnergyDistance,
+CompositeDistance
 
+export AR,
+ARMA,
+PLR,
+LS
+
+export Continuous,
+Discrete,
+SortAssignement,
+HungarianAssignement,
+DiscreteRoots,
+ContinuousRoots
+
+include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
 include("losses.jl")
-include("eigenvalue_manipulations.jl")
 include("interpolations.jl")
 include("utils.jl")
 include("plotting.jl")
