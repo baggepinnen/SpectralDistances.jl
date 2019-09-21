@@ -273,3 +273,34 @@ end
 
 (d::AbstractDistance)(x,y) = evaluate(d, x, y)
 (d::DistanceCollection)(x,y) = evaluate(d, x, y)
+
+
+
+function trivial_transport(x,y)
+    x = copy(x)
+    yf = zero(y)
+    n = length(x)
+    g = zeros(n,n)
+    i = j = 1
+    while j <= n && i <= n
+        needed = y[j] - yf[j]
+        available = x[i]
+        if available >= needed
+            g[i,j] += needed
+            x[i] -= needed
+            j += 1
+        else
+            i += 1
+        end
+
+    end
+    g
+end
+
+x = [1.,0,0]
+y = [0,0.5,0.5]
+
+g = trivial_transport(x,y)
+using Test
+@test sum(g,dims=1)[:] == y
+@test sum(g,dims=2)[:] == x
