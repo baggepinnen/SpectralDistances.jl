@@ -234,14 +234,14 @@ function evaluate(d::OptimalTransportModelDistance, m1, m2)
     b2 .= log.(b2)
     b2 .-= minimum(b2)
     b2 ./= sum(b2)
-    plan = sinkhorn_plan(d.distmat, b1, b2; ϵ=1e-2, rounds=300)
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    plan = sinkhorn_plan(d.distmat, b1, b2; ϵ=1/10, rounds=300)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
 
 function evaluate(d::OptimalTransportSpectralDistance, w1, w2)
-    plan = sinkhorn_plan(d.distmat, w1, w2; ϵ=1e-2, rounds=300)
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    plan = sinkhorn_plan(d.distmat, w1, w2; ϵ=1/10, rounds=300)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
 
@@ -251,8 +251,8 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
     h1 = fit(Histogram,x1)
     h2 = fit(Histogram,x2)
     distmat = [abs(e1-e2) for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
-    plan = sinkhorn_plan(distmat, s1(h1.weights), s1(h2.weights); ϵ=1e-2, rounds=300)
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1e-2, rounds=300)
+    plan = sinkhorn_plan(distmat, s1(h1.weights), s1(h2.weights); ϵ=1\10, rounds=300)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* distmat)
 end
 
