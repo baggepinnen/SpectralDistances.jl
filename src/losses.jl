@@ -21,7 +21,7 @@ end
 
 @kwdef struct EuclideanRootDistance{D,A,F} <: AbstractRootDistance
     domain::D
-    assignement::A = SortAssignement(imag)
+    assignment::A = SortAssignement(imag)
     transform::F = identity
 end
 
@@ -42,6 +42,9 @@ end
 
 struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
     distmat::DT
+end
+
+struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
 end
 
 struct EnergyDistance <: AbstractDistance
@@ -65,14 +68,14 @@ distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(
 evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, roots(w1), roots(w2))
 evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA) = evaluate(d, pole(w1), pole(w2)) + evaluate(d, tzero(w1), tzero(w2))
 
-function evaluate(::HungarianRootDistance, e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
+function evaluate(d::HungarianRootDistance, e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     dm    = distmat_euclidean(e1,e2)
     hungarian(dm)[2]
 end
 
 
-function evaluate(::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
+function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     e1,e2 = toreim(e1), toreim(e2)
     n = length(e1[1])
@@ -110,6 +113,8 @@ end
 
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
     sum(abs, e1[I1]-e2[I2])
 end
@@ -117,6 +122,8 @@ end
 function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     λ     = d.λ
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
     error("this does not yield symmetric results")
     # e1 = [complex((logmag(magangle(e1)))...) for e1 in e1]
     # e2 = [complex((logmag(magangle(e2)))...) for e2 in e2]
@@ -297,10 +304,84 @@ function trivial_transport(x,y)
     g
 end
 
-x = [1.,0,0]
-y = [0,0.5,0.5]
+Base.inv(f::Function) = x->finv(f, x)
+# Base.inv(f::Function,fp) = x->finv(f, fp, x)
 
-g = trivial_transport(x,y)
-using Test
-@test sum(g,dims=1)[:] == y
-@test sum(g,dims=2)[:] == x
+function finv(f, z)
+    w = Roots.fzero(w->f(w)-z, 0, 2π)
+end
+
+# function finv(f, fp, z)
+#     w = Roots.fzero(w->f(w)-z, fp, π)
+# end
+
+∫(f,a,b) = quadgk(f,a,b; atol=1e-10, rtol=1e-7)[1]::Float64
+∫0(f,b) = quadgk(f,0,b; atol=1e-10, rtol=1e-7)[1]::Float64
+function c∫(f,a,b)
+    fi    = (u,p,t) -> f(t)
+    tspan = (a,b)
+    prob  = ODEProblem(fi,0.,tspan)
+    sol   = solve(prob,Tsit5(),reltol=1e-7,abstol=1e-8)
+end
+
+
+function closed_form_wass(a1,a2,p=1)
+    n     = length(a1)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    σ1    = ∫0(f1,2π)
+    σ2    = ∫0(f2,2π)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
+    F1(w) = ∫0(f1,w)
+    F2(w) = ∫0(f2,w)
+    ∫0(z->abs(inv(F1)(z) - inv(F2)(z))^p, 1)
+end
+
+function functionbarrier(sol1::T1,sol2::T2,p) where {T1,T2}
+    σ1    = sol1(2pi)
+    σ2    = sol2(2pi)
+    F1(w) = sol1(w)/σ1
+    F2(w) = sol2(w)/σ2
+    ∫0(2π) do w
+        F1w = F1(w)
+        F2w = F2(w)
+        abs(F1w-F2w)^p
+    end
+end
+function closed_form_wass_noinverse(a1,a2,p=1)
+    n     = length(a1)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    sol1  = c∫(f1,0,2π)
+    sol2  = c∫(f2,0,2π)
+    functionbarrier(sol1,sol2,p)
+end
+
+# This implementation has quadratic runtime due to integration inside integration
+function closed_form_wass_noinverse_slow(a1,a2,p=1)
+    n     = length(a1)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    σ1    = ∫0(f1,2π)
+    σ2    = ∫0(f2,2π)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
+    F1(w) = ∫0(f1,w)
+    F2(w) = ∫0(f2,w)
+    ∫0(2π) do w
+        F1w = F1(w)
+        F2w = F2(w)
+        abs(F1w-F2w)^p
+    end
+end
+
+function closed_form_log_wass(a1,a2,p=1)
+    n     = length(a1)
+    f1    = w -> -log(abs2(sum(j->a1[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
+    f2    = w -> -log(abs2(sum(j->a2[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
+    endpoint = min(∫0(f1,2π), ∫0(f2,2π))
+    F1(w) = ∫0(f1,w)
+    F2(w) = ∫0(f2,w)
+    ∫0(z->abs(inv(F1)(z) - inv(F2)(z))^p, endpoint)
+end

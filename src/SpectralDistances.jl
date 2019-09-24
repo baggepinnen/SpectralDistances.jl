@@ -1,11 +1,11 @@
 module SpectralDistances
 
 using LinearAlgebra, Statistics
-using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, Flux, Optim, Clustering, Lazy, RecipesBase, StatsBase
+using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, Flux, Optim, Clustering, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq
 import FiniteDifferences
 import Base.@kwdef
 
-export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1
+export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole
 
 export EuclideanCoefficientDistance,
 InnerProductCoefficientDistance,
@@ -16,7 +16,11 @@ KernelWassersteinRootDistance,
 OptimalTransportModelDistance,
 OptimalTransportSpectralDistance,
 EnergyDistance,
-CompositeDistance
+CompositeDistance,
+trivial_transport,
+closed_form_wass,
+closed_form_log_wass,
+closed_form_wass_noinverse
 
 export AR,
 ARMA,

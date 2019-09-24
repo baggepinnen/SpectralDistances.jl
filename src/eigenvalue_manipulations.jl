@@ -39,8 +39,8 @@ Base.exp(r::ContinuousRoots) = DiscreteRoots(exp.(r.r))
 ControlSystems.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log.(r.r) ./ h)
 d2c(r::ContinuousRoots,h=1) = DiscreteRoots(exp.(h .* r.r))
 
-Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)
-Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)
+Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2)
+Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2)
 
 sqrtmag(magang::Tuple) = sqrt.(magang[1]), magang[2]
 logmag(magang::Tuple) = log.(magang[1]), magang[2]
@@ -59,9 +59,29 @@ function sqrtreim(e)
     complex(sqrt(abs(r))*sign(r), sqrt(abs(i))*sign(i))
 end
 
-function logreim(e, ϵ=1e-3)
+function sqrtim(e)
+    r,i = real(e), imag(e)
+    complex(r, sqrt(abs(i))*sign(i))
+end
+
+function sqrtre(e)
+    r,i = real(e), imag(e)
+    complex(sqrt(abs(r))*sign(r), i)
+end
+
+function logreim(e, ϵ=1e-4)
     r,i = real(e), imag(e)
     complex(log(abs(r) + ϵ)*sign(r), log(abs(i) + ϵ)*sign(i))
+end
+
+function logim(e, ϵ=1e-4)
+    r,i = real(e), imag(e)
+    complex(r, log(abs(i) + ϵ)*sign(i))
+end
+
+function logre(e, ϵ=1e-4)
+    r,i = real(e), imag(e)
+    complex(log(abs(r) + ϵ)*sign(r), i)
 end
 
 function polar(e)

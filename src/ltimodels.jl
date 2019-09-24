@@ -9,7 +9,9 @@ struct AR{T} <: AbstractModel
         r = roots(reverse(nograd(a)))
         new{typeof(a)}(a, r)
     end
+    AR(a::AbstractVector) = new{typeof(a)}(a, DiscreteRoots(roots(reverse(a))))
 end
+
 
 struct ARMA{T} <: AbstractModel
     c::T

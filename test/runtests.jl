@@ -105,6 +105,15 @@ Random.seed!(0)
         @test ls_loss(filt(ones(10),[10], randn(1000)), filt(ones(10),[10], randn(1000)),10) < ls_loss(filt(ones(9),[9], randn(1000)), filt(ones(10),[10], randn(1000)),10) # Filtered through different filters
     end
 
+    x = [1.,0,0]
+    y = [0,0.5,0.5]
+
+    g = SpectralDistances.trivial_transport(x,y)
+    @test sum(g,dims=1)[:] == y
+    @test sum(g,dims=2)[:] == x
+
+
+
     # p = randn(20)
     # @btime Flux.gradient(p) do p
     #     r = riroots(p)
@@ -118,3 +127,9 @@ Random.seed!(0)
     # end, p)
 
 end
+
+
+
+a1,a2 = [1,1,0.8], [1,1,0.8]
+@test SpectralDistances.closed_form_wass(a1,a2) == 0
+@test SpectralDistances.closed_form_log_wass(a1,a2) == 0
