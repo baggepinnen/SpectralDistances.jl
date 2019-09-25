@@ -27,11 +27,20 @@ end
 Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
 Base.convert(::Type{ContinuousRoots}, r::Vector{<: Complex}) = ContinuousRoots(r)
 
+Base.:(≈)(r1::T, r2::T) where T <: AbstractRoots = sort(r1, by=LinearAlgebra.eigsortby) ≈ sort(r2, by=LinearAlgebra.eigsortby)
+
 domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
 domain_transform(d::Discrete,e::DiscreteRoots) = e
-domain_transform(d, e) = domain_transform(domain(d), e)
+domain_transform(d::AbstractDistance, e) = domain_transform(domain(d), e)
+
+function domain_transform(d::Continuous, m::AR)
+    p = domain_transform(d, roots(m))
+    roots2poly(p)
+end
+
+
 
 Base.Vector(r::AbstractRoots) = r.r
 Base.log(r::DiscreteRoots) = ContinuousRoots(log.(r.r))

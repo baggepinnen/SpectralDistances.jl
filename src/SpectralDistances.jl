@@ -15,6 +15,7 @@ HungarianRootDistance,
 KernelWassersteinRootDistance,
 OptimalTransportModelDistance,
 OptimalTransportSpectralDistance,
+ClosedFormSpectralDistance,
 EnergyDistance,
 CompositeDistance,
 trivial_transport,
@@ -32,7 +33,8 @@ Discrete,
 SortAssignement,
 HungarianAssignement,
 DiscreteRoots,
-ContinuousRoots
+ContinuousRoots,
+domain_transform
 
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")

@@ -26,8 +26,11 @@ PolynomialRoots.roots(m::AR) = m.p
 ControlSystems.pole(m::AR) = m.p
 ControlSystems.pole(m::ARMA) = m.p
 ControlSystems.tzero(m::ARMA) = m.z
+ControlSystems.denvec(m::AbstractModel) = m.a
+ControlSystems.numvec(m::ARMA) = m.c
 coefficients(m::AR) = m.a[2:end]
 coefficients(m::ARMA) = [m.a[2:end]; m.c]
+
 
 abstract type FitMethod end
 
@@ -203,14 +206,45 @@ function d2c(a,c=1)
     e
 end
 
-
-function roots2poly(roots)
+function roots2polyold(roots)
     p = [1.]
     for r in roots
-        p = DSP.conv(p, [1,-r])
+        p = DSP.conv(p, [1.,-r])
     end
     real(p)
 end
+
+using StaticArrays
+
+function roots2poly(roots)
+    p = @MVector [1.]
+    for r in 1:length(roots)
+        p = roots2poly_kernel(p, roots[r])
+    end
+    real(p)
+end
+
+function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Real}
+    c = MVector{N+1,Complex{T}}(ntuple(_->0, N+1))
+    c[1] = 1
+    for i in 2:length(a)
+        c[i] = -b*a[i-1] + a[i]
+    end
+    c[end] = -b*a[end]
+    c
+end
+
+function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Complex}
+    c = MVector{N+1,T}(ntuple(_->0, N+1))
+    c[1] = 1
+    for i in 2:length(a)
+        c[i] = -b*a[i-1] + a[i]
+    end
+    c[end] = -b*a[end]
+    c
+end
+
+# roots2poly([-1,-2,-3])
 
 
 # function PolynomialRoots.roots(poly::AbstractVector{<:N}; epsilon::AbstractFloat=NaN,

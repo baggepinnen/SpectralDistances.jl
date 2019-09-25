@@ -8,6 +8,8 @@ abstract type AbstractCoefficientDistance <: AbstractDistance end
 const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
 
 evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
+Base.:(+)(d::AbstractDistance...) = d
+
 
 struct EuclideanCoefficientDistance <: AbstractCoefficientDistance
 end
@@ -47,12 +49,17 @@ end
 struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
 end
 
+@kwdef struct ClosedFormSpectralDistance{DT} <: AbstractDistance
+    domain::DT
+    p::Int = 1
+    interval = (-π,π)
+end
+
 struct EnergyDistance <: AbstractDistance
 end
 
 
-
-domain(d::AbstractRootDistance) = d.domain
+domain(d::AbstractDistance) = d.domain
 domain(d::AbstractModelDistance) = domain(d.distance)
 domain(d) = throw(ArgumentError("This type does not define domain"))
 
@@ -232,12 +239,12 @@ end
 
 function evaluate(d::OptimalTransportModelDistance, m1, m2)
     noise_model = tf(m1)
-    b1,_,_ = bode(noise_model, w.*2pi) .|> vec
+    b1,_,_ = bode(noise_model, w.*2π) .|> vec
     b1 .= log.(b1)
     b1 .-= minimum(b1)
     b1 ./= sum(b1)
     noise_model = tf(m2)
-    b2,_,_ = bode(noise_model, w.*2pi) .|> vec
+    b2,_,_ = bode(noise_model, w.*2π) .|> vec
     b2 .= log.(b2)
     b2 .-= minimum(b2)
     b2 ./= sum(b2)
@@ -316,7 +323,7 @@ end
 # end
 
 ∫(f,a,b) = quadgk(f,a,b; atol=1e-10, rtol=1e-7)[1]::Float64
-∫0(f,b) = quadgk(f,0,b; atol=1e-10, rtol=1e-7)[1]::Float64
+
 function c∫(f,a,b)
     fi    = (u,p,t) -> f(t)
     tspan = (a,b)
@@ -324,64 +331,73 @@ function c∫(f,a,b)
     sol   = solve(prob,Tsit5(),reltol=1e-7,abstol=1e-8)
 end
 
-
 function closed_form_wass(a1,a2,p=1)
     n     = length(a1)
     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
-    σ1    = ∫0(f1,2π)
-    σ2    = ∫0(f2,2π)
+    σ1    = ∫(f1,0,2π)
+    σ2    = ∫(f2,0,2π)
     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
-    F1(w) = ∫0(f1,w)
-    F2(w) = ∫0(f2,w)
-    ∫0(z->abs(inv(F1)(z) - inv(F2)(z))^p, 1)
+    F1(w) = ∫(f1,0,w)
+    F2(w) = ∫(f2,0,w)
+    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, 1)
 end
 
-function functionbarrier(sol1::T1,sol2::T2,p) where {T1,T2}
-    σ1    = sol1(2pi)
-    σ2    = sol2(2pi)
+function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
+    σ1    = sol1(interval[2]) # The total energy in the spectrum
+    σ2    = sol2(interval[2]) # The total energy in the spectrum
     F1(w) = sol1(w)/σ1
     F2(w) = sol2(w)/σ2
-    ∫0(2π) do w
-        F1w = F1(w)
-        F2w = F2(w)
-        abs(F1w-F2w)^p
+    ∫(interval...) do w
+        abs(F1(w)-F2(w))^p
     end
 end
-function closed_form_wass_noinverse(a1,a2,p=1)
-    n     = length(a1)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
-    sol1  = c∫(f1,0,2π)
-    sol2  = c∫(f2,0,2π)
-    functionbarrier(sol1,sol2,p)
+
+function evaluate(d::ClosedFormSpectralDistance{Discrete}, A1::AbstractModel, A2::AbstractModel)
+    a1,a2    = denvec(A1), denvec(A2)
+    n        = length(a1)
+    f1       = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+    f2       = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    sol1     = c∫(f1,d.interval...)
+    sol2     = c∫(f2,d.interval...)
+    functionbarrier(sol1,sol2,d.p,d.interval)
+end
+
+function evaluate(d::ClosedFormSpectralDistance{Continuous}, A1::AbstractModel, A2::AbstractModel)
+    a1,a2    = domain_transform(d,A1), domain_transform(d,A2)
+    n        = length(a1)
+    f1       = w -> abs2(1/sum(j->a1[j]*(im*w)^(n-j), 1:n))
+    f2       = w -> abs2(1/sum(j->a2[j]*(im*w)^(n-j), 1:n))
+    sol1     = c∫(f1,d.interval...)
+    sol2     = c∫(f2,d.interval...)
+    functionbarrier(sol1,sol2,d.p,d.interval)
 end
 
 # This implementation has quadratic runtime due to integration inside integration
-function closed_form_wass_noinverse_slow(a1,a2,p=1)
-    n     = length(a1)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
-    σ1    = ∫0(f1,2π)
-    σ2    = ∫0(f2,2π)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
-    F1(w) = ∫0(f1,w)
-    F2(w) = ∫0(f2,w)
-    ∫0(2π) do w
-        F1w = F1(w)
-        F2w = F2(w)
-        abs(F1w-F2w)^p
-    end
-end
+# function closed_form_wass_noinverse_slow(a1,a2,p=1)
+#     n     = length(a1)
+#     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+#     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+#     σ1    = ∫(f1,0,2π)
+#     σ2    = ∫(f2,0,2π)
+#     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
+#     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
+#     F1(w) = ∫(f1,0,w)
+#     F2(w) = ∫(f2,0,w)
+#     ∫(0,2π) do w
+#         F1w = F1(w)
+#         F2w = F2(w)
+#         abs(F1w-F2w)^p
+#     end
+# end
 
 function closed_form_log_wass(a1,a2,p=1)
     n     = length(a1)
     f1    = w -> -log(abs2(sum(j->a1[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
     f2    = w -> -log(abs2(sum(j->a2[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
-    endpoint = min(∫0(f1,2π), ∫0(f2,2π))
-    F1(w) = ∫0(f1,w)
-    F2(w) = ∫0(f2,w)
-    ∫0(z->abs(inv(F1)(z) - inv(F2)(z))^p, endpoint)
+    endpoint = min(∫(f1,0,2π), ∫(f2,0,2π))
+    F1(w) = ∫(f1,0,w)
+    F2(w) = ∫(f2,0,w)
+    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, endpoint)
 end
