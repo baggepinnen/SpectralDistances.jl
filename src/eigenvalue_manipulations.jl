@@ -33,12 +33,6 @@ domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
 domain_transform(d::Discrete,e::DiscreteRoots) = e
-domain_transform(d::AbstractDistance, e) = domain_transform(domain(d), e)
-
-function domain_transform(d::Continuous, m::AR)
-    p = domain_transform(d, roots(m))
-    roots2poly(p)
-end
 
 
 

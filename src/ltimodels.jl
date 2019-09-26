@@ -31,6 +31,11 @@ ControlSystems.numvec(m::ARMA) = m.c
 coefficients(m::AR) = m.a[2:end]
 coefficients(m::ARMA) = [m.a[2:end]; m.c]
 
+function domain_transform(d::Continuous, m::AR)
+    p = domain_transform(d, roots(m))
+    roots2poly(p)
+end
+
 
 abstract type FitMethod end
 

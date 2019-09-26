@@ -16,9 +16,9 @@ end
 struct InnerProductCoefficientDistance <: AbstractCoefficientDistance
 end
 
-struct ModelDistance <: AbstractModelDistance
+struct ModelDistance{D <: AbstractDistance} <: AbstractModelDistance
     fitmethod::FitMethod
-    distance::AbstractDistance
+    distance::D
 end
 
 @kwdef struct EuclideanRootDistance{D,A,F} <: AbstractRootDistance
@@ -26,9 +26,16 @@ end
     assignment::A = SortAssignement(imag)
     transform::F = identity
 end
-
-struct HungarianRootDistance{D} <: AbstractRootDistance
+# TODO: Merge the two above
+@kwdef struct ManhattanRootDistance{D,A,F} <: AbstractRootDistance
     domain::D
+    assignment::A = SortAssignement(imag)
+    transform::F = identity
+end
+
+@kwdef struct HungarianRootDistance{D,ID <: Distances.PreMetric} <: AbstractRootDistance
+    domain::D
+    distance::ID = Distances.SqEuclidean()
 end
 
 @kwdef struct KernelWassersteinRootDistance{D,F} <: AbstractRootDistance
@@ -63,6 +70,8 @@ domain(d::AbstractDistance) = d.domain
 domain(d::AbstractModelDistance) = domain(d.distance)
 domain(d) = throw(ArgumentError("This type does not define domain"))
 
+domain_transform(d::AbstractDistance, e) = domain_transform(domain(d), e)
+
 transform(d::AbstractRootDistance) = d.transform
 transform(d::AbstractRootDistance, x) = d.transform(x)
 
@@ -86,7 +95,8 @@ function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     e1,e2 = toreim(e1), toreim(e2)
     n = length(e1[1])
-    dm = [(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=1:n]
+    dist = d.distance
+    dm = [dist(e1[1][i],e2[1][j]) + dist(e1[2][i],e2[2][j]) for i = 1:n, j=1:n]
     c = hungarian(dm)[2]
     # P,c = hungarian(Flux.data.(dm))
     # mean([(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=P])
@@ -124,6 +134,15 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
     sum(abs, e1[I1]-e2[I2])
+end
+
+manhattan(c) = abs(c.re) + abs(c.im)
+function evaluate(d::ManhattanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
+    I1,I2 = d.assignment(e1, e2)
+    sum(manhattan, e1[I1]-e2[I2])
 end
 
 function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
@@ -331,18 +350,30 @@ function c∫(f,a,b)
     sol   = solve(prob,Tsit5(),reltol=1e-7,abstol=1e-8)
 end
 
-function closed_form_wass(a1,a2,p=1)
+function closed_form_wass(d::ClosedFormSpectralDistance{Discrete},a1,a2)
+    p,interval = d.p, d.interval
     n     = length(a1)
     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
-    σ1    = ∫(f1,0,2π)
-    σ2    = ∫(f2,0,2π)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
+    sol1  = c∫(f1,d.interval...)
+    sol2  = c∫(f2,d.interval...)
+    F1(w) = sol1(w)/sol1(interval[end])
+    F2(w) = sol2(w)/sol2(interval[end])
+    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, 1)
+end
+
+function closed_form_wass(d::ClosedFormSpectralDistance{Continuous},a1,a2)
+    p,interval = d.p, d.interval
+    n     = length(a1)
+    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
+    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    sol1  = c∫(f1,d.interval...)
+    sol2  = c∫(f2,d.interval...)
     F1(w) = ∫(f1,0,w)
     F2(w) = ∫(f2,0,w)
     ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, 1)
 end
+
 
 function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     σ1    = sol1(interval[2]) # The total energy in the spectrum
@@ -356,6 +387,7 @@ end
 
 function evaluate(d::ClosedFormSpectralDistance{Discrete}, A1::AbstractModel, A2::AbstractModel)
     a1,a2    = denvec(A1), denvec(A2)
+    d.p > 1 && (return closed_form_wass(d,a1,a2))
     n        = length(a1)
     f1       = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
     f2       = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
@@ -366,6 +398,7 @@ end
 
 function evaluate(d::ClosedFormSpectralDistance{Continuous}, A1::AbstractModel, A2::AbstractModel)
     a1,a2    = domain_transform(d,A1), domain_transform(d,A2)
+    d.p > 1 && (return closed_form_wass(d,a1,a2))
     n        = length(a1)
     f1       = w -> abs2(1/sum(j->a1[j]*(im*w)^(n-j), 1:n))
     f2       = w -> abs2(1/sum(j->a2[j]*(im*w)^(n-j), 1:n))
