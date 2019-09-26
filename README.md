@@ -16,3 +16,34 @@ loss = X -> evaluate(lossobj, X,X0)
 loss = (Xp) -> batch_loss(batchsize, lossobj, X, Xp)
 gradfun = Xp->Flux.gradient(loss, Xp)[1] |> Flux.data
 ```
+
+# List of distances
+```julia
+EuclideanCoefficientDistance
+InnerProductCoefficientDistance
+ModelDistance
+EuclideanRootDistance
+ManhattanRootDistance
+HungarianRootDistance
+KernelWassersteinRootDistance
+OptimalTransportModelDistance
+OptimalTransportSpectralDistance
+ClosedFormSpectralDistance
+EnergyDistance
+```
+# List of models and fitmethods
+```julia
+AR: model
+ARMA: model
+PLR: fitmethod for ARMA
+LS: fitmethod for AR
+```
+
+# Other types and functions
+```julia
+Continuous
+Discrete
+SortAssignement
+HungarianAssignement
+domain_transform # transform roots or model between continuous and discrete domains
+```
