@@ -3,19 +3,27 @@ const AbstractTuple = Union{Tuple, Flux.Tracker.TrackedTuple}
 abstract type AbstractModel end
 struct AR{T} <: AbstractModel
     a::T
+    ac::T
     p::DiscreteRoots
     function AR(xo::AbstractTuple,λ=1e-2)
         a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
         r = roots(reverse(nograd(a)))
-        new{typeof(a)}(a, r)
+        ac = roots2poly(log.(r))
+        new{typeof(a)}(a, ac, r)
     end
-    AR(a::AbstractVector) = new{typeof(a)}(a, DiscreteRoots(roots(reverse(a))))
+    function AR(a::AbstractVector)
+        r = DiscreteRoots(roots(reverse(a)))
+        ac = roots2poly(log.(r))
+        new{typeof(a)}(a, ac, r)
+    end
 end
 
 
 struct ARMA{T} <: AbstractModel
     c::T
+    cc::T
     a::T
+    ac::T
     z::DiscreteRoots
     p::DiscreteRoots
 end
@@ -28,8 +36,17 @@ ControlSystems.pole(m::ARMA) = m.p
 ControlSystems.tzero(m::ARMA) = m.z
 ControlSystems.denvec(m::AbstractModel) = m.a
 ControlSystems.numvec(m::ARMA) = m.c
-coefficients(m::AR) = m.a[2:end]
-coefficients(m::ARMA) = [m.a[2:end]; m.c]
+
+ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
+ControlSystems.numvec(::Discrete, m::ARMA) = m.c
+
+ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
+ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
+
+coefficients(::Discrete, m::AR) = m.a[2:end]
+coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.c]
+coefficients(::Continuous, m::AR) = m.ac[2:end]
+coefficients(::Continuous, m::ARMA) = [m.ac[2:end]; m.cc]
 
 function domain_transform(d::Continuous, m::AR)
     p = domain_transform(d, roots(m))
@@ -84,7 +101,9 @@ function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     y_train,A = y_trainA[1], y_trainA[2]
     w = ls((y_train,A),λ)
     a,c = params2poly(w,na,nc)
-    ARMA(c,a,roots(reverse(c)),roots(reverse(a)))
+    rc = roots(reverse(c))
+    ra = roots(reverse(a))
+    ARMA(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
 end
 
 function params2poly(w,na,nb)

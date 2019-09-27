@@ -11,9 +11,9 @@ evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
 
 
-struct EuclideanCoefficientDistance <: AbstractCoefficientDistance
-end
-struct InnerProductCoefficientDistance <: AbstractCoefficientDistance
+@kwdef struct CoefficientDistance{D,ID} <: AbstractCoefficientDistance
+    domain::D
+    distance::ID = SqEuclidean()
 end
 
 struct ModelDistance{D <: AbstractDistance} <: AbstractModelDistance
@@ -33,9 +33,10 @@ end
     transform::F = identity
 end
 
-@kwdef struct HungarianRootDistance{D,ID <: Distances.PreMetric} <: AbstractRootDistance
+@kwdef struct HungarianRootDistance{D,ID <: Distances.PreMetric,F} <: AbstractRootDistance
     domain::D
     distance::ID = Distances.SqEuclidean()
+    transform::F = identity
 end
 
 @kwdef struct KernelWassersteinRootDistance{D,F} <: AbstractRootDistance
@@ -59,7 +60,7 @@ end
 @kwdef struct ClosedFormSpectralDistance{DT} <: AbstractDistance
     domain::DT
     p::Int = 1
-    interval = (-π,π)
+    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
 end
 
 struct EnergyDistance <: AbstractDistance
@@ -86,6 +87,8 @@ evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA) = evaluate(d, pole(w1), pole
 
 function evaluate(d::HungarianRootDistance, e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
     dm    = distmat_euclidean(e1,e2)
     hungarian(dm)[2]
 end
@@ -93,6 +96,8 @@ end
 
 function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
     e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
     e1,e2 = toreim(e1), toreim(e2)
     n = length(e1[1])
     dist = d.distance
@@ -173,10 +178,10 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     mean(dm1) - 2mean(dm12) + mean(dm2)
 end
 
-evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, coefficients(w1), coefficients(w2))
+evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2))
 
-function evaluate(d::EuclideanCoefficientDistance,w1::AbstractArray,w2::AbstractArray)
-    sqrt(mean(abs2,w1-w2))
+function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray)
+    evaluate(d.distance,w1,w2)
 end
 
 function evaluate(d::ModelDistance,X,Xh)
@@ -185,10 +190,6 @@ function evaluate(d::ModelDistance,X,Xh)
     evaluate(d.distance, w, wh)
 end
 
-
-function evaluate(d::InnerProductCoefficientDistance,w1::AbstractArray,w2::AbstractArray)
-    (1-w1'w2/norm(w1)/norm(w2))
-end
 
 # function ls_loss_eigvals_disc(d,X,Xh,order)
 #     r = ar(X, order) |> polyroots
@@ -291,7 +292,7 @@ end
 
 
 
-# for dt in [ EuclideanCoefficientDistance,
+# for dt in [ CoefficientDistance,
 #             InnerProductCoefficientDistance,
 #             ModelDistance,
 #             EuclideanRootDistance,
@@ -330,11 +331,11 @@ function trivial_transport(x,y)
     g
 end
 
-Base.inv(f::Function) = x->finv(f, x)
+Base.inv(f::Function, interval) = x->finv(f, x, interval)
 # Base.inv(f::Function,fp) = x->finv(f, fp, x)
 
-function finv(f, z)
-    w = Roots.fzero(w->f(w)-z, 0, 2π)
+function finv(f, z, interval)
+    w = Roots.fzero(w->f(w)-z, interval...)
 end
 
 # function finv(f, fp, z)
@@ -350,30 +351,29 @@ function c∫(f,a,b)
     sol   = solve(prob,Tsit5(),reltol=1e-7,abstol=1e-8)
 end
 
-function closed_form_wass(d::ClosedFormSpectralDistance{Discrete},a1,a2)
-    p,interval = d.p, d.interval
-    n     = length(a1)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
-    sol1  = c∫(f1,d.interval...)
-    sol2  = c∫(f2,d.interval...)
-    F1(w) = sol1(w)/sol1(interval[end])
-    F2(w) = sol2(w)/sol2(interval[end])
-    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, 1)
+@inline ControlSystems.evalfr(::Discrete, w, a::AbstractArray) = (n=length(a);1/sum(j->a[j]*exp(im*w*(n-j)), 1:n))
+@inline ControlSystems.evalfr(d::Discrete, w, a::AR) = evalfr(d,w,denvec(Discrete(), a))
+@inline ControlSystems.evalfr(r::DiscreteRoots, w) = evalfr(Discrete(),w,roots2poly(r))
+@inline ControlSystems.evalfr(::Continuous, w, a::AbstractArray) = (n=length(a);1/sum(j->a[j]*(im*w)^(n-j), 1:n))
+@inline ControlSystems.evalfr(d::Continuous, w, a::AR) = evalfr(d,w,denvec(Continuous(), a))
+@inline ControlSystems.evalfr(r::ContinuousRoots, w) = evalfr(Continuous(),w,roots2poly(r))
+
+function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
+    σ1    = sol1(interval[2]) # The total energy in the spectrum
+    σ2    = sol2(interval[2]) # The total energy in the spectrum
+    F1(w) = sol1(w)/σ1
+    F2(w) = sol2(w)/σ2
+    ∫(z->abs(inv(F1, interval)(z) - inv(F2, interval)(z))^p, 0, 1)
 end
 
-function closed_form_wass(d::ClosedFormSpectralDistance{Continuous},a1,a2)
+function closed_form_wass(d::ClosedFormSpectralDistance,a1,a2)
     p,interval = d.p, d.interval
-    n     = length(a1)
-    f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-    f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+    f1    = w -> abs2(evalfr(domain(d), w, a1))
+    f2    = w -> abs2(evalfr(domain(d), w, a2))
     sol1  = c∫(f1,d.interval...)
     sol2  = c∫(f2,d.interval...)
-    F1(w) = ∫(f1,0,w)
-    F2(w) = ∫(f2,0,w)
-    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, 1)
+    invfunctionbarrier(sol1,sol2,p,interval)
 end
-
 
 function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     σ1    = sol1(interval[2]) # The total energy in the spectrum
@@ -385,37 +385,25 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     end
 end
 
-function evaluate(d::ClosedFormSpectralDistance{Discrete}, A1::AbstractModel, A2::AbstractModel)
-    a1,a2    = denvec(A1), denvec(A2)
-    d.p > 1 && (return closed_form_wass(d,a1,a2))
-    n        = length(a1)
-    f1       = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-    f2       = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+function evaluate(d::ClosedFormSpectralDistance, A1::AbstractModel, A2::AbstractModel)
+    d.p > 1 && (return closed_form_wass(d,A1,A2))
+    f1       = w -> abs2(evalfr(domain(d), w, A1))
+    f2       = w -> abs2(evalfr(domain(d), w, A2))
     sol1     = c∫(f1,d.interval...)
     sol2     = c∫(f2,d.interval...)
     functionbarrier(sol1,sol2,d.p,d.interval)
 end
 
-function evaluate(d::ClosedFormSpectralDistance{Continuous}, A1::AbstractModel, A2::AbstractModel)
-    a1,a2    = domain_transform(d,A1), domain_transform(d,A2)
-    d.p > 1 && (return closed_form_wass(d,a1,a2))
-    n        = length(a1)
-    f1       = w -> abs2(1/sum(j->a1[j]*(im*w)^(n-j), 1:n))
-    f2       = w -> abs2(1/sum(j->a2[j]*(im*w)^(n-j), 1:n))
-    sol1     = c∫(f1,d.interval...)
-    sol2     = c∫(f2,d.interval...)
-    functionbarrier(sol1,sol2,d.p,d.interval)
-end
 
 # This implementation has quadratic runtime due to integration inside integration
 # function closed_form_wass_noinverse_slow(a1,a2,p=1)
 #     n     = length(a1)
-#     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n))
-#     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n))
+#     f1    = w -> abs2(evalfr(Discrete(), w, a1))
+#     f2    = w -> abs2(evalfr(Discrete(), w, a2))
 #     σ1    = ∫(f1,0,2π)
 #     σ2    = ∫(f2,0,2π)
-#     f1    = w -> abs2(1/sum(j->a1[j]*exp(im*w*(n-j)), 1:n)) / σ1
-#     f2    = w -> abs2(1/sum(j->a2[j]*exp(im*w*(n-j)), 1:n)) / σ2
+#     f1    = w -> abs2(evalfr(Discrete(), w, a1)) / σ1
+#     f2    = w -> abs2(evalfr(Discrete(), w, a2)) / σ2
 #     F1(w) = ∫(f1,0,w)
 #     F2(w) = ∫(f2,0,w)
 #     ∫(0,2π) do w
@@ -425,12 +413,12 @@ end
 #     end
 # end
 
-function closed_form_log_wass(a1,a2,p=1)
-    n     = length(a1)
-    f1    = w -> -log(abs2(sum(j->a1[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
-    f2    = w -> -log(abs2(sum(j->a2[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π)
-    endpoint = min(∫(f1,0,2π), ∫(f2,0,2π))
-    F1(w) = ∫(f1,0,w)
-    F2(w) = ∫(f2,0,w)
-    ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 0, endpoint)
-end
+# function closed_form_log_wass(a1,a2,p=1)
+#     n     = length(a1)
+#     f1    = w -> -log(abs(evalfr(Discrete(), w, a1))) + 1/(2π)
+#     f2    = w -> -log(abs(evalfr(Discrete(), w, a2))) + 1/(2π)
+#     endpoint = min(∫(f1,0,2π), ∫(f2,0,2π))
+#     F1(w) = ∫(f1,0,w)
+#     F2(w) = ∫(f2,0,w)
+#     ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 1e-9, endpoint-1e-9)
+# end
