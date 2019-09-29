@@ -102,6 +102,10 @@ function expre(e)
     complex(exp(r),i)
 end
 
+function projim(e)
+    complex(0,imag(e))
+end
+
 function polar(e)
     abs.(e), angle.(e)
 end

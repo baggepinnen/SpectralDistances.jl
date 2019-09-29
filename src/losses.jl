@@ -39,27 +39,36 @@ end
     transform::F = identity
 end
 
-@kwdef struct KernelWassersteinRootDistance{D,F} <: AbstractRootDistance
+@kwdef struct KernelWassersteinRootDistance{D,F,DI} <: AbstractRootDistance
     domain::D
     λ::Float64   = 1.
     transform::F = identity
+    distance::DI = SqEuclidean()
 end
 
-struct OptimalTransportModelDistance{WT,DT} <: AbstractDistance
-    w::WT
-    distmat::DT
+@kwdef struct OptimalTransportModelDistance{WT,DT} <: AbstractDistance
+    w::WT = LinRange(0.01, 0.5, 300)
+    distmat::DT = distmat_euclidean(w,w)
+    iters::Int = 1000
 end
 
 struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
     distmat::DT
 end
 
-struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
+@kwdef struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
+    p::Int = 1
 end
 
 @kwdef struct ClosedFormSpectralDistance{DT} <: AbstractDistance
     domain::DT
     p::Int = 1
+    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
+end
+
+@kwdef struct CramerSpectralDistance{DT} <: AbstractDistance
+    domain::DT
+    p::Int = 2
     interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
 end
 
@@ -80,18 +89,12 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 distmat_euclidean(e1::AbstractArray,e2::AbstractArray) = abs2.(e1 .- transpose(e2))
 distmat_euclidean(e1,e2) = (n = length(e1[1]); [(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=1:n])
 
+distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
+
 distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
 
 evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, roots(w1), roots(w2))
 evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA) = evaluate(d, pole(w1), pole(w2)) + evaluate(d, tzero(w1), tzero(w2))
-
-function evaluate(d::HungarianRootDistance, e1::AbstractVector{<:Complex},e2::AbstractVector{<:Complex})
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
-    dm    = distmat_euclidean(e1,e2)
-    hungarian(dm)[2]
-end
 
 
 function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
@@ -138,7 +141,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e1    = d.transform.(e1)
     e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
-    sum(abs, e1[I1]-e2[I2])
+    sum(abs2, e1[I1]-e2[I2])
 end
 
 manhattan(c) = abs(c.re) + abs(c.im)
@@ -172,6 +175,9 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     λ     = d.λ
     e1    = d.transform.(e1)
     e2    = d.transform.(e2)
+    # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
+    # dm2   = exp.(.- λ .* distmat(d.distance, e2,e2))
+    # dm12  = exp.(.- λ .* distmat(d.distance, e1,e2))
     dm1   = exp.(.- λ .* distmat_euclidean(e1,e1))
     dm2   = exp.(.- λ .* distmat_euclidean(e2,e2))
     dm12  = exp.(.- λ .* distmat_euclidean(e1,e2))
@@ -235,46 +241,25 @@ evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh)
 
 
 
-
-function OptimalTransportModelDistance(w = exp10.(LinRange(-3, 0.5, 300)))
-    distmat = zeros(length(w), length(w))
-    for i=1:n
-        for j=1:n
-            distmat[i, j] = abs((i/n)-(j/n))
-        end
-    end
-    OptimalTransportModelDistance(w,distmat)
-end
-
-function OptimalTransportSpectralDistance(w)
-    distmat = zeros(length(w), length(w))
-    for i=1:n
-        for j=1:n
-            distmat[i, j] = abs((i/n)-(j/n))
-        end
-    end
-    OptimalTransportSpectralDistance(distmat)
-end
-
-
 function evaluate(d::OptimalTransportModelDistance, m1, m2)
+    w = d.w
     noise_model = tf(m1)
     b1,_,_ = bode(noise_model, w.*2π) .|> vec
-    b1 .= log.(b1)
-    b1 .-= minimum(b1)
+    b1 .= abs2.(b1)
+    # b1 .-= (minimum(b1) - 1e-9) # reg to ensure no value is exactly 0
     b1 ./= sum(b1)
     noise_model = tf(m2)
     b2,_,_ = bode(noise_model, w.*2π) .|> vec
-    b2 .= log.(b2)
-    b2 .-= minimum(b2)
+    b2 .= abs2.(b2)
+    # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
-    plan = sinkhorn_plan(d.distmat, b1, b2; ϵ=1/10, rounds=300)
+    plan = IPOT(d.distmat, b1, b2; β=1, iters=d.iters)[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
 
 function evaluate(d::OptimalTransportSpectralDistance, w1, w2)
-    plan = sinkhorn_plan(d.distmat, w1, w2; ϵ=1/10, rounds=300)
+    plan = IPOT(d.distmat, w1, w2; iters=1000)[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
@@ -282,10 +267,11 @@ end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
 function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
+    p  = d.p
     h1 = fit(Histogram,x1)
     h2 = fit(Histogram,x2)
-    distmat = [abs(e1-e2) for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
-    plan = sinkhorn_plan(distmat, s1(h1.weights), s1(h2.weights); ϵ=1\10, rounds=300)
+    distmat = [abs(e1-e2)^p for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
+    plan = IPOT(distmat, s1(h1.weights), s1(h2.weights))[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* distmat)
 end
@@ -385,14 +371,15 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     end
 end
 
-function evaluate(d::ClosedFormSpectralDistance, A1::AbstractModel, A2::AbstractModel)
-    d.p > 1 && (return closed_form_wass(d,A1,A2))
+function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
+    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,A1,A2))
     f1       = w -> abs2(evalfr(domain(d), w, A1))
     f2       = w -> abs2(evalfr(domain(d), w, A2))
     sol1     = c∫(f1,d.interval...)
     sol2     = c∫(f2,d.interval...)
     functionbarrier(sol1,sol2,d.p,d.interval)
 end
+
 
 
 # This implementation has quadratic runtime due to integration inside integration

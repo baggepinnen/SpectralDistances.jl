@@ -28,8 +28,10 @@ struct ARMA{T} <: AbstractModel
     p::DiscreteRoots
 end
 
-ControlSystems.tf(m::AR, ts=1) = tf(1, m.a, ts)
-ControlSystems.tf(m::ARMA, ts=1) = tf(m.c, m.a, ts)
+ControlSystems.tf(m::AR, ts) = tf(1, m.a, ts)
+ControlSystems.tf(m::AR) = tf(1, m.ac)
+ControlSystems.tf(m::ARMA, ts) = tf(m.c, m.a, ts)
+ControlSystems.tf(m::ARMA) = tf(m.cc, m.ac)
 PolynomialRoots.roots(m::AR) = m.p
 ControlSystems.pole(m::AR) = m.p
 ControlSystems.pole(m::ARMA) = m.p

@@ -16,11 +16,15 @@ KernelWassersteinRootDistance,
 OptimalTransportModelDistance,
 OptimalTransportSpectralDistance,
 ClosedFormSpectralDistance,
+CramerSpectralDistance,
 EnergyDistance,
 CompositeDistance,
 trivial_transport
 # closed_form_wass,
 # closed_form_wass_noinverse
+
+export sinkhorn,
+IPOT
 
 export AR,
 ARMA,
@@ -41,5 +45,6 @@ include("losses.jl")
 include("interpolations.jl")
 include("utils.jl")
 include("plotting.jl")
+include("sinkhorn.jl")
 
 end # module
