@@ -253,7 +253,8 @@ function evaluate(d::OptimalTransportModelDistance, m1, m2)
     b2 .= abs2.(b2)
     # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
-    plan = IPOT(d.distmat, b1, b2; β=1, iters=d.iters)[1]
+    # plan = IPOT(d.distmat, b1, b2; β=1, iters=d.iters)[1]
+    plan = trivial_transport(b1, b2)
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
@@ -307,13 +308,16 @@ function trivial_transport(x,y)
         available = x[i]
         if available >= needed
             g[i,j] += needed
+            yf[j] += needed
             x[i] -= needed
             j += 1
         else
+            g[i,j] += available
+            yf[j] += available
             i += 1
         end
-
     end
+    @show i,j
     g
 end
 
