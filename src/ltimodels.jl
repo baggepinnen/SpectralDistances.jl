@@ -270,6 +270,17 @@ function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) wher
     c
 end
 
+function poles2model(r::AbstractVector{<:Real}, i::AbstractVector{<:Real})
+    roots = [complex.(r, i); complex.(r, -i)]
+    AR(roots2poly(roots))
+end
+
+function Base.rand(::Type{AR}, dr, di, n=2)
+    @assert n % 2 == 0
+    n = n ÷ 2
+    poles2model(rand(dr,n), rand(di,n))
+end
+
 # roots2poly([-1,-2,-3])
 
 
