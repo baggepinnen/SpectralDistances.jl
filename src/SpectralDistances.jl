@@ -17,6 +17,7 @@ OptimalTransportModelDistance,
 OptimalTransportSpectralDistance,
 ClosedFormSpectralDistance,
 CramerSpectralDistance,
+BuresDistance,
 EnergyDistance,
 CompositeDistance,
 trivial_transport

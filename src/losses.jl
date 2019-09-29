@@ -72,6 +72,9 @@ end
     interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
 end
 
+struct BuresDistance <: AbstractDistance
+end
+
 struct EnergyDistance <: AbstractDistance
 end
 
@@ -317,8 +320,16 @@ function trivial_transport(x,y)
             i += 1
         end
     end
-    @show i,j
+    @assert abs(i-j) <= 1 "Not all indices were covered"
     g
+end
+
+function Base.inv(f::AbstractVector)
+    n = length(f)
+    r = LinRange(0, f[end], n)
+    map(r) do r
+        findfirst(>=(r), f)
+    end
 end
 
 Base.inv(f::Function, interval) = x->finv(f, x, interval)
@@ -413,3 +424,30 @@ end
 #     F2(w) = ∫(f2,0,w)
 #     ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 1e-9, endpoint-1e-9)
 # end
+
+function stabilize(sys)
+    A = sys.A
+    e = eigen(A)
+    e.values .= reflect(ContinuousRoots(e.values))
+    sys.A .= real((e.vectors) * Diagonal(e.values) * inv(e.vectors))
+    sys
+end
+
+function evaluate(d::BuresDistance, A1::AbstractModel, A2::AbstractModel)
+    evaluate(d,tf(A1),tf(A2))
+end
+
+function evaluate(d::BuresDistance, A1::LTISystem, A2::LTISystem)
+    sys1 = (ss((A1))) # stabilize
+    sys2 = (ss((A2)))
+    X1   = gram(sys1,:c)
+    X2   = gram(sys2,:c)
+    evaluate(d,(sys1.C*X1*sys1.C'),(sys2.C*X2*sys2.C'))
+    # evaluate(d,inv(X1),inv(X2))
+    # 2π*tr(sys.C*X*sys.C')
+end
+
+function evaluate(d::BuresDistance, A::AbstractMatrix, B::AbstractMatrix)
+    sA = sqrt(A)
+    tr(A+B - 2sqrt(sA*B*sA))
+end
