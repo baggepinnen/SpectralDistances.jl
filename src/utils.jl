@@ -6,6 +6,14 @@ function twoD(X)
     Y[:,1], Y[:,2]
 end
 
+function threeD(X)
+    X = X .- mean(X,dims=1)
+    X = X ./ std(X,dims=1)
+    s = svd(X)
+    Y = s.U[:,1:3]#.*s.S[1:2]'
+    Y[:,1], Y[:,2], Y[:,3]
+end
+
 
 s1(x, dims=:) = x./sum(x, dims=dims)
 n1(x) = x./norm(x)

@@ -126,6 +126,10 @@ Random.seed!(0)
     #     sum([r[1]; r[2]])
     # end, p)
 
+@test SpectralDistances.reflectd(2) ≈ 0.5 + 0.0im
+@test SpectralDistances.reflectd(complex(0,2)) ≈ 0 + 0.5im
+@test SpectralDistances.reflectd(complex(0,-2)) ≈ 0 - 0.5im
+
 end
 
 

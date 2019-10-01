@@ -5,11 +5,11 @@ function pz_interpolate(a1,c1,a2,c2,α, ::typeof(hungarian))
     ai = (1-α)*a1 + α*a2
     ci  = (1-α)*c1 + α*c2
     ki  = (1-α)*k1 + α*k2
-    p1  = a1 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=imag)
-    p2  = a2 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=imag)
+    p1  = a1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
+    p2  = a2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
     p2 = hungariansort(p1,p2)
-    z1 = c1 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=imag)
-    z2 = c2 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=imag)
+    z1 = c1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
+    z2 = c2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
     z2 = hungariansort(z1,z2)
     pi = (1-α)*p1 + α*p2 .|> exp
     zi  = (1-α)*z1 + α*z2 .|> exp
@@ -25,10 +25,10 @@ function pz_interpolate(a1,c1,a2,c2,α, by=imag)
     ai = (1-α)*a1 + α*a2
     ci  = (1-α)*c1 + α*c2
     ki  = (1-α)*k1 + α*k2
-    p1  = a1 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=by) #.|> exp
-    p2  = a2 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=by) #.|> exp
-    z1 = c1 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=by) #.|> exp
-    z2 = c2 |> reverse |> roots .|> log .|> reflect |> x->sort(x,by=by) #.|> exp
+    p1  = a1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
+    p2  = a2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
+    z1 = c1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
+    z2 = c2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
     pi = (1-α)*p1 + α*p2 .|> exp
     zi  = (1-α)*z1 + α*z2 .|> exp
 

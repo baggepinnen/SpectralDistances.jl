@@ -33,18 +33,16 @@ ControlSystems.tf(m::AR) = tf(1, m.ac)
 ControlSystems.tf(m::ARMA, ts) = tf(m.c, m.a, ts)
 ControlSystems.tf(m::ARMA) = tf(m.cc, m.ac)
 PolynomialRoots.roots(m::AR) = m.p
+PolynomialRoots.roots(m::ARMA) = m.p
 ControlSystems.pole(m::AR) = m.p
 ControlSystems.pole(m::ARMA) = m.p
 ControlSystems.tzero(m::ARMA) = m.z
 ControlSystems.denvec(m::AbstractModel) = m.a
 ControlSystems.numvec(m::ARMA) = m.c
-
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
-
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
 ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
-
 coefficients(::Discrete, m::AR) = m.a[2:end]
 coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.c]
 coefficients(::Continuous, m::AR) = m.ac[2:end]
@@ -54,7 +52,6 @@ function domain_transform(d::Continuous, m::AR)
     p = domain_transform(d, roots(m))
     roots2poly(p)
 end
-
 
 abstract type FitMethod end
 
@@ -92,7 +89,6 @@ AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
 
 function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
-    na -= 1
     y_trainA = getARregressor(y,initial_order)
     y_train,A = y_trainA[1], y_trainA[2]
     w1 = ls((y_train, A),λ)
@@ -105,7 +101,7 @@ function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     a,c = params2poly(w,na,nc)
     rc = roots(reverse(c))
     ra = roots(reverse(a))
-    ARMA(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
+    ARMA{typeof(c)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
 end
 
 function params2poly(w,na,nb)
@@ -247,7 +243,7 @@ function roots2poly(roots)
     for r in 1:length(roots)
         p = roots2poly_kernel(p, roots[r])
     end
-    real(p)
+    Vector(real(p))
 end
 
 function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Real}
