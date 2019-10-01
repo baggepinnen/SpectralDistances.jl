@@ -18,10 +18,12 @@ abstract type AbstractRoots{T} <: AbstractVector{T} end
 
 struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
+    DiscreteRoots(r) = new{eltype(r), typeof(r)}(eigsort(r))
 end
 
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
+    ContinuousRoots(r) = new{eltype(r), typeof(r)}(eigsort(r))
 end
 
 Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
@@ -34,7 +36,7 @@ domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
 domain_transform(d::Discrete,e::DiscreteRoots) = e
 
-
+eigsort(e) = sort(e, by=imag)
 
 Base.Vector(r::AbstractRoots) = r.r
 Base.log(r::DiscreteRoots) = ContinuousRoots(log.(r.r))

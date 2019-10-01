@@ -10,6 +10,8 @@ const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
 evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
 
+(d::AbstractDistance)(x,y) = evaluate(d, x, y)
+(d::DistanceCollection)(x,y) = evaluate(d, x, y)
 
 @kwdef struct CoefficientDistance{D,ID} <: AbstractCoefficientDistance
     domain::D
@@ -242,9 +244,19 @@ end
 
 evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
+function precompute(d::OptimalTransportModelDistance, As::AbstractArray{<:AbstractModel}, threads=true)
+    mapfun = threads ? tmap : map
+    mapfun(As) do A1
+        w = d.w
+        noise_model = tf(m1)
+        b1 = bode(noise_model, w.*2π)[1] |> vec
+        b1 .= abs2.(b1)
+        b1 ./= sum(b1)
+        b1
+    end
+end
 
-
-function evaluate(d::OptimalTransportModelDistance, m1, m2)
+function evaluate(d::OptimalTransportModelDistance, m1::AbstractModel, m2::AbstractModel)
     w = d.w
     noise_model = tf(m1)
     b1,_,_ = bode(noise_model, w.*2π) .|> vec
@@ -256,9 +268,11 @@ function evaluate(d::OptimalTransportModelDistance, m1, m2)
     b2 .= abs2.(b2)
     # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
-    # plan = IPOT(d.distmat, b1, b2; β=1, iters=d.iters)[1]
+    evaluate(d, b1, b2)
+end
+
+function evaluate(d::OptimalTransportModelDistance, b1, b2)
     plan = trivial_transport(b1, b2)
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* d.distmat)
 end
 
@@ -282,21 +296,6 @@ end
 
 
 
-# for dt in [ CoefficientDistance,
-#             InnerProductCoefficientDistance,
-#             ModelDistance,
-#             EuclideanRootDistance,
-#             HungarianRootDistance,
-#             KernelWassersteinRootDistance,
-#             OptimalTransportModelDistance,
-#             OptimalTransportSpectralDistance,
-#             EnergyDistance,
-#             DistanceCollection]
-#     @eval (d::$dt)(x,y) = evaluate(d, x, y)
-# end
-
-(d::AbstractDistance)(x,y) = evaluate(d, x, y)
-(d::DistanceCollection)(x,y) = evaluate(d, x, y)
 
 
 
@@ -367,12 +366,8 @@ function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     ∫(z->abs(inv(F1, interval)(z) - inv(F2, interval)(z))^p, 0, 1)
 end
 
-function closed_form_wass(d::ClosedFormSpectralDistance,a1,a2)
+function closed_form_wass(d::ClosedFormSpectralDistance,sol1,sol2)
     p,interval = d.p, d.interval
-    f1    = w -> abs2(evalfr(domain(d), w, a1))
-    f2    = w -> abs2(evalfr(domain(d), w, a2))
-    sol1  = c∫(f1,d.interval...)
-    sol2  = c∫(f2,d.interval...)
     invfunctionbarrier(sol1,sol2,p,interval)
 end
 
@@ -392,10 +387,21 @@ function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, 
     f2       = w -> abs2(evalfr(domain(d), w, A2))
     sol1     = c∫(f1,d.interval...)
     sol2     = c∫(f2,d.interval...)
+    evaluate(d, sol1, sol2)
+end
+
+function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, sol1, sol2)
+    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
     functionbarrier(sol1,sol2,d.p,d.interval)
 end
 
-
+function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
+    mapfun = threads ? tmap : map
+    mapfun(As) do A1
+        f1   = w -> abs2(evalfr(domain(d), w, A1))
+        sol1 = c∫(f1,d.interval...)
+    end
+end
 
 # This implementation has quadratic runtime due to integration inside integration
 # function closed_form_wass_noinverse_slow(a1,a2,p=1)
