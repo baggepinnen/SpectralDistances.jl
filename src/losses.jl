@@ -65,7 +65,7 @@ end
 @kwdef struct ClosedFormSpectralDistance{DT} <: AbstractDistance
     domain::DT
     p::Int = 1
-    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
+    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,),float(π))
 end
 
 @kwdef struct CramerSpectralDistance{DT} <: AbstractDistance
@@ -295,31 +295,33 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
 end
 
 
-
-
-
-
-function trivial_transport(x,y)
+function trivial_transport(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
     x = copy(x)
-    yf = zero(y)
+    yf = zero(T)
     n = length(x)
+    @assert length(y) == n
     g = zeros(n,n)
     i = j = 1
-    while j <= n && i <= n
-        needed = y[j] - yf[j]
+    @inbounds while j <= n && i <= n
+        needed = y[j] - yf
         available = x[i]
         if available >= needed
             g[i,j] += needed
-            yf[j] += needed
             x[i] -= needed
+            yf = zero(T)
             j += 1
         else
             g[i,j] += available
-            yf[j] += available
+            yf += available
             i += 1
         end
     end
-    @assert abs(i-j) <= 1 "Not all indices were covered"
+    if abs(i-j) <= 1
+        sumleft = (sum(x[i:end]),sum(y[j:end]))
+        if sumleft[1] > tol || sumleft[2] > tol
+            error("Not all indices were covered (i,j) = $((i,j)), sum left (x,y) = $(sumleft)")
+        end
+    end
     g
 end
 
@@ -382,11 +384,11 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
 end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
-    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,A1,A2))
     f1       = w -> abs2(evalfr(domain(d), w, A1))
     f2       = w -> abs2(evalfr(domain(d), w, A2))
     sol1     = c∫(f1,d.interval...)
     sol2     = c∫(f2,d.interval...)
+    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
     evaluate(d, sol1, sol2)
 end
 

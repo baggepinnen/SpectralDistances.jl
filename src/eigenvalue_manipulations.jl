@@ -18,13 +18,16 @@ abstract type AbstractRoots{T} <: AbstractVector{T} end
 
 struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
-    DiscreteRoots(r) = new{eltype(r), typeof(r)}(eigsort(r))
+    DiscreteRoots(r) = new{eltype(r), typeof(r)}(reflectd.(anglesort(r)))
 end
 
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
-    ContinuousRoots(r) = new{eltype(r), typeof(r)}(eigsort(r))
+    ContinuousRoots(r) = new{eltype(r), typeof(r)}(reflectc.(eigsort(r)))
 end
+
+DiscreteRoots(r::ContinuousRoots) = domain_transform(Discrete(), r)
+ContinuousRoots(r::DiscreteRoots) = domain_transform(Continuous(), r)
 
 Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
 Base.convert(::Type{ContinuousRoots}, r::Vector{<: Complex}) = ContinuousRoots(r)
@@ -37,6 +40,7 @@ domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
 domain_transform(d::Discrete,e::DiscreteRoots) = e
 
 eigsort(e) = sort(e, by=imag)
+anglesort(e) = sort(e, by=angle)
 
 Base.Vector(r::AbstractRoots) = r.r
 Base.log(r::DiscreteRoots) = ContinuousRoots(log.(r.r))
@@ -133,8 +137,12 @@ toreim(x::Tuple) = x
 toreim(x::Flux.Tracker.TrackedTuple) = x
 
 
-reflectc(x) = complex(x.re < 0 ? x.re : -x.re,x.im)
-reflectd(x) = error("Not implemented")
+reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)
+function reflectd(x)
+    a = abs(x)
+    a < 1 && return x
+    1/a * exp(im*angle(x))
+end
 reflect(r::ContinuousRoots) = ContinuousRoots(reflectc.(r.r))
 reflect(r::DiscreteRoots) = DiscreteRoots(reflectd.(r.r))
 # function remove_negreal(p)
