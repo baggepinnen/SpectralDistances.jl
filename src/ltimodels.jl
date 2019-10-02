@@ -61,10 +61,10 @@ fitmodel(fm,X::AbstractModel) = X
     nc::Int
     na::Int
     initial_order::Int = 100
-    λ::Float64 = 1e-2
+    λ::Float64 = 1e-4
 end
 function fitmodel(fm::PLR,X::AbstractArray)
-    plr(X,fm.na,fm.nc; initial_order = fm.initial_order)
+    plr(X,fm.na,fm.nc; initial_order = fm.initial_order, λ=fm.λ)
 end
 (fm::PLR)(X) = fitmodel(fm, X)
 
@@ -73,7 +73,7 @@ end
     λ::Float64 = 1e-2
 end
 function fitmodel(fm::LS,X::AbstractArray)
-    AR(X,fm.na)
+    AR(X,fm.na,fm.λ)
 end
 (fm::LS)(X) = fitmodel(fm, X)
 
@@ -241,12 +241,12 @@ using StaticArrays
 function roots2poly(roots)
     p = @MVector [1.]
     for r in 1:length(roots)
-        p = roots2poly_kernel(p, roots[r])
+        p = _roots2poly_kernel(p, roots[r])
     end
     Vector(real(p))
 end
 
-function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Real}
+function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Real}
     c = MVector{N+1,Complex{T}}(ntuple(_->0, N+1))
     c[1] = 1
     for i in 2:length(a)
@@ -256,7 +256,7 @@ function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) wher
     c
 end
 
-function roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Complex}
+function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Complex}
     c = MVector{N+1,T}(ntuple(_->0, N+1))
     c[1] = 1
     for i in 2:length(a)
@@ -275,6 +275,16 @@ function Base.rand(::Type{AR}, dr, di, n=2)
     @assert n % 2 == 0
     n = n ÷ 2
     poles2model(rand(dr,n), rand(di,n))
+end
+
+function plot_assignment(m1,m2)
+    plot(cos.(0:0.1:2pi),sin.(0:0.1:2pi),l=(:dash, :black), subplot=1, layout=1)
+    scatter!(real.(roots(m1)), imag.(roots(m1)), c=:blue, subplot=1, markerstrokealpha=0.1)
+    scatter!(real.(roots(m2)), imag.(roots(m2)), c=:red, subplot=1, markerstrokealpha=0.1)
+    hungariansort(roots(m1), roots(m2))
+    xc = [real(roots(m1)) real(roots(m2)) fill(Inf, length(m1.p))]'[:]
+    yc = [imag(roots(m1)) imag(roots(m2)) fill(Inf, length(m1.p))]'[:]
+    plot!(xc,yc, subplot=1, legend=false) |> display
 end
 
 # roots2poly([-1,-2,-3])

@@ -296,9 +296,9 @@ end
 
 
 function trivial_transport(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
-    x = copy(x)
+    x  = copy(x)
     yf = zero(T)
-    n = length(x)
+    n  = length(x)
     @assert length(y) == n
     g = zeros(n,n)
     i = j = 1
@@ -346,11 +346,11 @@ end
 
 ∫(f,a,b) = quadgk(f,a,b; atol=1e-10, rtol=1e-7)[1]::Float64
 
-function c∫(f,a,b)
+function c∫(f,a,b;kwargs...)
     fi    = (u,p,t) -> f(t)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
-    sol   = solve(prob,Tsit5(),reltol=1e-7,abstol=1e-8)
+    sol   = solve(prob,Tsit5();reltol=1e-7,abstol=1e-8,kwargs...)
 end
 
 @inline ControlSystems.evalfr(::Discrete, w, a::AbstractArray) = (n=length(a);1/sum(j->a[j]*exp(im*w*(n-j)), 1:n))
@@ -397,6 +397,22 @@ function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, 
     functionbarrier(sol1,sol2,d.p,d.interval)
 end
 
+function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
+    p    = d.p
+    f    = w -> abs(evalfr(domain(d), w, A1))
+    w    = P.freq .* (2π)
+    sol  = c∫(f,d.interval...; saveat=w)
+    cP   = cumsum(sqrt.(P.power))
+    cP ./= cP[end]
+    plan = trivial_transport(sol.u./sol.u[end], cP)
+    c    = 0.
+    for i in axes(plan,1), j in axes(plan,2)
+        c += abs(w[i]-w[j])^p * plan[i,j]
+    end
+    @assert c >= 0 "Distance turned out to be negative :/ c=$c"
+    c
+end
+
 function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     mapfun(As) do A1
@@ -404,24 +420,6 @@ function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}
         sol1 = c∫(f1,d.interval...)
     end
 end
-
-# This implementation has quadratic runtime due to integration inside integration
-# function closed_form_wass_noinverse_slow(a1,a2,p=1)
-#     n     = length(a1)
-#     f1    = w -> abs2(evalfr(Discrete(), w, a1))
-#     f2    = w -> abs2(evalfr(Discrete(), w, a2))
-#     σ1    = ∫(f1,0,2π)
-#     σ2    = ∫(f2,0,2π)
-#     f1    = w -> abs2(evalfr(Discrete(), w, a1)) / σ1
-#     f2    = w -> abs2(evalfr(Discrete(), w, a2)) / σ2
-#     F1(w) = ∫(f1,0,w)
-#     F2(w) = ∫(f2,0,w)
-#     ∫(0,2π) do w
-#         F1w = F1(w)
-#         F2w = F2(w)
-#         abs(F1w-F2w)^p
-#     end
-# end
 
 # function closed_form_log_wass(a1,a2,p=1)
 #     n     = length(a1)
