@@ -1,6 +1,17 @@
-const AbstractTuple = Union{Tuple, Flux.Tracker.TrackedTuple}
+const AbstractTuple = Tuple #Union{Tuple, Flux.Tracker.TrackedTuple}
 
 abstract type AbstractModel end
+
+"""
+    struct AR{T} <: AbstractModel
+
+Represents an all-pole transfer function, i.e., and AR model
+
+#Arguments:
+- `a`: denvec
+- `ac`: denvec cont. time
+- `p`: poles
+"""
 struct AR{T} <: AbstractModel
     a::T
     ac::T
@@ -18,7 +29,19 @@ struct AR{T} <: AbstractModel
     end
 end
 
+"""
+    struct ARMA{T} <: AbstractModel
 
+Represents an ARMA model, i.e., transfer function
+
+#Arguments:
+- `c`: numvec
+- `cc`: numvec cont. time
+- `a`: denvec
+- `ac`: denvec cont. time
+- `z`: zeros
+- `p`: poles
+"""
 struct ARMA{T} <: AbstractModel
     c::T
     cc::T
@@ -43,6 +66,11 @@ ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
 ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
+"""
+    coefficients(::Domain, m::AbstractModel)
+
+Return all fitted coefficients
+"""
 coefficients(::Discrete, m::AR) = m.a[2:end]
 coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.c]
 coefficients(::Continuous, m::AR) = m.ac[2:end]
@@ -63,6 +91,9 @@ fitmodel(fm,X::AbstractModel) = X
     initial_order::Int = 100
     λ::Float64 = 1e-4
 end
+"""
+    fitmodel(fm::PLR, X::AbstractArray)
+"""
 function fitmodel(fm::PLR,X::AbstractArray)
     plr(X,fm.na,fm.nc; initial_order = fm.initial_order, λ=fm.λ)
 end
@@ -72,12 +103,21 @@ end
     na::Int
     λ::Float64 = 1e-2
 end
+
+"""
+    fitmodel(fm::LS, X::AbstractArray)
+"""
 function fitmodel(fm::LS,X::AbstractArray)
     AR(X,fm.na,fm.λ)
 end
 (fm::LS)(X) = fitmodel(fm, X)
 
 
+"""
+    ls(yA::AbstractTuple, λ=0.01)
+
+Regularized Least-squares
+"""
 function ls(yA::AbstractTuple,λ=1e-2)
     y,A = yA[1], yA[2]
     # (A'A + 1e-9I)\(A'y) #src
@@ -87,6 +127,18 @@ end
 
 AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
 
+"""
+    plr(y, na, nc; initial_order=20, λ=0.01)
+
+Performs pseudo-linear regression to estimate an ARMA model.
+
+#Arguments:
+- `y`: signal
+- `na`: denomenator order
+- `nc`: numerator order
+- `initial_order`: order of the first step model
+- `λ`: reg
+"""
 function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
     y_trainA = getARregressor(y,initial_order)
@@ -115,6 +167,11 @@ function params2poly(w,na,nb)
     a,b
 end
 
+"""
+    toeplitz(c, r)
+
+Returns a toepliz matrix with first column and row specified (c[1] == r[1]).
+"""
 function toeplitz(c,r)
     @assert c[1] == r[1]
     nc = length(c)
@@ -138,10 +195,10 @@ function getARregressor(y, na)
     return y,A
 end
 
-getARregressor(a::TrackedArray, b) = Flux.Tracker.track(getARregressor, a, b)
+# getARregressor(a::TrackedArray, b) = Flux.Tracker.track(getARregressor, a, b)
 
-Flux.Tracker.@grad function getARregressor(y::TrackedArray,na)
-    getARregressor(Flux.Tracker.data(y),na),  function (Δ)
+ZygoteRules.@adjoint function getARregressor(y,na)
+    getARregressor((y),na),  function (Δ)
         d = zero(y)
         d[na+1:end] .= Δ[1]
         for j in 1:size(Δ[2], 2)
@@ -170,11 +227,11 @@ function getARXregressor(y::AbstractVector,u::AbstractVector, na, nb)
     return y,A
 end
 
-getARXregressor(y::TrackedArray, u::TrackedArray, na::Int, nb::Int) = Flux.Tracker.track(getARXregressor, y, u, na, nb)
+# getARXregressor(y::TrackedArray, u::TrackedArray, na::Int, nb::Int) = Flux.Tracker.track(getARXregressor, y, u, na, nb)
 
-Flux.Tracker.@grad function getARXregressor(y::TrackedArray, u::TrackedArray, na::Int, nb)
+ZygoteRules.@adjoint function getARXregressor(y, u, na::Int, nb)
     @assert nb <= na # This is not a fundamental requirement, but this adjoint does not support it yet.
-    getARXregressor(Flux.Tracker.data(y),Flux.Tracker.data(u),na,nb),  function (Δ)
+    getARXregressor((y),(u),na,nb),  function (Δ)
     dy = zero(y)
     du = zero(u)
     dy[na+1:end] .= Δ[1]
@@ -203,11 +260,11 @@ polyvec(w) = [1; -w]
 polyroots(w) = roots(poly(w))
 
 riroots(p) = (r=roots(p); (real.(r),imag.(r)))
-riroots(p::TrackedArray) = Flux.Tracker.track(riroots, p)
-polyroots(w::TrackedArray) = riroots(poly(w))
+# riroots(p::TrackedArray) = Flux.Tracker.track(riroots, p)
+# polyroots(w::TrackedArray) = riroots(poly(w))
 
-Flux.Tracker.@grad function riroots(p::TrackedArray)
-    dp = Flux.Tracker.data(p)
+ZygoteRules.@adjoint function riroots(p)
+    dp = (p)
     r = riroots(dp)
     r, function (Δ)
         fd = FiniteDifferences.central_fdm(3,1)
@@ -238,6 +295,11 @@ end
 
 using StaticArrays
 
+"""
+    roots2poly(roots)
+
+Accepts a vector of complex roots and returns the polynomial with those roots
+"""
 function roots2poly(roots)
     p = @MVector [1.]
     for r in 1:length(roots)
@@ -266,6 +328,11 @@ function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) whe
     c
 end
 
+"""
+    poles2model(r::AbstractVector{<:Real}, i::AbstractVector{<:Real})
+
+Returns a transer function with the desired poles. There will be twice as many poles as the length of `i` and `r`.
+"""
 function poles2model(r::AbstractVector{<:Real}, i::AbstractVector{<:Real})
     roots = [complex.(r, i); complex.(r, -i)]
     AR(roots2poly(roots))
@@ -277,6 +344,11 @@ function Base.rand(::Type{AR}, dr, di, n=2)
     poles2model(rand(dr,n), rand(di,n))
 end
 
+"""
+    plot_assignment(m1, m2)
+
+Plots the poles of two models and the optimal assignment between them
+"""
 function plot_assignment(m1,m2)
     plot(cos.(0:0.1:2pi),sin.(0:0.1:2pi),l=(:dash, :black), subplot=1, layout=1)
     scatter!(real.(roots(m1)), imag.(roots(m1)), c=:blue, subplot=1, markerstrokealpha=0.1)

@@ -26,7 +26,17 @@ struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     ContinuousRoots(r) = new{eltype(r), typeof(r)}(reflectc.(eigsort(r)))
 end
 
+"""
+    DiscreteRoots(r::ContinuousRoots) = begin
+
+Represents roots of a polynomial in discrete time
+"""
 DiscreteRoots(r::ContinuousRoots) = domain_transform(Discrete(), r)
+"""
+    ContinuousRoots(r::DiscreteRoots) = begin
+
+Represents roots of a polynomial in continuous time
+"""
 ContinuousRoots(r::DiscreteRoots) = domain_transform(Continuous(), r)
 
 Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
@@ -34,6 +44,11 @@ Base.convert(::Type{ContinuousRoots}, r::Vector{<: Complex}) = ContinuousRoots(r
 
 Base.:(≈)(r1::T, r2::T) where T <: AbstractRoots = sort(r1, by=LinearAlgebra.eigsortby) ≈ sort(r2, by=LinearAlgebra.eigsortby)
 
+"""
+    domain_transform(d::Domain, e::AbstractRoots)
+
+Change the domain of the roots
+"""
 domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
@@ -116,6 +131,11 @@ function polar(e)
     abs.(e), angle.(e)
 end
 
+"""
+    polar(e::Number)
+
+magnitude and angle of a complex number
+"""
 function polar(e::Number)
     abs(e), angle(e)
 end
@@ -134,7 +154,7 @@ end
 
 toreim(x::AbstractVector{<:Complex}) = (real.(x), imag.(x))
 toreim(x::Tuple) = x
-toreim(x::Flux.Tracker.TrackedTuple) = x
+# toreim(x::Flux.Tracker.TrackedTuple) = x
 
 
 reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)
@@ -143,6 +163,11 @@ function reflectd(x)
     a < 1 && return x
     1/a * exp(im*angle(x))
 end
+"""
+    reflect(r::AbstractRoots)
+
+Reflects unstable roots to a corresponding stable position (in unit circle for disc. in LHP for cont.)
+"""
 reflect(r::ContinuousRoots) = ContinuousRoots(reflectc.(r.r))
 reflect(r::DiscreteRoots) = DiscreteRoots(reflectd.(r.r))
 # function remove_negreal(p)
@@ -169,6 +194,11 @@ reflect(r::DiscreteRoots) = DiscreteRoots(reflectd.(r.r))
 
 scalereal(x) = complex(1x.re, x.im)
 
+"""
+    hungariansort(p1, p2)
+
+takes two vectors of numbers and sorts and returns `p2` such that it is in the order of the best Hungarian assignement between `p1` and `p2`. Uses `abs` for comparisons, works on complex numbers.
+"""
 function hungariansort(p1,p2)
     length(p1) <= 2 && (return p2)
     distmat = abs.(p1 .- transpose(p2))

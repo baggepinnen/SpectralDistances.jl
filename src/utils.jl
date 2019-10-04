@@ -1,3 +1,8 @@
+"""
+    twoD(X)
+
+Project `X` to two dmensions using PCA
+"""
 function twoD(X)
     X = X .- mean(X,dims=1)
     X = X ./ std(X,dims=1)
@@ -6,6 +11,11 @@ function twoD(X)
     Y[:,1], Y[:,2]
 end
 
+"""
+    threeD(X)
+
+Project `X` to three dimensions using PCA
+"""
 function threeD(X)
     X = X .- mean(X,dims=1)
     X = X ./ std(X,dims=1)
@@ -14,20 +24,44 @@ function threeD(X)
     Y[:,1], Y[:,2], Y[:,3]
 end
 
+"""
+    s1(x, dims=:) = begin
 
+normalize x sums to 1
+"""
 s1(x, dims=:) = x./sum(x, dims=dims)
+"""
+    n1(x) = begin
+
+normalize x norm 1
+"""
 n1(x) = x./norm(x)
+"""
+    v1(x, dims=:)
+
+normalize x var 1
+"""
 function v1(x, dims=:)
     x = x .- mean(x, dims=dims)
     x .= x./std(x, dims=dims)
 end
 
+"""
+    bp_filter(x, passband)
+
+Band-pass filter, passband is tuple, `fs` assumed = 1
+"""
 function bp_filter(x, passband)
     responsetype = Bandpass(passband..., fs=1)
     designmethod = Butterworth(2)
     filt(digitalfilter(responsetype, designmethod), x)
 end
 
+"""
+    lp_filter(x, cutoff)
+
+Low-pass filter, `fs` assumed = 1
+"""
 function lp_filter(x, cutoff)
     responsetype = Lowpass(cutoff, fs=1)
     designmethod = Butterworth(2)

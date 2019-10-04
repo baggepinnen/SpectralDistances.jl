@@ -81,11 +81,22 @@ struct EnergyDistance <: AbstractDistance
 end
 
 
+"""
+    domain(d::AbstractDistance)
+
+Return the domain of the distance
+"""
 domain(d::AbstractDistance) = d.domain
 domain(d::AbstractModelDistance) = domain(d.distance)
 domain(d) = throw(ArgumentError("This type does not define domain"))
 
+"""
+    domain_transform(d::AbstractDistance, e)
+
+DOCSTRING
+"""
 domain_transform(d::AbstractDistance, e) = domain_transform(domain(d), e)
+
 
 transform(d::AbstractRootDistance) = d.transform
 transform(d::AbstractRootDistance, x) = d.transform(x)
@@ -244,6 +255,16 @@ end
 
 evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
+"""
+    precompute(d::AbstractDistance, As, threads=true)
+
+Perform computations that only need to be donce once when several pairwise distances are to be computed
+
+#Arguments:
+- `d`: DESCRIPTION
+- `As`: DESCRIPTION
+- `threads`: Us multithreading? (true)
+"""
 function precompute(d::OptimalTransportModelDistance, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     mapfun(As) do A1
@@ -294,7 +315,11 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
     cost = sum(plan .* distmat)
 end
 
+"""
+    trivial_transport(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T))) where T
 
+Calculate the optimal-transport plan between two vectors that are assumed to have the same support, with sorted support points.
+"""
 function trivial_transport(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
     x  = copy(x)
     yf = zero(T)
@@ -344,8 +369,21 @@ end
 #     w = Roots.fzero(w->f(w)-z, fp, π)
 # end
 
+"""
+    ∫(f, a, b) = begin
+
+Integrate `f` between `a` and `b`
+"""
 ∫(f,a,b) = quadgk(f,a,b; atol=1e-10, rtol=1e-7)[1]::Float64
 
+"""
+    c∫(f, a, b; kwargs...)
+
+Cumulative integration of `f` between `a` and `b`
+
+#Arguments:
+- `kwargs`: are sent to the DiffEq solver
+"""
 function c∫(f,a,b;kwargs...)
     fi    = (u,p,t) -> f(t)
     tspan = (a,b)
@@ -431,6 +469,11 @@ end
 #     ∫(z->abs(inv(F1)(z) - inv(F2)(z))^p, 1e-9, endpoint-1e-9)
 # end
 
+"""
+    stabilize(sys)
+
+takes a statespace system and reflects all eigenvalues to be in the left half plane
+"""
 function stabilize(sys)
     A = sys.A
     e = eigen(A)
