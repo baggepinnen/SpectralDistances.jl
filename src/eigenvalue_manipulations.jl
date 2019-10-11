@@ -156,7 +156,7 @@ toreim(x::AbstractVector{<:Complex}) = (real.(x), imag.(x))
 toreim(x::Tuple) = x
 # toreim(x::Flux.Tracker.TrackedTuple) = x
 
-
+reflectc(x::Real) = x < 0 ? x : -x
 reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)
 function reflectd(x)
     a = abs(x)

@@ -359,6 +359,16 @@ function plot_assignment(m1,m2)
     plot!(xc,yc, subplot=1, legend=false) |> display
 end
 
+function spectralenergy(G)
+    sys = ss(G)
+    A = sys.A
+    e = eigen(A)
+    e.values .= reflect(ContinuousRoots(e.values))
+    sys.A .= real((e.vectors) * Diagonal(e.values) * inv(e.vectors))
+    sys,X = balreal(sys)
+    2π*tr(sys.C*X*sys.C')
+end
+
 # roots2poly([-1,-2,-3])
 
 

@@ -69,4 +69,5 @@ function lp_filter(x, cutoff)
 end
 
 
-@inline nograd(x) = Flux.data(x)
+@inline nograd(x) = x
+# @inline nograd(x) = Flux.data(x)

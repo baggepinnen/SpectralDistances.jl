@@ -1,4 +1,5 @@
 
+
 function pz_interpolate(a1,c1,a2,c2,α, ::typeof(hungarian))
     k1 = sum(c1)/sum(a1)
     k2 = sum(c2)/sum(a2)
@@ -110,4 +111,22 @@ function wasserstein_interpolate(a1,c1,a2,c2,α,aw)
     cr .*= sum(ci)/sum(ai)*sum(ar)/sum(cr)
     # ar[1] = 1
     ar, cr, res
+end
+
+function interpolator(d::ClosedFormSpectralDistance,A1,A2)
+    @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
+    interval = d.interval
+    f1    = w -> abs2(evalfr(domain(d), w, A1))
+    f2    = w -> abs2(evalfr(domain(d), w, A2))
+    sol1  = c∫(f1,interval...)
+    sol2  = c∫(f2,interval...)
+    σ1    = sol1(interval[2]) # The total energy in the spectrum
+    σ2    = sol2(interval[2]) # The total energy in the spectrum
+    F1(w) = sol1(w)/σ1
+    F2(w) = sol2(w)/σ2
+    iF1   = inv(F1, interval)
+    iF2   = inv(F2, interval)
+    (w,t) -> tmap1(6,w) do w
+        finv(e->(1-t)*iF1(e) + t*iF2(e), w, (0,1))
+    end
 end

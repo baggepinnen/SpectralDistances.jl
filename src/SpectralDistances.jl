@@ -5,13 +5,14 @@ using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungari
 import FiniteDifferences
 import Base.@kwdef
 
-export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, plot_assignment
+export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, plot_assignment, roots2poly, evalfr, Log, Identity
 
 export CoefficientDistance,
 ModelDistance,
 EuclideanRootDistance,
 ManhattanRootDistance,
 HungarianRootDistance,
+SinkhornRootDistance,
 KernelWassersteinRootDistance,
 OptimalTransportModelDistance,
 OptimalTransportSpectralDistance,

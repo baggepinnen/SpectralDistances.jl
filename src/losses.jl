@@ -7,6 +7,11 @@ abstract type AbstractCoefficientDistance <: AbstractDistance end
 
 const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
 
+struct Identity end
+struct Log end
+magnitude(d) = Identity()
+
+
 evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
 
@@ -23,11 +28,19 @@ struct ModelDistance{D <: AbstractDistance} <: AbstractModelDistance
     distance::D
 end
 
-@kwdef struct EuclideanRootDistance{D,A,F} <: AbstractRootDistance
+@kwdef struct EuclideanRootDistance{D,A,F1,F2} <: AbstractRootDistance
     domain::D
     assignment::A = SortAssignement(imag)
-    transform::F = identity
+    transform::F1 = identity
+    weight::F2 = e->1
 end
+
+@kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
+    domain::D
+    transform::F1 = identity
+    weight::F2 = e->s1(abs.(1 ./real.(e)))
+end
+
 # TODO: Merge the two above
 @kwdef struct ManhattanRootDistance{D,A,F} <: AbstractRootDistance
     domain::D
@@ -62,16 +75,18 @@ end
     p::Int = 1
 end
 
-@kwdef struct ClosedFormSpectralDistance{DT} <: AbstractDistance
+@kwdef struct ClosedFormSpectralDistance{DT,MT} <: AbstractDistance
     domain::DT
     p::Int = 1
-    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,),float(π))
+    magnitude::MT = Identity()
+    interval = (-float(π,),float(π))
 end
+magnitude(d::ClosedFormSpectralDistance) = d.magnitude
 
 @kwdef struct CramerSpectralDistance{DT} <: AbstractDistance
     domain::DT
     p::Int = 2
-    interval = domain isa Continuous ? (-float(2π),float(2π)) : (-float(π,)float(π))
+    interval = (-float(π,),float(π))
 end
 
 struct BuresDistance <: AbstractDistance
@@ -86,9 +101,9 @@ end
 
 Return the domain of the distance
 """
-domain(d::AbstractDistance) = d.domain
+domain(d) = d.domain
 domain(d::AbstractModelDistance) = domain(d.distance)
-domain(d) = throw(ArgumentError("This type does not define domain"))
+
 
 """
     domain_transform(d::AbstractDistance, e)
@@ -118,10 +133,10 @@ function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots
     e1    = d.transform.(e1)
     e2    = d.transform.(e2)
     e1,e2 = toreim(e1), toreim(e2)
-    n = length(e1[1])
-    dist = d.distance
-    dm = [dist(e1[1][i],e2[1][j]) + dist(e1[2][i],e2[2][j]) for i = 1:n, j=1:n]
-    c = hungarian(dm)[2]
+    n     = length(e1[1])
+    dist  = d.distance
+    dm    = [dist(e1[1][i],e2[1][j]) + dist(e1[2][i],e2[2][j]) for i = 1:n, j=1:n]
+    c     = hungarian(dm)[2]
     # P,c = hungarian(Flux.data.(dm))
     # mean([(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=P])
 end
@@ -157,7 +172,23 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e1    = d.transform.(e1)
     e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
-    sum(abs2, e1[I1]-e2[I2])
+    w1,w2 = d.weight.(e1), d.weight.(e2)
+    sum(eachindex(e1)) do i
+        i1 = I1[i]
+        i2 = I2[i]
+        (w1[i1]*w2[i2])abs2((e1[i1]-e2[i2]))
+    end
+end
+
+function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
+    e1    = d.transform.(e1)
+    e2    = d.transform.(e2)
+    D     = distmat_euclidean(e1,e2)
+    w1    = d.weight(e1)
+    w2    = d.weight(e2)
+    C     = sinkhorn(D,w1,w2,β=0.01, iters=10000)[1]
+    sum(C.*D)
 end
 
 manhattan(c) = abs(c.re) + abs(c.im)
@@ -211,29 +242,6 @@ function evaluate(d::ModelDistance,X,Xh)
     wh = fitmodel(d.fitmethod, Xh)
     evaluate(d.distance, w, wh)
 end
-
-
-# function ls_loss_eigvals_disc(d,X,Xh,order)
-#     r = ar(X, order) |> polyroots
-#     rh = ar(Xh, order) |> polyroots
-#     eigval_dist_wass(d,r,rh)
-# end
-#
-#
-# function ls_loss_eigvals_cont(d,X,Xh,order)
-#     r = ar(X, order) |> polyroots .|> log
-#     rh = ar(Xh, order) |> polyroots .|> log
-#     # weighted_eigval_dist_hungarian(r,rh)
-#     eigval_dist_wass(d,r,rh)
-# end
-#
-# function ls_loss_eigvals_cont_logmag(d,X,Xh,order)
-#     r = ar(X, order) |> polyroots .|> log
-#     rh = ar(Xh, order) |> polyroots .|> log
-#     # weighted_eigval_dist_hungarian(r,rh)
-#     eigval_dist_wass_logmag(d,r,rh)
-# end
-
 
 function batch_loss(bs::Int, loss, X, Xh)
     l = zero(eltype(Xh))
@@ -391,12 +399,19 @@ function c∫(f,a,b;kwargs...)
     sol   = solve(prob,Tsit5();reltol=1e-7,abstol=1e-8,kwargs...)
 end
 
-@inline ControlSystems.evalfr(::Discrete, w, a::AbstractArray) = (n=length(a);1/sum(j->a[j]*exp(im*w*(n-j)), 1:n))
-@inline ControlSystems.evalfr(d::Discrete, w, a::AR) = evalfr(d,w,denvec(Discrete(), a))
-@inline ControlSystems.evalfr(r::DiscreteRoots, w) = evalfr(Discrete(),w,roots2poly(r))
-@inline ControlSystems.evalfr(::Continuous, w, a::AbstractArray) = (n=length(a);1/sum(j->a[j]*(im*w)^(n-j), 1:n))
-@inline ControlSystems.evalfr(d::Continuous, w, a::AR) = evalfr(d,w,denvec(Continuous(), a))
-@inline ControlSystems.evalfr(r::ContinuousRoots, w) = evalfr(Continuous(),w,roots2poly(r))
+@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray) = (n=length(a);abs2(1/sum(j->a[j]*exp(im*w*(n-j)), 1:n)))
+@inline ControlSystems.evalfr(d::Discrete, m::Identity, w, a::AR) = evalfr(d,m,w,denvec(Discrete(), a))
+@inline ControlSystems.evalfr(r::DiscreteRoots, m::Identity, w) = evalfr(Discrete(),m,w,roots2poly(r))
+@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray) = (n=length(a);abs2(1/sum(j->a[j]*(im*w)^(n-j), 1:n)))
+@inline ControlSystems.evalfr(d::Continuous, m::Identity, w, a::AR) = evalfr(d,m,w,denvec(Continuous(), a))
+@inline ControlSystems.evalfr(r::ContinuousRoots, m::Identity, w) = evalfr(Continuous(),m,w,roots2poly(r))
+
+@inline ControlSystems.evalfr(::Discrete, m::Log, w, a::AbstractArray) = (n=length(a);-log(abs2(sum(j->a[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π))
+@inline ControlSystems.evalfr(d::Discrete, m::Log, w, a::AR) = evalfr(d,m,w,denvec(Discrete(), a))
+@inline ControlSystems.evalfr(r::DiscreteRoots, m::Log, w) = evalfr(Discrete(),m,w,roots2poly(r))
+@inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray) = (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + 1/(2π))
+@inline ControlSystems.evalfr(d::Continuous, m::Log, w, a::AR) = evalfr(d,m,w,denvec(Continuous(), a))
+@inline ControlSystems.evalfr(r::ContinuousRoots, m::Log, w) = evalfr(Continuous(),m,w,roots2poly(r))
 
 function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     σ1    = sol1(interval[2]) # The total energy in the spectrum
@@ -422,8 +437,8 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
 end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
-    f1       = w -> abs2(evalfr(domain(d), w, A1))
-    f2       = w -> abs2(evalfr(domain(d), w, A2))
+    f1       = w -> evalfr(domain(d), magnitude(d), w, A1)
+    f2       = w -> evalfr(domain(d), magnitude(d), w, A2)
     sol1     = c∫(f1,d.interval...)
     sol2     = c∫(f2,d.interval...)
     d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
@@ -437,7 +452,7 @@ end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
     p    = d.p
-    f    = w -> abs(evalfr(domain(d), w, A1))
+    f    = w -> evalfr(domain(d), magnitude(d), w, A1)
     w    = P.freq .* (2π)
     sol  = c∫(f,d.interval...; saveat=w)
     cP   = cumsum(sqrt.(P.power))
@@ -454,14 +469,14 @@ end
 function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     mapfun(As) do A1
-        f1   = w -> abs2(evalfr(domain(d), w, A1))
+        f1   = w -> evalfr(domain(d), magnitude(d), w, A1)
         sol1 = c∫(f1,d.interval...)
     end
 end
 
 # function closed_form_log_wass(a1,a2,p=1)
 #     n     = length(a1)
-#     f1    = w -> -log(abs(evalfr(Discrete(), w, a1))) + 1/(2π)
+    # f1    = w -> -log(abs(evalfr(Discrete(), w, a1))) + 1/(2π)
 #     f2    = w -> -log(abs(evalfr(Discrete(), w, a2))) + 1/(2π)
 #     endpoint = min(∫(f1,0,2π), ∫(f2,0,2π))
 #     F1(w) = ∫(f1,0,w)
