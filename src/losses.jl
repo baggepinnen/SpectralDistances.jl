@@ -32,13 +32,13 @@ end
     domain::D
     assignment::A = SortAssignement(imag)
     transform::F1 = identity
-    weight::F2 = e->1
+    weight::F2 = e->ones(length(e))
 end
 
 @kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
-    weight::F2 = e->s1(abs.(1 ./real.(e)))
+    weight::F2 = residueweight
 end
 
 # TODO: Merge the two above
@@ -172,7 +172,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     e1    = d.transform.(e1)
     e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
-    w1,w2 = d.weight.(e1), d.weight.(e2)
+    w1,w2 = d.weight(e1), d.weight(e2)
     sum(eachindex(e1)) do i
         i1 = I1[i]
         i2 = I2[i]
@@ -382,7 +382,7 @@ end
 
 Integrate `f` between `a` and `b`
 """
-∫(f,a,b) = quadgk(f,a,b; atol=1e-10, rtol=1e-7)[1]::Float64
+∫(f,a,b) = quadgk(f,a,b; atol=1e-12, rtol=1e-7)[1]::Float64
 
 """
     c∫(f, a, b; kwargs...)
@@ -396,7 +396,7 @@ function c∫(f,a,b;kwargs...)
     fi    = (u,p,t) -> f(t)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
-    sol   = solve(prob,Tsit5();reltol=1e-7,abstol=1e-8,kwargs...)
+    sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
 end
 
 @inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray) = (n=length(a);abs2(1/sum(j->a[j]*exp(im*w*(n-j)), 1:n)))

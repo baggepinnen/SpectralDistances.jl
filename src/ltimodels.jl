@@ -308,8 +308,9 @@ function roots2poly(roots)
     Vector(real(p))
 end
 
-function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Real}
-    c = MVector{N+1,Complex{T}}(ntuple(_->0, N+1))
+function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T}
+    vT = T <: Real ? Complex{T} : T
+    c = MVector{N+1,vT}(ntuple(_->0, N+1))
     c[1] = 1
     for i in 2:length(a)
         c[i] = -b*a[i-1] + a[i]
@@ -318,16 +319,21 @@ function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) whe
     c
 end
 
-function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T<:Complex}
-    c = MVector{N+1,T}(ntuple(_->0, N+1))
-    c[1] = 1
-    for i in 2:length(a)
-        c[i] = -b*a[i-1] + a[i]
+# Base.delete_method.(methods(_roots2poly_kernel))
+
+function residues(a::AbstractVector, r = roots(reverse(a)))
+    @assert a[1] ≈ 1
+    n = length(a)-1
+    res = map(r) do r
+        powers = n:-1:1
+        ap     = powers.*a[1:end-1]
+        1/sum(j->ap[j]*r^(n-j), 1:n)
     end
-    c[end] = -b*a[end]
-    c
 end
 
+residues(r::AbstractRoots) = residues(roots2poly(Vector(r)), Vector(r))
+
+# Base.delete_method.(methods(residues))
 """
     poles2model(r::AbstractVector{<:Real}, i::AbstractVector{<:Real})
 
@@ -359,7 +365,7 @@ function plot_assignment(m1,m2)
     plot!(xc,yc, subplot=1, legend=false) |> display
 end
 
-function spectralenergy(G)
+function spectralenergy(G::LTISystem)
     sys = ss(G)
     A = sys.A
     e = eigen(A)
@@ -368,6 +374,18 @@ function spectralenergy(G)
     sys,X = balreal(sys)
     2π*tr(sys.C*X*sys.C')
 end
+
+function spectralenergy(a)
+    @warn "Something is wrong with this method"
+    ac = a .* (-1).^(length(a)-1:-1:0)
+    a2 = conv(ac,a)
+    r2 = roots(reverse(a2))
+    r2 = filter(r -> real(r) < 0, r2)
+    res = residues(a2, r2)
+    2π*sum(res)
+end
+
+
 
 # roots2poly([-1,-2,-3])
 

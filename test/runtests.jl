@@ -130,6 +130,48 @@ Random.seed!(0)
 @test SpectralDistances.reflectd(complex(0,2)) ≈ 0 + 0.5im
 @test SpectralDistances.reflectd(complex(0,-2)) ≈ 0 - 0.5im
 
+
+
+
+@testset "residues and roots" begin
+
+    a = randn(5); a[1]=1;a
+    r = roots(reverse(a))
+    @test roots2poly(r) ≈ a
+
+
+    b,a = 1,0.1randn(5)
+    a[1] = 1
+    r   = roots(reverse(a))
+    G   = tf(b,a)
+    w   = im
+    F = evalfr(G,w)[]
+    a2 = roots2poly(r)
+    @assert a ≈ a2
+    roots(reverse(a2))
+    @test sum(r) do r
+        powers = length(a)-1:-1:1
+        ap     = powers.*a[1:end-1]
+        G      = tf(b,ap)
+        evalfr(G,r)[] *1/(w - r)
+    end ≈ F
+
+
+
+    res = residues(a)
+    @test sum(eachindex(r)) do i
+        res[i]/(w-r[i])
+    end ≈ F
+
+    @test prod(eachindex(r)) do i
+        1/(w-r[i])
+    end ≈ F
+
+
+
+
+end
+
 end
 
 
