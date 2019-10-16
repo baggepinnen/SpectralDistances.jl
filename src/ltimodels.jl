@@ -285,13 +285,19 @@ function d2c(a,c=1)
     e
 end
 
-function roots2polyold(roots)
-    p = [1.]
-    for r in roots
-        p = DSP.conv(p, [1.,-r])
+function polyconv(a,b)
+    na,nb = length(a),length(b)
+    c = zeros(eltype(a), na+nb-1)
+    for i = 1:length(c)
+        for j = 1:min(i,na,nb)
+            av = j ∈ eachindex(a) ? a[j] : zero(eltype(a))
+            bv = i-j+1 ∈ eachindex(b) ? b[i-j+1] : zero(eltype(b))
+            c[i] += av*bv
+        end
     end
-    real(p)
+    c
 end
+
 
 using StaticArrays
 
@@ -322,7 +328,7 @@ end
 # Base.delete_method.(methods(_roots2poly_kernel))
 
 function residues(a::AbstractVector, r = roots(reverse(a)))
-    @assert a[1] ≈ 1
+    a[1] ≈ 1 || @warn "a[1] is $(a[1])"
     n = length(a)-1
     res = map(r) do r
         powers = n:-1:1
@@ -368,6 +374,7 @@ end
 function spectralenergy(G::LTISystem)
     sys = ss(G)
     A = sys.A
+    eltype(A) <: Complex && @warn "This function is known to be incorrect for complex systems"
     e = eigen(A)
     e.values .= reflect(ContinuousRoots(e.values))
     sys.A .= real((e.vectors) * Diagonal(e.values) * inv(e.vectors))
@@ -375,14 +382,45 @@ function spectralenergy(G::LTISystem)
     2π*tr(sys.C*X*sys.C')
 end
 
-function spectralenergy(a)
-    @warn "Something is wrong with this method"
+spectralenergy(a) = spectralenergy(determine_domain(roots(reverse(a))), a)
+spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m))
+
+function spectralenergy(d::TimeDomain, a::AbstractVector)
     ac = a .* (-1).^(length(a)-1:-1:0)
-    a2 = conv(ac,a)
+    a2 = polyconv(ac,a)
     r2 = roots(reverse(a2))
-    r2 = filter(r -> real(r) < 0, r2)
+    filterfun = d isa Continuous ? r -> real(r) < 0 : r -> abs(r) < 1
+    r2 = filter(filterfun, r2)
     res = residues(a2, r2)
-    2π*sum(res)
+    e = 2π*sum(res)
+    abs(imag(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
+    abs(e)
+end
+
+function determine_domain(r)
+    if all(<(0), real.(r)) # Seems like Cont
+        if all(abs.(r)) < 1 # Seems like Disc as well
+            error("I can't determine if domain is discrete or continuous. Wrap in the correct wrapper (ContinuousRoots / DiscreteRoots)")
+        end
+        return Continuous()
+    end
+    all(abs.(r)) < 1 || error("I can't determine if domain is discrete or continuous. Wrap in the correct wrapper (ContinuousRoots / DiscreteRoots)")
+    Discrete()
+end
+
+function AutoRoots(r)
+    determine_domain(r) isa Discrete ? DiscreteRoots(r) : ContinuousRoots(r)
+end
+normalization_factor(r) = normalization_factor(AutoRoots(r))
+
+
+function normalization_factor(r::AbstractRoots)
+    e = spectralenergy(domain(r), roots2poly(r))
+    n = length(r)
+    s = e^(1/(2n-1))
+end
+function normalize_energy(r)
+    r .* normalization_factor(r)
 end
 
 

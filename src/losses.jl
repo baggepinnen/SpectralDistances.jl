@@ -39,6 +39,8 @@ end
     domain::D
     transform::F1 = identity
     weight::F2 = residueweight
+    β::Float64 = 0.01
+    iters::Int = 10000
 end
 
 # TODO: Merge the two above
@@ -187,7 +189,7 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     D     = distmat_euclidean(e1,e2)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = sinkhorn(D,w1,w2,β=0.01, iters=10000)[1]
+    C     = IPOT(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     sum(C.*D)
 end
 
@@ -399,23 +401,22 @@ function c∫(f,a,b;kwargs...)
     sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
 end
 
-@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray) = (n=length(a);abs2(1/sum(j->a[j]*exp(im*w*(n-j)), 1:n)))
-@inline ControlSystems.evalfr(d::Discrete, m::Identity, w, a::AR) = evalfr(d,m,w,denvec(Discrete(), a))
-@inline ControlSystems.evalfr(r::DiscreteRoots, m::Identity, w) = evalfr(Discrete(),m,w,roots2poly(r))
-@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray) = (n=length(a);abs2(1/sum(j->a[j]*(im*w)^(n-j), 1:n)))
-@inline ControlSystems.evalfr(d::Continuous, m::Identity, w, a::AR) = evalfr(d,m,w,denvec(Continuous(), a))
-@inline ControlSystems.evalfr(r::ContinuousRoots, m::Identity, w) = evalfr(Continuous(),m,w,roots2poly(r))
+@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
+        (n=length(a);abs2(scale/sum(j->a[j]*exp(im*w*(n-j)), 1:n)))
+@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, scale::Number=1) =
+        (n=length(a);abs2(scale/sum(j->a[j]*(im*w)^(n-j), 1:n)))
+@inline ControlSystems.evalfr(::Discrete, m::Log, w, a::AbstractArray, scale::Number=1) =
+        (n=length(a);-log(abs2(sum(j->a[j]*exp(im*w*(n-j)), 1:n))) + scale/(2π))
+@inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
+        (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + scale/(2π))
 
-@inline ControlSystems.evalfr(::Discrete, m::Log, w, a::AbstractArray) = (n=length(a);-log(abs2(sum(j->a[j]*exp(im*w*(n-j)), 1:n))) + 1/(2π))
-@inline ControlSystems.evalfr(d::Discrete, m::Log, w, a::AR) = evalfr(d,m,w,denvec(Discrete(), a))
-@inline ControlSystems.evalfr(r::DiscreteRoots, m::Log, w) = evalfr(Discrete(),m,w,roots2poly(r))
-@inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray) = (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + 1/(2π))
-@inline ControlSystems.evalfr(d::Continuous, m::Log, w, a::AR) = evalfr(d,m,w,denvec(Continuous(), a))
-@inline ControlSystems.evalfr(r::ContinuousRoots, m::Log, w) = evalfr(Continuous(),m,w,roots2poly(r))
+@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale)
+@inline ControlSystems.evalfr(r::AbstractRoots, m, w, scale=1) = evalfr(domain(r),m,w,roots2poly(r), scale)
+
 
 function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
-    σ1    = sol1(interval[2]) # The total energy in the spectrum
-    σ2    = sol2(interval[2]) # The total energy in the spectrum
+    @show σ1    = sol1(interval[2]) # The total energy in the spectrum
+    @show σ2    = sol2(interval[2]) # The total energy in the spectrum
     F1(w) = sol1(w)/σ1
     F2(w) = sol2(w)/σ2
     ∫(z->abs(inv(F1, interval)(z) - inv(F2, interval)(z))^p, 0, 1)
@@ -437,10 +438,12 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
 end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
-    f1       = w -> evalfr(domain(d), magnitude(d), w, A1)
-    f2       = w -> evalfr(domain(d), magnitude(d), w, A2)
-    sol1     = c∫(f1,d.interval...)
-    sol2     = c∫(f2,d.interval...)
+    e1   = 1/sqrt(spectralenergy(domain(d), A1))
+    f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
+    e2   = 1/sqrt(spectralenergy(domain(d), A2))
+    f2   = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
+    sol1 = c∫(f1,d.interval...)
+    sol2 = c∫(f2,d.interval...)
     d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
     evaluate(d, sol1, sol2)
 end
@@ -452,7 +455,8 @@ end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
     p    = d.p
-    f    = w -> evalfr(domain(d), magnitude(d), w, A1)
+    e    = 1/sqrt(spectralenergy(domain(d), A1))
+    f    = w -> evalfr(domain(d), magnitude(d), w, A1, e)
     w    = P.freq .* (2π)
     sol  = c∫(f,d.interval...; saveat=w)
     cP   = cumsum(sqrt.(P.power))
@@ -469,7 +473,8 @@ end
 function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     mapfun(As) do A1
-        f1   = w -> evalfr(domain(d), magnitude(d), w, A1)
+        e1 = 1/sqrt(spectralenergy(domain(d), A1))
+        f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
         sol1 = c∫(f1,d.interval...)
     end
 end

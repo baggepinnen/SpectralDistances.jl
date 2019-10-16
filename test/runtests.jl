@@ -133,6 +133,16 @@ Random.seed!(0)
 
 
 
+a = randn(5)
+b = randn(5)
+@test polyconv(a,b) ≈ DSP.conv(a,b)
+
+a = randn(5)
+b = randn(10)
+@test polyconv(a,b) ≈ DSP.conv(a,b)
+
+
+
 @testset "residues and roots" begin
 
     a = randn(5); a[1]=1;a

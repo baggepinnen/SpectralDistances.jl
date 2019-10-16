@@ -53,6 +53,9 @@ domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
 domain_transform(d::Discrete,e::DiscreteRoots) = e
+domain(::DiscreteRoots) = Discrete()
+domain(::ContinuousRoots) = Continuous()
+
 
 eigsort(e) = sort(e, by=imag)
 anglesort(e) = sort(e, by=angle)
