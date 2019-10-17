@@ -415,8 +415,10 @@ end
 
 
 function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
-    @show σ1    = sol1(interval[2]) # The total energy in the spectrum
-    @show σ2    = sol2(interval[2]) # The total energy in the spectrum
+    σ1    = sol1(interval[2]) # The total energy in the spectrum
+    σ2    = sol2(interval[2]) # The total energy in the spectrum
+    abs(σ1-1) > 0.05 && @warn "Cumulative spectral energy not equal to 1, σ1 = $(σ1)"
+    abs(σ2-1) > 0.05 && @warn "Cumulative spectral energy not equal to 1, σ2 = $(σ2)"
     F1(w) = sol1(w)/σ1
     F2(w) = sol2(w)/σ2
     ∫(z->abs(inv(F1, interval)(z) - inv(F2, interval)(z))^p, 0, 1)
@@ -430,6 +432,8 @@ end
 function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     σ1    = sol1(interval[2]) # The total energy in the spectrum
     σ2    = sol2(interval[2]) # The total energy in the spectrum
+    abs(σ1-1) > 0.05 && @warn "Cumulative spectral energy not equal to 1, σ1 = $(σ1)"
+    abs(σ2-1) > 0.05 && @warn "Cumulative spectral energy not equal to 1, σ2 = $(σ2)"
     F1(w) = sol1(w)/σ1
     F2(w) = sol2(w)/σ2
     ∫(interval...) do w
