@@ -356,20 +356,7 @@ function Base.rand(::Type{AR}, dr, di, n=2)
     poles2model(rand(dr,n), rand(di,n))
 end
 
-"""
-    plot_assignment(m1, m2)
 
-Plots the poles of two models and the optimal assignment between them
-"""
-function plot_assignment(m1,m2)
-    plot(cos.(0:0.1:2pi),sin.(0:0.1:2pi),l=(:dash, :black), subplot=1, layout=1)
-    scatter!(real.(roots(m1)), imag.(roots(m1)), c=:blue, subplot=1, markerstrokealpha=0.1)
-    scatter!(real.(roots(m2)), imag.(roots(m2)), c=:red, subplot=1, markerstrokealpha=0.1)
-    hungariansort(roots(m1), roots(m2))
-    xc = [real(roots(m1)) real(roots(m2)) fill(Inf, length(m1.p))]'[:]
-    yc = [imag(roots(m1)) imag(roots(m2)) fill(Inf, length(m1.p))]'[:]
-    plot!(xc,yc, subplot=1, legend=false) |> display
-end
 
 function spectralenergy(G::LTISystem)
     sys = ss(G)
@@ -394,17 +381,21 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
     res = residues(a2, r2)
     e = 2π*sum(res)
     abs(imag(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
-    abs(e)
+    ae = abs(e)
+    if ae < 1e-3 && !(eltype(a) <: DoubleFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+        return eltype(a)(spectralenergy(d, Double64.(a)))
+    end
+    ae
 end
 
 function determine_domain(r)
     if all(<(0), real.(r)) # Seems like Cont
-        if all(abs.(r)) < 1 # Seems like Disc as well
+        if all(<(1), abs.(r)) # Seems like Disc as well
             error("I can't determine if domain is discrete or continuous. Wrap in the correct wrapper (ContinuousRoots / DiscreteRoots)")
         end
         return Continuous()
     end
-    all(abs.(r)) < 1 || error("I can't determine if domain is discrete or continuous. Wrap in the correct wrapper (ContinuousRoots / DiscreteRoots)")
+    all(<(1), abs.(r)) || error("I can't determine if domain is discrete or continuous. Wrap in the correct wrapper (ContinuousRoots / DiscreteRoots)")
     Discrete()
 end
 
