@@ -20,11 +20,13 @@ struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
     DiscreteRoots(r) = new{eltype(r), typeof(r)}(reflectd.(anglesort(r)))
 end
+StaticArrays.similar_type(r::DiscreteRoots{T,V}) where {T,V} = DiscreteRoots
 
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
     ContinuousRoots(r) = new{eltype(r), typeof(r)}(reflectc.(eigsort(r)))
 end
+StaticArrays.similar_type(r::ContinuousRoots{T,V}) where {T,V} = ContinuousRoots
 
 """
     DiscreteRoots(r::ContinuousRoots) = begin
@@ -32,12 +34,14 @@ end
 Represents roots of a polynomial in discrete time
 """
 DiscreteRoots(r::ContinuousRoots) = domain_transform(Discrete(), r)
+DiscreteRoots(r::DiscreteRoots) = r
 """
     ContinuousRoots(r::DiscreteRoots) = begin
 
 Represents roots of a polynomial in continuous time
 """
 ContinuousRoots(r::DiscreteRoots) = domain_transform(Continuous(), r)
+ContinuousRoots(r::ContinuousRoots) = r
 
 Base.convert(::Type{DiscreteRoots}, r::Vector{<: Complex}) = DiscreteRoots(r)
 Base.convert(::Type{ContinuousRoots}, r::Vector{<: Complex}) = ContinuousRoots(r)

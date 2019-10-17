@@ -382,7 +382,7 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
     e = 2π*sum(res)
     abs(imag(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
     ae = abs(e)
-    if ae < 1e-3 && !(eltype(a) <: DoubleFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+    if ae < 1e-3  && !(eltype(a) <: DoubleFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         return eltype(a)(spectralenergy(d, Double64.(a)))
     end
     ae
