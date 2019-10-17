@@ -189,7 +189,7 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     D     = distmat_euclidean(e1,e2)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = IPOT(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
+    C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     sum(C.*D)
 end
 
