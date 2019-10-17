@@ -129,7 +129,7 @@ distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(
 function preprocess_roots(d::AbstractRootDistance, e::AbstractRoots)
     e2 = domain_transform(d,e)
     T = similar_type(e2)
-    T(d.transform.(e))
+    T(d.transform.(e2))
 end
 
 function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
