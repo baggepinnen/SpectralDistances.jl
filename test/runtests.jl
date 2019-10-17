@@ -142,6 +142,10 @@ b = randn(10)
 @test polyconv(a,b) ≈ DSP.conv(a,b)
 
 
+rd  = EuclideanRootDistance(domain=Continuous(), weight=residueweight)
+m = AR([1., -0.1])
+@test rd(m,m) == 0
+@test SpectralDistances.preprocess_roots(rd, m)[] ≈ -2.3025850929940455
 
 @testset "residues and roots" begin
 

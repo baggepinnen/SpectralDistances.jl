@@ -126,14 +126,27 @@ distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n]
 
 distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
 
-evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, roots(w1), roots(w2))
-evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA) = evaluate(d, pole(w1), pole(w2)) + evaluate(d, tzero(w1), tzero(w2))
+function preprocess_roots(d::AbstractRootDistance, e::AbstractRoots)
+    e2 = domain_transform(d,e)
+    T = similar_type(e2)
+    T(d.transform.(e2))
+end
+
+function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
+    e = roots(m)
+    preprocess_roots(d, e)
+end
+function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
+    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2))
+end
+function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
+    d1 = evaluate(d, preprocess_roots(d,pole(w1)), preprocess_roots(d,pole(w2)))
+    d2 = evaluate(d, preprocess_roots(d,tzero(w1)), preprocess_roots(d,tzero(w2)))
+    d1 + d2
+end
 
 
 function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     e1,e2 = toreim(e1), toreim(e2)
     n     = length(e1[1])
     dist  = d.distance
@@ -170,9 +183,6 @@ function logkernelsum(e1,e2,λ)
 end
 
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
     sum(eachindex(e1)) do i
@@ -183,9 +193,6 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
 end
 
 function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     D     = distmat_euclidean(e1,e2)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
@@ -195,18 +202,12 @@ end
 
 manhattan(c) = abs(c.re) + abs(c.im)
 function evaluate(d::ManhattanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     I1,I2 = d.assignment(e1, e2)
     sum(manhattan, e1[I1]-e2[I2])
 end
 
 function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     λ     = d.λ
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     error("this does not yield symmetric results")
     # e1 = [complex((logmag(magangle(e1)))...) for e1 in e1]
     # e2 = [complex((logmag(magangle(e2)))...) for e2 in e2]
@@ -220,10 +221,7 @@ function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1:
     dm1 - 2dm12 + dm2
 end
 function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    e1,e2 = domain_transform(d,e1), domain_transform(d,e2)
     λ     = d.λ
-    e1    = d.transform.(e1)
-    e2    = d.transform.(e2)
     # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
     # dm2   = exp.(.- λ .* distmat(d.distance, e2,e2))
     # dm12  = exp.(.- λ .* distmat(d.distance, e1,e2))

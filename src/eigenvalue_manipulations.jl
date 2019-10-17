@@ -138,7 +138,7 @@ function polar(e)
     abs.(e), angle.(e)
 end
 
-function residueweight(e)
+function residueweight(e::AbstractRoots)
     res = residues(ContinuousRoots(e))
     s1(abs.(π*abs2.(res)./ real.(e)))
 end
