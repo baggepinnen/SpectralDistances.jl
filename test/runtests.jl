@@ -117,6 +117,11 @@ end
     @test all(<(1) ∘ abs, reflect(ed))
     @test all(<(0) ∘ real, reflect(ec))
 
+
+    @test SpectralDistances.determine_domain(0.1randn(10)) isa Discrete
+    @test SpectralDistances.determine_domain(randn(10).-4) isa Continuous
+    @test_throws Exception SpectralDistances.determine_domain(0.1randn(10).-0.3)
+
 end
 
 @testset "polynomial acrobatics" begin
