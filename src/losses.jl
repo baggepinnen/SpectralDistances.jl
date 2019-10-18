@@ -69,8 +69,10 @@ end
     iters::Int = 1000
 end
 
-struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
+@kwdef struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
     distmat::DT
+    β::Float64 = 0.01
+    iters::Int = 10000
 end
 
 @kwdef struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
@@ -201,7 +203,7 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
         @warn "Nan in SinkhornRootDistance, increasing precision"
         C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
         any(isnan, C) && @error "Sinkhorn failed, consider increasing β"
-        eltype(w1).(C)
+        eltype(D).(C)
     end
     sum(C.*D)
 end
@@ -311,12 +313,19 @@ function evaluate(d::OptimalTransportModelDistance, b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
-function evaluate(d::OptimalTransportSpectralDistance, w1, w2)
-    plan = IPOT(d.distmat, w1, w2; iters=1000)[1]
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
-    cost = sum(plan .* d.distmat)
+function evaluate(d::OptimalTransportSpectralDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
+    D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq) : d.distmat
+    if w1.freq == w2.freq
+        C = trivial_transport(w1.power,w2.power)
+    else
+        C = sinkhorn(D,w1.power,w2.power,β=d.β, iters=d.iters)[1]
+    end
+    cost = sum(C .* D)
 end
 
+function evaluate(d::OptimalTransportSpectralDistance, x1, x2)
+    evaluate(d, welch_pgram(x1), welch_pgram(x2))
+end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
 function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
@@ -403,6 +412,11 @@ function c∫(f,a,b;kwargs...)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
     sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
+    if length(sol) <= 1 # In this case the solver failed due to numerical issues
+        prob  = ODEProblem(fi,big(0.),big.(tspan))
+        sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
+    end
+    sol
 end
 
 @inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
