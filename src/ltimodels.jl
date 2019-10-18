@@ -12,20 +12,20 @@ Represents an all-pole transfer function, i.e., and AR model
 - `ac`: denvec cont. time
 - `p`: poles
 """
-struct AR{T} <: AbstractModel
+struct AR{T,Rt} <: AbstractModel  where Rt <: DiscreteRoots
     a::T
     ac::T
-    p::DiscreteRoots
+    p::Rt
     function AR(xo::AbstractTuple,λ=1e-2)
         a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
-        r = hproots(reverse(nograd(a)))
+        r = DiscreteRoots(hproots(reverse(nograd(a))))
         ac = roots2poly(log.(r))
-        new{typeof(a)}(a, ac, r)
+        new{typeof(a), typeof(r)}(a, ac, r)
     end
     function AR(a::AbstractVector)
         r = DiscreteRoots(hproots(reverse(a)))
         ac = roots2poly(log.(r))
-        new{typeof(a)}(a, ac, r)
+        new{typeof(a), typeof(r)}(a, ac, r)
     end
 end
 
@@ -42,13 +42,13 @@ Represents an ARMA model, i.e., transfer function
 - `z`: zeros
 - `p`: poles
 """
-struct ARMA{T} <: AbstractModel
+struct ARMA{T,Rt} <: AbstractModel  where Rt <: DiscreteRoots
     c::T
     cc::T
     a::T
     ac::T
-    z::DiscreteRoots
-    p::DiscreteRoots
+    z::Rt
+    p::Rt
 end
 
 
