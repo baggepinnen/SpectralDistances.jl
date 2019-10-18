@@ -210,6 +210,7 @@ end
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         @show d = D(domain=Continuous())
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
+        d isa Union{ClosedFormSpectralDistance, CramerSpectralDistance} && continue
         @show d = D(domain=Discrete())
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
     end
@@ -227,6 +228,7 @@ end
         @show d = D(domain=Continuous())
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
+        d isa Union{ClosedFormSpectralDistance, CramerSpectralDistance} && continue
         @show d = D(domain=Discrete())
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10

@@ -18,12 +18,12 @@ struct AR{T} <: AbstractModel
     p::DiscreteRoots
     function AR(xo::AbstractTuple,λ=1e-2)
         a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
-        r = roots(reverse(nograd(a)))
+        r = hproots(reverse(nograd(a)))
         ac = roots2poly(log.(r))
         new{typeof(a)}(a, ac, r)
     end
     function AR(a::AbstractVector)
-        r = DiscreteRoots(roots(reverse(a)))
+        r = DiscreteRoots(hproots(reverse(a)))
         ac = roots2poly(log.(r))
         new{typeof(a)}(a, ac, r)
     end
@@ -51,6 +51,8 @@ struct ARMA{T} <: AbstractModel
     p::DiscreteRoots
 end
 
+
+hproots(a::AbstractVector{T}) where T = roots(Double64.(a))
 ControlSystems.tf(m::AR, ts) = tf(1, m.a, ts)
 ControlSystems.tf(m::AR) = tf(1, m.ac)
 ControlSystems.tf(m::ARMA, ts) = tf(m.c, m.a, ts)
@@ -380,7 +382,6 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
     r2 = filter(filterfun, r2)
     res = residues(a2, r2)
     e = 2π*sum(res)
-    abs(imag(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
     ae = real(e)
     if ae < 1e-3  && !((eltype(a) <: DoubleFloat) || (eltype(a) <: BigFloat)) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         if ae > 1e-12
@@ -389,6 +390,7 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
             return eltype(a)(spectralenergy(d, big.(a)))
         end
     end
+    abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
     ae
 end
 
