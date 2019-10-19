@@ -390,7 +390,7 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
             return eltype(a)(spectralenergy(d, big.(a)))
         end
     end
-    abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(imag(e))"
+    abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"
     ae
 end
 

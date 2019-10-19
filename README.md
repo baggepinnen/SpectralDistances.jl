@@ -27,7 +27,7 @@ ManhattanRootDistance
 HungarianRootDistance
 KernelWassersteinRootDistance
 OptimalTransportModelDistance
-OptimalTransportSpectralDistance
+WelchOptimalTransportDistance
 ClosedFormSpectralDistance
 EnergyDistance
 ```

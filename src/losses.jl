@@ -69,10 +69,12 @@ end
     iters::Int = 1000
 end
 
-@kwdef struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
+@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractDistance
     distmat::DT
     β::Float64 = 0.01
     iters::Int = 10000
+    args::AT = ()
+    kwargs::KWT = NamedTuple()
 end
 
 @kwdef struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
@@ -200,7 +202,7 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     w2    = d.weight(e2)
     C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     if any(isnan, C)
-        @warn "Nan in SinkhornRootDistance, increasing precision"
+        @info "Nan in SinkhornRootDistance, increasing precision"
         C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
         any(isnan, C) && @error "Sinkhorn failed, consider increasing β"
         eltype(D).(C)
@@ -313,18 +315,18 @@ function evaluate(d::OptimalTransportModelDistance, b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
-function evaluate(d::OptimalTransportSpectralDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
+function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq) : d.distmat
-    if w1.freq == w2.freq
-        C = trivial_transport(w1.power,w2.power)
+    if issorted(w1.freq) && issorted(w2.freq)
+        C = trivial_transport(s1(w1.power),s1(w2.power), 1e-4)
     else
-        C = sinkhorn(D,w1.power,w2.power,β=d.β, iters=d.iters)[1]
+        C = sinkhorn(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
     end
     cost = sum(C .* D)
 end
 
-function evaluate(d::OptimalTransportSpectralDistance, x1, x2)
-    evaluate(d, welch_pgram(x1), welch_pgram(x2))
+function evaluate(d::WelchOptimalTransportDistance, x1, x2)
+    evaluate(d, welch_pgram(x1, d.args...; d.kwargs...), welch_pgram(x2, d.args...; d.kwargs...))
 end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
