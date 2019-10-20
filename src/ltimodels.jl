@@ -53,15 +53,37 @@ end
 
 
 hproots(a::AbstractVector{T}) where T = roots(Double64.(a))
+"""
+    ControlSystems.tf(m::AR, ts)
+
+Convert model to a transfer function compatible with ControlSystems.jl
+"""
 ControlSystems.tf(m::AR, ts) = tf(1, m.a, ts)
+"""
+    ControlSystems.tf(m::AR)
+
+Convert model to a transfer function compatible with ControlSystems.jl
+"""
 ControlSystems.tf(m::AR) = tf(1, m.ac)
 ControlSystems.tf(m::ARMA, ts) = tf(m.c, m.a, ts)
 ControlSystems.tf(m::ARMA) = tf(m.cc, m.ac)
+"""
+    roots(m::AbstractModel)
+
+Returns the roots of a model
+"""
+roots
+
 PolynomialRoots.roots(m::AR) = m.p
 PolynomialRoots.roots(m::ARMA) = m.p
 ControlSystems.pole(m::AR) = m.p
 ControlSystems.pole(m::ARMA) = m.p
 ControlSystems.tzero(m::ARMA) = m.z
+"""
+    ControlSystems.denvec(m::AbstractModel) = begin
+
+DOCSTRING
+"""
 ControlSystems.denvec(m::AbstractModel) = m.a
 ControlSystems.numvec(m::ARMA) = m.c
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
@@ -83,10 +105,22 @@ function domain_transform(d::Continuous, m::AR)
     roots2poly(p)
 end
 
+"Abstract type that represents a way to fit a model to data"
 abstract type FitMethod end
 
 fitmodel(fm,X::AbstractModel) = X
 
+"""
+    PLR <: FitMethod
+
+DOCSTRING
+
+#Arguments:
+- `nc::Int`: order of numerator
+- `na::Int`: order of denomenator
+- `initial_order::Int = 100`: This order model is fit in initial step
+- `λ::Float64 = 0.0001`: reg factor
+"""
 @kwdef struct PLR <: FitMethod
     nc::Int
     na::Int
@@ -101,6 +135,14 @@ function fitmodel(fm::PLR,X::AbstractArray)
 end
 (fm::PLR)(X) = fitmodel(fm, X)
 
+"""
+    LS <: FitMethod
+
+
+#Arguments:
+- `na::Int`: number of roots (order of the system)
+- `λ::Float64 = 0.01`: reg factor
+"""
 @kwdef struct LS <: FitMethod
     na::Int
     λ::Float64 = 1e-2
@@ -127,6 +169,16 @@ function ls(yA::AbstractTuple,λ=1e-2)
     (A2'A2)\(A'y)
 end
 
+"""
+    AR(X::AbstractArray, order::Int, λ=0.01) = begin
+
+DOCSTRING
+
+#Arguments:
+- `X`: a signal
+- `order`: number of roots
+- `λ`: reg factor
+"""
 AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
 
 """
@@ -301,7 +353,6 @@ function polyconv(a,b)
 end
 
 
-using StaticArrays
 
 """
     roots2poly(roots)
@@ -329,6 +380,11 @@ end
 
 # Base.delete_method.(methods(_roots2poly_kernel))
 
+"""
+    residues(a::AbstractVector, r=roots(reverse(a)))
+
+Returns a vector of residues for the system represented by denominator polynomial `a`
+"""
 function residues(a::AbstractVector, r = roots(reverse(a)))
     a[1] ≈ 1 || @warn "a[1] is $(a[1])"
     n = length(a)-1
@@ -339,6 +395,12 @@ function residues(a::AbstractVector, r = roots(reverse(a)))
     end
 end
 
+"""
+    residues(r::AbstractRoots)
+
+Returns a vector of residues for the system represented by roots `r`
+
+"""
 residues(r::AbstractRoots) = residues(roots2poly(Vector(r)), Vector(r))
 
 # Base.delete_method.(methods(residues))
@@ -359,7 +421,11 @@ function Base.rand(::Type{AR}, dr, di, n=2)
 end
 
 
+"""
+    spectralenergy(G::LTISystem)
 
+Calculates the energy in the spectrum associated with `G`
+"""
 function spectralenergy(G::LTISystem)
     sys = ss(G)
     A = sys.A
@@ -374,6 +440,11 @@ end
 spectralenergy(a) = spectralenergy(determine_domain(roots(reverse(a))), a)
 spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m))
 
+"""
+    spectralenergy(d::TimeDomain, a::AbstractVector)
+
+Calculates the energy in the spectrum associated with denominator polynomial `a`
+"""
 function spectralenergy(d::TimeDomain, a::AbstractVector)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
@@ -394,6 +465,11 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
     ae
 end
 
+"""
+    determine_domain(r)
+
+Tries to automatically figure out which time domain the roots represent. Throws an error if ambiguous.
+"""
 function determine_domain(r)
     if all(<(0), real.(r)) # Seems like Cont
         if all(<(1), abs.(r)) # Seems like Disc as well
