@@ -411,10 +411,17 @@ function c∫(f,a,b;kwargs...)
     fi    = (u,p,t) -> f(t)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
-    sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
-    if length(sol) <= 1 # In this case the solver failed due to numerical issues
-        prob  = ODEProblem(fi,big(0.),big.(tspan))
+    retry = false
+    try
         sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
+    catch
+        retry = true
+    end
+    retry = retry || length(sol) <= 1 || abs(sol[end]-1) > 0.1
+    if retry # In this case the solver failed due to numerical issues
+        @warn "Spectral integration failed, increasing precision"
+        prob  = ODEProblem(fi,big(0.),big.(tspan))
+        sol   = solve(prob,Vern9();reltol=1e-16,abstol=1e-45,kwargs...)
     end
     sol
 end
