@@ -12,21 +12,37 @@ Represents an all-pole transfer function, i.e., and AR model
 - `ac`: denvec cont. time
 - `p`: poles
 """
-struct AR{T,Rt} <: AbstractModel  where Rt <: DiscreteRoots
+struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     a::T
     ac::T
     p::Rt
+    pc::Ct
     function AR(xo::AbstractTuple,λ=1e-2)
         a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
         r = DiscreteRoots(hproots(reverse(nograd(a))))
-        ac = roots2poly(log.(r))
-        new{typeof(a), typeof(r)}(a, ac, r)
+        rc = ContinuousRoots(r)
+        ac = roots2poly(rc)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     end
     function AR(a::AbstractVector)
         r = DiscreteRoots(hproots(reverse(a)))
-        ac = roots2poly(log.(r))
-        new{typeof(a), typeof(r)}(a, ac, r)
+        rc = ContinuousRoots(r)
+        ac = roots2poly(rc)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     end
+    function AR(rc::ContinuousRoots)
+        r = DiscreteRoots(rc)
+        a = roots2poly(r)
+        ac = roots2poly(rc)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+    end
+    function AR(rc::DiscreteRoots)
+        rc = ContinuousRoots(r)
+        a = roots2poly(r)
+        ac = roots2poly(rc)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+    end
+
 end
 
 """
@@ -74,18 +90,17 @@ Returns the roots of a model
 """
 roots
 
-PolynomialRoots.roots(m::AR) = m.p
-PolynomialRoots.roots(m::ARMA) = m.p
-ControlSystems.pole(m::AR) = m.p
-ControlSystems.pole(m::ARMA) = m.p
+PolynomialRoots.roots(::Discrete, m::AR) = m.p
+PolynomialRoots.roots(::Continuous, m::AR) = m.pc
+PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
+PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
+ControlSystems.pole(::TimeDomain, m::AbstractModel) = roots(d,m)
 ControlSystems.tzero(m::ARMA) = m.z
 """
     ControlSystems.denvec(m::AbstractModel) = begin
 
 DOCSTRING
 """
-ControlSystems.denvec(m::AbstractModel) = m.a
-ControlSystems.numvec(m::ARMA) = m.c
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac

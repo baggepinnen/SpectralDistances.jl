@@ -64,6 +64,7 @@ Simple euclidean distance between roots of transfer functions
 - `assignment::A =` [`SortAssignement`](@ref)`(imag)`: Determines how roots are assigned. An alternative is `HungarianAssignement`
 - `transform::F1 = identity`: DESCRIPTION
 - `weight` : A function used to calculate weights for the induvidual root distances. A good option is [`residueweight`](@ref)
+- `p::Int = 2` : Order of the distance
 """
 EuclideanRootDistance
 @kwdef struct EuclideanRootDistance{D,A,F1,F2} <: AbstractRootDistance
@@ -71,6 +72,7 @@ EuclideanRootDistance
     assignment::A = SortAssignement(imag)
     transform::F1 = identity
     weight::F2 = e->ones(length(e))
+    p::Int = 2
 end
 
 """
@@ -81,7 +83,7 @@ The Sinkhorn distance between roots. The weights are provided by `weight`, which
 #Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `transform::F1 = identity`: Probably not needed.
-- `weight::F2 = `[`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
+- `weight::F2 = `[`s1`](@ref) `∘` [`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
 - `β::Float64 = 0.01`: Amount of entropy regularization
 - `iters::Int = 10000`: Number of iterations of the Sinkhorn algorithm.
 """
@@ -89,7 +91,7 @@ SinkhornRootDistance
 @kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
-    weight::F2 = residueweight
+    weight::F2 = s1 ∘ residueweight
     β::Float64 = 0.01
     iters::Int = 10000
 end
@@ -260,7 +262,7 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 
 distmat_euclidean(e1::AbstractArray,e2::AbstractArray) = abs2.(e1 .- transpose(e2))
-distmat_euclidean(e1,e2) = (n = length(e1[1]); [(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=1:n])
+distmat_euclidean(e1,e2) = (n = length(e1[1]); [abs2(e1[1][i]-e2[1][j]) + abs2(e1[2][i]-e2[2][j]) for i = 1:n, j=1:n])
 
 distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
@@ -273,7 +275,7 @@ function preprocess_roots(d::AbstractRootDistance, e::AbstractRoots)
 end
 
 function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
-    e = roots(m)
+    e = roots(domain(d), m)
     preprocess_roots(d, e)
 end
 function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
@@ -328,7 +330,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     sum(eachindex(e1)) do i
         i1 = I1[i]
         i2 = I2[i]
-        sqrt(w1[i1]*w2[i2])abs2((e1[i1]-e2[i2]))
+        sqrt(w1[i1]*w2[i2])abs((e1[i1]-e2[i2]))^d.p
     end
 end
 
@@ -535,7 +537,7 @@ end
 
 Integrate `f` between `a` and `b`
 """
-∫(f,a,b) = quadgk(f,a,b; atol=1e-12, rtol=1e-7)[1]::Float64
+∫(f,a,b)::Float64 = quadgk(f,a,b; atol=1e-12, rtol=1e-7)[1]
 
 """
     c∫(f, a, b; kwargs...)

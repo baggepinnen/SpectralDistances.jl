@@ -164,11 +164,11 @@ end
 """
     residueweight(e::AbstractRoots)
 
-Returns a vector normalized to sums to one, where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole. 
+Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole.
 """
 function residueweight(e::AbstractRoots)
     res = residues(ContinuousRoots(e))
-    s1(abs.(π*abs2.(res)./ real.(e)))
+    abs.(π*abs2.(res)./ real.(e))
 end
 
 """
