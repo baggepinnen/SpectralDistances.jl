@@ -1,10 +1,17 @@
 import Distances.evaluate
 
+"The top level distance type"
 abstract type AbstractDistance <: Distances.Metric end
+"All subtypes of this type operates on rational transfer functions"
 abstract type AbstractModelDistance <: AbstractDistance end
-abstract type AbstractRootDistance <: AbstractDistance end
-abstract type AbstractCoefficientDistance <: AbstractDistance end
+"All subtypes of this type operates on signals"
+abstract type AbstractSignalDistance <: AbstractDistance end
+"All subtypes of this type operates on the roots of rational transfer functions"
+abstract type AbstractRootDistance <: AbstractModelDistance end
+"All subtypes of this type operates on the coefficients of rational transfer functions"
+abstract type AbstractCoefficientDistance <: AbstractModelDistance end
 
+"A Union that represents a collection of distances"
 const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
 
 struct Identity end
@@ -18,16 +25,47 @@ Base.:(+)(d::AbstractDistance...) = d
 (d::AbstractDistance)(x,y) = evaluate(d, x, y)
 (d::DistanceCollection)(x,y) = evaluate(d, x, y)
 
+"""
+    CoefficientDistance{D, ID} <: AbstractCoefficientDistance
+
+Distance metric based on model coefficients
+
+#Arguments:
+- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `distance::ID = SqEuclidean()`: Inner distance between coeffs
+"""
+CoefficientDistance
 @kwdef struct CoefficientDistance{D,ID} <: AbstractCoefficientDistance
     domain::D
     distance::ID = SqEuclidean()
 end
 
-struct ModelDistance{D <: AbstractDistance} <: AbstractModelDistance
+"""
+    ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
+
+A model distance operates on signals and works by fitting an LTI model to the signals before calculating the distance. The distance between the LTI models is defined by the field `distance`. This is essentially a wrapper around the inner distance that handles the fitting of a model to the signals. How the model is fit is determined by `fitmethod`.
+
+#Arguments:
+- `fitmethod::FitMethod`: `LS` or `PLR`
+- `distance::D`: The inner distance between the models
+"""
+struct ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
     fitmethod::FitMethod
     distance::D
 end
 
+"""
+    EuclideanRootDistance{D, A, F1, F2} <: AbstractRootDistance
+
+Simple euclidean distance between roots of transfer functions
+
+#Arguments:
+- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `assignment::A =` [`SortAssignement`](@ref)`(imag)`: Determines how roots are assigned. An alternative is `HungarianAssignement`
+- `transform::F1 = identity`: DESCRIPTION
+- `weight` : A function used to calculate weights for the induvidual root distances. A good option is [`residueweight`](@ref)
+"""
+EuclideanRootDistance
 @kwdef struct EuclideanRootDistance{D,A,F1,F2} <: AbstractRootDistance
     domain::D
     assignment::A = SortAssignement(imag)
@@ -35,6 +73,19 @@ end
     weight::F2 = e->ones(length(e))
 end
 
+"""
+    SinkhornRootDistance{D, F1, F2} <: AbstractRootDistance
+
+The Sinkhorn distance between roots. The weights are provided by `weight`, which defaults to [`residueweight`](@ref).
+
+#Arguments:
+- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `transform::F1 = identity`: Probably not needed.
+- `weight::F2 = `[`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
+- `β::Float64 = 0.01`: Amount of entropy regularization
+- `iters::Int = 10000`: Number of iterations of the Sinkhorn algorithm.
+"""
+SinkhornRootDistance
 @kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
@@ -50,12 +101,35 @@ end
     transform::F = identity
 end
 
+"""
+    HungarianRootDistance{D, ID <: Distances.PreMetric, F} <: AbstractRootDistance
+
+DOCSTRING
+
+#Arguments:
+- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `distance::ID = SqEuclidean()`: Inner distance
+- `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
+"""
+HungarianRootDistance
 @kwdef struct HungarianRootDistance{D,ID <: Distances.PreMetric,F} <: AbstractRootDistance
     domain::D
-    distance::ID = Distances.SqEuclidean()
+    distance::ID = SqEuclidean()
     transform::F = identity
 end
 
+"""
+    KernelWassersteinRootDistance{D, F, DI} <: AbstractRootDistance
+
+DOCSTRING
+
+#Arguments:
+- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `λ::Float64 = 1.0`: reg param
+- `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
+- `distance::DI = SqEuclidean()`: Inner distance
+"""
+KernelWassersteinRootDistance
 @kwdef struct KernelWassersteinRootDistance{D,F,DI} <: AbstractRootDistance
     domain::D
     λ::Float64   = 1.
@@ -63,23 +137,66 @@ end
     distance::DI = SqEuclidean()
 end
 
-@kwdef struct OptimalTransportModelDistance{WT,DT} <: AbstractDistance
+"""
+    OptimalTransportModelDistance{WT, DT} <: AbstractModelDistance
+
+DOCSTRING
+
+#Arguments:
+- `w::WT = LinRange(0.01, 0.5, 300)`: Frequency set
+- `distmat::DT = distmat_euclidean(w, w)`: DESCRIPTION
+"""
+OptimalTransportModelDistance
+@kwdef struct OptimalTransportModelDistance{WT,DT} <: AbstractModelDistance
     w::WT = LinRange(0.01, 0.5, 300)
     distmat::DT = distmat_euclidean(w,w)
-    iters::Int = 1000
 end
 
-@kwdef struct OptimalTransportSpectralDistance{DT} <: AbstractDistance
+"""
+    WelchOptimalTransportDistance{DT, AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
+
+Calculates the Wasserstein distance between two signals by estimating a Welch periodogram of each.
+
+#Arguments:
+- `distmat::DT`: you may provide a matrix array for this
+- `args::AT = ()`: Options to the Welch function
+- `kwargs::KWT = NamedTuple()`: Options to the Welch function
+"""
+WelchOptimalTransportDistance
+@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
     distmat::DT
     β::Float64 = 0.01
     iters::Int = 10000
+    args::AT = ()
+    kwargs::KWT = NamedTuple()
 end
 
+"""
+    OptimalTransportHistogramDistance{DT} <: AbstractDistance
+
+What it sounds like
+
+#Arguments:
+- `p::Int = 1`: order
+"""
+OptimalTransportHistogramDistance
 @kwdef struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
     p::Int = 1
 end
 
-@kwdef struct ClosedFormSpectralDistance{DT,MT} <: AbstractDistance
+"""
+    ClosedFormSpectralDistance{DT, MT} <: AbstractModelDistance
+
+calculates the Wasserstein distance using the closed-form solution based on integrals and inverse cumulative functions.
+
+#Arguments:
+- `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `p::Int = 1`: order
+- `magnitude::MT = Identity()`:
+- `interval = (-(float(π)), float(π))`: Integration interval
+"""
+ClosedFormSpectralDistance
+@kwdef struct ClosedFormSpectralDistance{DT,MT} <: AbstractModelDistance
     domain::DT
     p::Int = 1
     magnitude::MT = Identity()
@@ -87,16 +204,37 @@ end
 end
 magnitude(d::ClosedFormSpectralDistance) = d.magnitude
 
-@kwdef struct CramerSpectralDistance{DT} <: AbstractDistance
+"""
+    CramerSpectralDistance{DT} <: AbstractModelDistance
+
+Similar to `ClosedFormSpectralDistance` but does not use inverse functions.
+
+#Arguments:
+- `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `p::Int = 2`: order
+- `interval = (-(float(π)), float(π))`: Integration interval
+"""
+CramerSpectralDistance
+@kwdef struct CramerSpectralDistance{DT} <: AbstractModelDistance
     domain::DT
     p::Int = 2
     interval = (-float(π,),float(π))
 end
 
+"""
+    BuresDistance <: AbstractDistance
+
+Distance between pos.def. matrices
+"""
 struct BuresDistance <: AbstractDistance
 end
 
-struct EnergyDistance <: AbstractDistance
+"""
+    EnergyDistance <: AbstractSignalDistance
+
+`std(x1) - std(x2)`
+"""
+struct EnergyDistance <: AbstractSignalDistance
 end
 
 
@@ -106,13 +244,13 @@ end
 Return the domain of the distance
 """
 domain(d) = d.domain
-domain(d::AbstractModelDistance) = domain(d.distance)
+domain(d::ModelDistance) = domain(d.distance)
 
 
 """
     domain_transform(d::AbstractDistance, e)
 
-DOCSTRING
+Change domain of roots
 """
 domain_transform(d::AbstractDistance, e) = domain_transform(domain(d), e)
 
@@ -200,7 +338,7 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     w2    = d.weight(e2)
     C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     if any(isnan, C)
-        @warn "Nan in SinkhornRootDistance, increasing precision"
+        @info "Nan in SinkhornRootDistance, increasing precision"
         C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
         any(isnan, C) && @error "Sinkhorn failed, consider increasing β"
         eltype(D).(C)
@@ -277,8 +415,7 @@ evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh)
 Perform computations that only need to be donce once when several pairwise distances are to be computed
 
 #Arguments:
-- `d`: DESCRIPTION
-- `As`: DESCRIPTION
+- `As`: A vector of models
 - `threads`: Us multithreading? (true)
 """
 function precompute(d::OptimalTransportModelDistance, As::AbstractArray{<:AbstractModel}, threads=true)
@@ -313,18 +450,18 @@ function evaluate(d::OptimalTransportModelDistance, b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
-function evaluate(d::OptimalTransportSpectralDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
+function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq) : d.distmat
-    if w1.freq == w2.freq
-        C = trivial_transport(w1.power,w2.power)
+    if issorted(w1.freq) && issorted(w2.freq)
+        C = trivial_transport(s1(w1.power),s1(w2.power), 1e-3)
     else
-        C = sinkhorn(D,w1.power,w2.power,β=d.β, iters=d.iters)[1]
+        C = sinkhorn(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
     end
     cost = sum(C .* D)
 end
 
-function evaluate(d::OptimalTransportSpectralDistance, x1, x2)
-    evaluate(d, welch_pgram(x1), welch_pgram(x2))
+function evaluate(d::WelchOptimalTransportDistance, x1, x2)
+    evaluate(d, welch_pgram(x1, d.args...; d.kwargs...), welch_pgram(x2, d.args...; d.kwargs...))
 end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
@@ -364,10 +501,11 @@ function trivial_transport(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(ep
             i += 1
         end
     end
-    if abs(i-j) <= 1
-        sumleft = (sum(x[i:end]),sum(y[j:end]))
+    if j < n || i < n
+        takenfromy = yf#min(needed,available)
+        sumleft = (sum(x[i:end]),sum(y[j:end])-takenfromy)
         if sumleft[1] > tol || sumleft[2] > tol
-            error("Not all indices were covered (i,j) = $((i,j)), sum left (x,y) = $(sumleft)")
+            error("Not all indices were covered (n,i,j) = $((n,i,j)), sum left (x,y) = $(sumleft)")
         end
     end
     g

@@ -1,14 +1,27 @@
+"Abstract type that represents a time-domain, either `Discrete` or `Continuous`"
 abstract type TimeDomain end
+"Continuous time domain"
 struct Continuous <: TimeDomain end
+"Discrete (sampled) time domain"
 struct Discrete <: TimeDomain end
 
 abstract type AbstractAssignmentMethod end
 
+"""
+    SortAssignement{F} <: AbstractAssignmentMethod
+
+Contains a single Function field that determines what to sort roots by.
+"""
 struct SortAssignement{F} <: AbstractAssignmentMethod
     by::F
 end
 (a::SortAssignement)(e1,e2) = sortperm(nograd(e1), by=a.by), sortperm(nograd(e2), by=a.by)
 
+"""
+    HungarianAssignement <: AbstractAssignmentMethod
+
+Sort roots using Hungarian method
+"""
 struct HungarianAssignement <: AbstractAssignmentMethod
 end
 
@@ -16,12 +29,22 @@ end
 
 abstract type AbstractRoots{T} <: AbstractVector{T} end
 
+"""
+    DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
+
+Represent roots in discrete time
+"""
 struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
     DiscreteRoots(r) = new{eltype(r), typeof(r)}(reflectd.(anglesort(r)))
 end
 StaticArrays.similar_type(r::DiscreteRoots{T,V}) where {T,V} = DiscreteRoots
 
+"""
+    ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
+
+Represents roots in continuous time
+"""
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
     ContinuousRoots(r) = new{eltype(r), typeof(r)}(reflectc.(eigsort(r)))
@@ -138,6 +161,11 @@ function polar(e)
     abs.(e), angle.(e)
 end
 
+"""
+    residueweight(e::AbstractRoots)
+
+Returns a vector normalized to sums to one, where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole. 
+"""
 function residueweight(e::AbstractRoots)
     res = residues(ContinuousRoots(e))
     s1(abs.(π*abs2.(res)./ real.(e)))

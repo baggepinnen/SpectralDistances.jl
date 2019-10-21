@@ -53,6 +53,16 @@ function spectral_interpolate(args...)
 end
 
 
+"""
+    slerp(p1, p2, t)
+
+DOCSTRING
+
+#Arguments:
+- `p1`: DESCRIPTION
+- `p2`: DESCRIPTION
+- `t`: DESCRIPTION
+"""
 function slerp(p1,p2,t)
     0 <= t <= 1 || throw(DomainError("Interpolation parameter should be between 0 and 1"))
     m = (1-t)*norm(p1) + t*norm(p2)
@@ -113,6 +123,11 @@ function wasserstein_interpolate(a1,c1,a2,c2,α,aw)
     ar, cr, res
 end
 
+"""
+    interpolator(d::ClosedFormSpectralDistance, A1, A2)
+
+Perform displacement interpolation between two models.
+"""
 function interpolator(d::ClosedFormSpectralDistance,A1,A2)
     @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
     interval = d.interval

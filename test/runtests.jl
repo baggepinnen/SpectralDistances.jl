@@ -1,7 +1,8 @@
 @info "Running tests"
-using SpectralDistances, Distributions
-using Test, LinearAlgebra, Statistics, Random, ControlSystems
-using ForwardDiff, DSP
+using SpectralDistances# Distributions
+using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
+# using ForwardDiff
+using DSP
 
 
 Random.seed!(0)
@@ -191,6 +192,8 @@ end
     r2 = SpectralDistances.reflectc.(roots(reverse(a2)))
     r2 = complex.(0.01real.(r2), imag.(r2))
     r2o = SpectralDistances.normalize_energy(ContinuousRoots(r2))
+
+    m1,m2 = AR(a1), AR(a2)
 
     dist2 = ClosedFormSpectralDistance(domain=Continuous(), p=2, interval=(-200.,200.))
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
