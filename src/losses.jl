@@ -328,7 +328,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     sum(eachindex(e1)) do i
         i1 = I1[i]
         i2 = I2[i]
-        (w1[i1]*w2[i2])abs2((e1[i1]-e2[i2]))
+        sqrt(w1[i1]*w2[i2])abs2((e1[i1]-e2[i2]))
     end
 end
 
