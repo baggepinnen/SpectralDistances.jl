@@ -3,6 +3,8 @@
 using SpectralDistances, InteractiveUtils
 ```
 
+## Overview
+
 This package supports two kind of LTI models, [`AR`](@ref) and [`ARMA`](@ref).
 [`AR`](@ref) represents a model with only poles whereas [`ARMA`](@ref) has zeros as well.
 
