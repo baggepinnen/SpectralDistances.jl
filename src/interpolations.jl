@@ -1,43 +1,4 @@
 
-
-function pz_interpolate(a1,c1,a2,c2,α, ::typeof(hungarian))
-    k1 = sum(c1)/sum(a1)
-    k2 = sum(c2)/sum(a2)
-    ai = (1-α)*a1 + α*a2
-    ci  = (1-α)*c1 + α*c2
-    ki  = (1-α)*k1 + α*k2
-    p1  = a1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
-    p2  = a2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
-    p2 = hungariansort(p1,p2)
-    z1 = c1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
-    z2 = c2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=imag)
-    z2 = hungariansort(z1,z2)
-    pi = (1-α)*p1 + α*p2 .|> exp
-    zi  = (1-α)*z1 + α*z2 .|> exp
-
-    ar,cr = roots2poly(pi), roots2poly(zi)
-    cr .*= ki*sum(ar)/sum(cr)
-    ar,cr
-end
-
-function pz_interpolate(a1,c1,a2,c2,α, by=imag)
-    k1 = sum(c1)/sum(a1)
-    k2 = sum(c2)/sum(a2)
-    ai = (1-α)*a1 + α*a2
-    ci  = (1-α)*c1 + α*c2
-    ki  = (1-α)*k1 + α*k2
-    p1  = a1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
-    p2  = a2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
-    z1 = c1 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
-    z2 = c2 |> reverse |> roots .|> log .|> reflectd |> x->sort(x,by=by) #.|> exp
-    pi = (1-α)*p1 + α*p2 .|> exp
-    zi  = (1-α)*z1 + α*z2 .|> exp
-
-    ar,cr = roots2poly(pi), roots2poly(zi)
-    cr .*= ki*sum(ar)/sum(cr)
-    ar,cr
-end
-
 function feedback_interpolate(a1,c1,a2,c2,α)
     sys1 = ss(tf(c1,a1,1))
     sys2 = ss(tf(c2,a2,1))
@@ -56,12 +17,7 @@ end
 """
     slerp(p1, p2, t)
 
-DOCSTRING
-
-#Arguments:
-- `p1`: DESCRIPTION
-- `p2`: DESCRIPTION
-- `t`: DESCRIPTION
+The slerp interpolation at `t` between two vectors.
 """
 function slerp(p1,p2,t)
     0 <= t <= 1 || throw(DomainError("Interpolation parameter should be between 0 and 1"))
@@ -95,33 +51,6 @@ function sinkhorn_interpolate(a1,c1,a2,c2,ai,ci,α)
     ai, ci, res
 end
 
-function wasserstein_interpolate(a1,c1,a2,c2,α,aw)
-    error("Update to new interface")
-    # ai = (1-α)*a1 + α*a2
-    # ci  = (1-α)*c1 + α*c2
-    r1  = a1 |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    r2  = a2 |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    ri  = ai |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    rc1 = c1 |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    rc2 = c2 |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    rci = ci |> reverse |> roots .|> log |> x->sort(x,by=imag)
-    r1  = [r1; rc1]
-    r2  = [r2; rc2]
-    ri  = [ri; rci]
-
-    function loss(r)
-        r = complex.(r[1:end÷2], r[end÷2+1:end])
-        # (1-α)*eigval_dist_wass_logmag(r1,r,10) +  α*eigval_dist_wass_logmag(r2,r,10) + 0.01norm(aw-ai)^2 #+ 0.1norm(cw-ci)^2
-        (1-α)*eigval_dist_hungarian(r1,r) +  α*eigval_dist_hungarian(r2,r) + 0.01sum(abs, r-ri)^2 #+ 0.1norm(cw-ci)^2
-    end
-    res = Optim.optimize(loss, [real(ri);imag(ri)], Newton(), Optim.Options(store_trace=false, show_trace=false, iterations=150, allow_f_increases=false, g_tol=1e-10), inplace=false)
-    w = complex.(res.minimizer[1:end÷2], res.minimizer[end÷2+1:end])
-    ra,rc = w[1:length(a1)-1],w[length(a1):end]
-    ar,cr = roots2poly(ra), roots2poly(rc)
-    cr .*= sum(ci)/sum(ai)*sum(ar)/sum(cr)
-    # ar[1] = 1
-    ar, cr, res
-end
 
 function centraldiff(v::AbstractVector)
     dv = diff(v)./2
@@ -137,8 +66,8 @@ Perform displacement interpolation between two models.
 """
 function interpolator(d::ClosedFormSpectralDistance,A1,A2)
     @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
-    @assert (interval[1] == 0 || interval[1] == -interval[2])
     interval   = (0., d.interval[2])
+    @assert (interval[1] == 0 || interval[1] == -interval[2])
     e1   = sqrt(2)/sqrt(spectralenergy(domain(d), A1))
     e2   = sqrt(2)/sqrt(spectralenergy(domain(d), A2))
     f1    = w -> evalfr(domain(d), magnitude(d), w, A1, e1)

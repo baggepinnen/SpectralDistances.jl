@@ -25,5 +25,5 @@ Pages = ["distances.md", "ltimodels.md", "interpolations.md", "plotting.md", "mi
 
 ## All Exported functions and types
 ```@index
-Pages = ["distances.md", "ltimodels.md", "examples.md"]
+Pages = ["distances.md", "ltimodels.md"]
 ```

@@ -7,7 +7,7 @@ abstract type AbstractModel end
 
 Represents an all-pole transfer function, i.e., and AR model
 
-#Arguments:
+# Arguments:
 - `a`: denvec
 - `ac`: denvec cont. time
 - `p`: poles
@@ -50,7 +50,7 @@ end
 
 Represents an ARMA model, i.e., transfer function
 
-#Arguments:
+# Arguments:
 - `c`: numvec
 - `cc`: numvec cont. time
 - `a`: denvec
@@ -130,7 +130,7 @@ fitmodel(fm,X::AbstractModel) = X
 
 DOCSTRING
 
-#Arguments:
+# Arguments:
 - `nc::Int`: order of numerator
 - `na::Int`: order of denomenator
 - `initial_order::Int = 100`: This order model is fit in initial step
@@ -154,7 +154,7 @@ end
     LS <: FitMethod
 
 
-#Arguments:
+# Arguments:
 - `na::Int`: number of roots (order of the system)
 - `λ::Float64 = 0.01`: reg factor
 """
@@ -189,7 +189,7 @@ end
 
 DOCSTRING
 
-#Arguments:
+# Arguments:
 - `X`: a signal
 - `order`: number of roots
 - `λ`: reg factor
@@ -201,7 +201,7 @@ AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
 
 Performs pseudo-linear regression to estimate an ARMA model.
 
-#Arguments:
+# Arguments:
 - `y`: signal
 - `na`: denomenator order
 - `nc`: numerator order

@@ -30,7 +30,7 @@ Base.:(+)(d::AbstractDistance...) = d
 
 Distance metric based on model coefficients
 
-#Arguments:
+# Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `distance::ID = SqEuclidean()`: Inner distance between coeffs
 """
@@ -45,7 +45,7 @@ end
 
 A model distance operates on signals and works by fitting an LTI model to the signals before calculating the distance. The distance between the LTI models is defined by the field `distance`. This is essentially a wrapper around the inner distance that handles the fitting of a model to the signals. How the model is fit is determined by `fitmethod`.
 
-#Arguments:
+# Arguments:
 - `fitmethod::FitMethod`: `LS` or `PLR`
 - `distance::D`: The inner distance between the models
 """
@@ -59,7 +59,7 @@ end
 
 Simple euclidean distance between roots of transfer functions
 
-#Arguments:
+# Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `assignment::A =` [`SortAssignement`](@ref)`(imag)`: Determines how roots are assigned. An alternative is `HungarianAssignement`
 - `transform::F1 = identity`: DESCRIPTION
@@ -80,7 +80,7 @@ end
 
 The Sinkhorn distance between roots. The weights are provided by `weight`, which defaults to [`residueweight`](@ref).
 
-#Arguments:
+# Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `transform::F1 = identity`: Probably not needed.
 - `weight::F2 = `[`s1`](@ref) `∘` [`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
@@ -108,7 +108,7 @@ end
 
 DOCSTRING
 
-#Arguments:
+# Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `distance::ID = SqEuclidean()`: Inner distance
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
@@ -125,7 +125,7 @@ end
 
 DOCSTRING
 
-#Arguments:
+# Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `λ::Float64 = 1.0`: reg param
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
@@ -144,7 +144,7 @@ end
 
 DOCSTRING
 
-#Arguments:
+# Arguments:
 - `w::WT = LinRange(0.01, 0.5, 300)`: Frequency set
 - `distmat::DT = distmat_euclidean(w, w)`: DESCRIPTION
 """
@@ -159,7 +159,7 @@ end
 
 Calculates the Wasserstein distance between two signals by estimating a Welch periodogram of each.
 
-#Arguments:
+# Arguments:
 - `distmat::DT`: you may provide a matrix array for this
 - `args::AT = ()`: Options to the Welch function
 - `kwargs::KWT = NamedTuple()`: Options to the Welch function
@@ -178,7 +178,7 @@ end
 
 What it sounds like
 
-#Arguments:
+# Arguments:
 - `p::Int = 1`: order
 """
 OptimalTransportHistogramDistance
@@ -191,7 +191,7 @@ end
 
 calculates the Wasserstein distance using the closed-form solution based on integrals and inverse cumulative functions.
 
-#Arguments:
+# Arguments:
 - `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `p::Int = 1`: order
 - `magnitude::MT = Identity()`:
@@ -211,7 +211,7 @@ magnitude(d::ClosedFormSpectralDistance) = d.magnitude
 
 Similar to `ClosedFormSpectralDistance` but does not use inverse functions.
 
-#Arguments:
+# Arguments:
 - `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `p::Int = 2`: order
 - `interval = (-(float(π)), float(π))`: Integration interval
@@ -416,7 +416,7 @@ evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh)
 
 Perform computations that only need to be donce once when several pairwise distances are to be computed
 
-#Arguments:
+# Arguments:
 - `As`: A vector of models
 - `threads`: Us multithreading? (true)
 """
@@ -546,7 +546,7 @@ Integrate `f` between `a` and `b`
 
 Cumulative integration of `f` between `a` and `b`
 
-#Arguments:
+# Arguments:
 - `kwargs`: are sent to the DiffEq solver
 """
 function c∫(f,a,b;kwargs...)
