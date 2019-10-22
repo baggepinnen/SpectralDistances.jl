@@ -96,6 +96,23 @@ d2c(r::ContinuousRoots,h=1) = DiscreteRoots(exp.(h .* r.r))
 Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2, Base.real, Base.imag)
 Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2, Base.real, Base.imag)
 
+for R in (:ContinuousRoots, :DiscreteRoots)
+    for ff in [abs, abs2, real, imag]
+        f = nameof(ff)
+        @eval Base.$f(r::$R) = R($f.(r.r))
+    end
+    for ff in [+, -, *, /]
+        f = nameof(ff)
+        @eval Base.$f(r::$R,a::Number) = $R($f.(r.r, a))
+        @eval Base.$f(a::Number,r::$R) = $R($f.(a, r.r))
+        @eval Base.$f(r::$R,a::AbstractArray) = $R($f.(r.r, a))
+        @eval Base.$f(a::AbstractArray,r::$R) = $R($f.(a, r.r))
+
+        @eval Base.$f(r::$R,a::$R) = $R($f.(r.r, a.r))
+        @eval Base.$f(a::$R,r::$R) = $R($f.(a.r, r.r))
+    end
+end
+
 sqrtmag(magang::Tuple) = sqrt.(magang[1]), magang[2]
 logmag(magang::Tuple) = log.(magang[1]), magang[2]
 

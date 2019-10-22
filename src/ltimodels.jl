@@ -508,7 +508,7 @@ function normalization_factor(r::AbstractRoots)
     s = e^(1/(2n-1))
 end
 function normalize_energy(r)
-    r .* normalization_factor(r)
+    normalization_factor(r)*r
 end
 
 

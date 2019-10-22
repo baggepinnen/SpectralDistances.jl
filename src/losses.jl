@@ -525,6 +525,8 @@ Base.inv(f::Function, interval) = x->finv(f, x, interval)
 # Base.inv(f::Function,fp) = x->finv(f, fp, x)
 
 function finv(f, z, interval)
+    f(interval[1])-z > 0 && return interval[1]
+    f(interval[2])-z < 0 && return interval[2]
     w = Roots.fzero(w->f(w)-z, interval...)
 end
 

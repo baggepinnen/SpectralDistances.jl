@@ -123,6 +123,13 @@ function wasserstein_interpolate(a1,c1,a2,c2,α,aw)
     ar, cr, res
 end
 
+function centraldiff(v::AbstractVector)
+    dv = diff(v)./2
+    a1 = [dv[1];dv]
+    a2 = [dv;dv[end]]
+    a = a1+a2
+end
+
 """
     interpolator(d::ClosedFormSpectralDistance, A1, A2)
 
@@ -130,9 +137,12 @@ Perform displacement interpolation between two models.
 """
 function interpolator(d::ClosedFormSpectralDistance,A1,A2)
     @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
-    interval = d.interval
-    f1    = w -> abs2(evalfr(domain(d), w, A1))
-    f2    = w -> abs2(evalfr(domain(d), w, A2))
+    @assert (interval[1] == 0 || interval[1] == -interval[2])
+    interval   = (0., d.interval[2])
+    e1   = sqrt(2)/sqrt(spectralenergy(domain(d), A1))
+    e2   = sqrt(2)/sqrt(spectralenergy(domain(d), A2))
+    f1    = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
+    f2    = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
     sol1  = c∫(f1,interval...)
     sol2  = c∫(f2,interval...)
     σ1    = sol1(interval[2]) # The total energy in the spectrum
@@ -141,7 +151,25 @@ function interpolator(d::ClosedFormSpectralDistance,A1,A2)
     F2(w) = sol2(w)/σ2
     iF1   = inv(F1, interval)
     iF2   = inv(F2, interval)
-    (w,t) -> tmap1(6,w) do w
-        finv(e->(1-t)*iF1(e) + t*iF2(e), w, (0,1))
+    function (w,t)
+        t == 0 && return map(f1,w)
+        t == 1 && return map(f2,w)
+        r = tmap(w) do w
+            finv(e->(1-t)*iF1(e) + t*iF2(e), w, (0,max(σ1, σ2)))
+        end
+        centraldiff(r) ./ centraldiff(w)
+    end
+end
+
+function interpolator(d::EuclideanRootDistance,A1,A2; normalize=false)
+    @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
+    RT = domain(d) isa Continuous ? ContinuousRoots : DiscreteRoots
+    r1,r2 = roots(domain(d), A1), roots(domain(d), A2)
+    function (w,t)
+        A = AR(RT((1-t)*r1 + t*r2))
+        e = normalize ? 1/sqrt(spectralenergy(domain(d), A)) : 1
+        tmap1(6,w) do w
+            evalfr(domain(d), magnitude(d), w, A, e)
+        end
     end
 end

@@ -243,12 +243,12 @@ end
     n = 4
     a1 = randn(n+1); a1[1] = 1
     r1 = SpectralDistances.reflectc.(roots(reverse(a1)))
-    r1 = complex.(0.01real.(r1), imag.(r1))
+    r1 = ContinuousRoots(complex.(0.01real.(r1), imag.(r1)))
     # r1 = SpectralDistances.normalize_energy(ContinuousRoots(r1))
 
     a2 = randn(n+1); a2[1] = 1
     r2 = SpectralDistances.reflectc.(roots(reverse(a2)))
-    r2 = complex.(0.01real.(r2), imag.(r2))
+    r2 = ContinuousRoots(complex.(0.01real.(r2), imag.(r2)))
     # r2 = SpectralDistances.normalize_energy(ContinuousRoots(r2))
 
 
@@ -262,8 +262,8 @@ end
     for α ∈ 1:0.5:3, p ∈ 1:3
         @test α^(1. -2n +p) * scaleddist(1,p) ≈ scaleddist(α,p)
 
-        @test α^(1. -n)*residues(ContinuousRoots(r1)) ≈ residues(ContinuousRoots(α.*r1))
-        @test α^(1. -2n)*residueweight_unnormalized(r1) ≈ residueweight_unnormalized(α.*r1)
+        @test α^(1. -n)*residues(ContinuousRoots(r1)) ≈ residues(ContinuousRoots(α*r1))
+        @test α^(1. -2n)*residueweight(r1) ≈ residueweight(α*r1)
     end
 
 end

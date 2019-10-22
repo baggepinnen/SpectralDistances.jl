@@ -4,8 +4,8 @@ using DocumenterLaTeX
 
 makedocs(
     sitename = "SpectralDistances",
-    format = LaTeX(),
-    # format = Documenter.HTML(prettyurls = false),
+    # format = LaTeX(),
+    format = Documenter.HTML(prettyurls = false),
     modules = [SpectralDistances]
 )
 
