@@ -262,3 +262,16 @@ function hungariansort(p1,p2)
     ass,cost = hungarian(distmat)
     p2[ass]
 end
+
+function move_real_poles(r::DiscreteRoots, tol=1e-4)
+    ro = deepcopy(r)
+    reals = findall(abs.(imag.(r)) .< tol)
+    @assert length(reals) % 2 == 0 "Uneven number of real poles, I can't solve this for you"
+    for i = 1:length(reals)÷2
+        r1,r2 = real(r[reals[i]]), real(r[reals[end-i+1]])
+        r0 = (r1+r2)/2
+        ro[reals[i]] = complex(r0, tol)
+        ro[reals[end-i+1]] = complex(r0, -tol)
+    end
+    DiscreteRoots(ro)
+end

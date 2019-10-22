@@ -6,7 +6,8 @@ makedocs(
     sitename = "SpectralDistances",
     # format = LaTeX(),
     format = Documenter.HTML(prettyurls = false),
-    modules = [SpectralDistances]
+    modules = [SpectralDistances],
+    pages = ["index.md", "ltimodels.md", "distances.md", "interpolations.md", "plotting.md", "misc.md", "examples.md"]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
