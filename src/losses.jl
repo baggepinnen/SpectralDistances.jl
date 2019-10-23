@@ -11,11 +11,15 @@ abstract type AbstractRootDistance <: AbstractModelDistance end
 "All subtypes of this type operates on the coefficients of rational transfer functions"
 abstract type AbstractCoefficientDistance <: AbstractModelDistance end
 
+Base.Broadcast.broadcastable(p::AbstractDistance) = Ref(p)
+
 "A Union that represents a collection of distances"
 const DistanceCollection = Union{Tuple, Vector{<:AbstractDistance}}
 
 struct Identity end
 struct Log end
+Base.Broadcast.broadcastable(p::Identity) = Ref(p)
+Base.Broadcast.broadcastable(p::Log) = Ref(p)
 magnitude(d) = Identity()
 
 
@@ -261,10 +265,22 @@ transform(d::AbstractRootDistance) = d.transform
 transform(d::AbstractRootDistance, x) = d.transform(x)
 
 
-distmat_euclidean(e1::AbstractArray,e2::AbstractArray) = abs2.(e1 .- transpose(e2))
-distmat_euclidean(e1,e2) = (n = length(e1[1]); [abs2(e1[1][i]-e2[1][j]) + abs2(e1[2][i]-e2[2][j]) for i = 1:n, j=1:n])
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector) = abs2.(e1 .- transpose(e2))
 
-distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
+# distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
+
+function distmat(dist,e::AbstractVector)
+    n = length(e)
+    T = typeof(dist(e[1],e[1]))
+    D = zeros(T,n,n)
+    for i = 1:n
+        Threads.@threads for j=i:n
+            D[i,j] = dist(e[i],e[j])
+            i != j && (D[j,i] = D[i,j])
+        end
+    end
+    Symmetric(D)
+end
 
 distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
 
@@ -555,7 +571,7 @@ function c∫(f,a,b;kwargs...)
     prob  = ODEProblem(fi,0.,tspan)
     retry = false
     try
-        sol   = solve(prob,Tsit5();reltol=1e-12,abstol=1e-45,kwargs...)
+        sol   = solve(prob,AutoTsit5(Rosenbrock23());reltol=1e-12,abstol=1e-45,kwargs...)
     catch
         retry = true
     end
@@ -563,7 +579,7 @@ function c∫(f,a,b;kwargs...)
     if retry # In this case the solver failed due to numerical issues
         @warn "Spectral integration failed, increasing precision"
         prob  = ODEProblem(fi,big(0.),big.(tspan))
-        sol   = solve(prob,Vern9();reltol=1e-16,abstol=1e-45,kwargs...)
+        sol   = solve(prob,AutoVern9(Rodas5());reltol=1e-16,abstol=1e-45,kwargs...)
     end
     sol
 end
@@ -609,9 +625,10 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
 end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
-    e1   = 1/sqrt(spectralenergy(domain(d), A1))
+    sc   = d.interval[1] == 0 ? sqrt(2) : 1
+    e1   = sc/sqrt(spectralenergy(domain(d), A1))
     f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
-    e2   = 1/sqrt(spectralenergy(domain(d), A2))
+    e2   = sc/sqrt(spectralenergy(domain(d), A2))
     f2   = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
     sol1 = c∫(f1,d.interval...)
     sol2 = c∫(f2,d.interval...)
@@ -626,7 +643,8 @@ end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
     p    = d.p
-    e    = 1/sqrt(spectralenergy(domain(d), A1))
+    sc   = d.interval[1] == 0 ? sqrt(2) : 1
+    e    = sc/sqrt(spectralenergy(domain(d), A1))
     f    = w -> evalfr(domain(d), magnitude(d), w, A1, e)
     w    = P.freq .* (2π)
     sol  = c∫(f,d.interval...; saveat=w)
@@ -643,8 +661,9 @@ end
 
 function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
+    sc   = d.interval[1] == 0 ? sqrt(2) : 1
     mapfun(As) do A1
-        e1 = 1/sqrt(spectralenergy(domain(d), A1))
+        e1 = sc/sqrt(spectralenergy(domain(d), A1))
         f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
         sol1 = c∫(f1,d.interval...)
     end

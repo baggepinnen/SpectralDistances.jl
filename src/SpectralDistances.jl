@@ -1,7 +1,7 @@
 module SpectralDistances
 
 using LinearAlgebra, Statistics
-using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, ZygoteRules, Optim, Clustering, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays
+using DSP, Distances, PolynomialRoots, ControlSystems, SinkhornDistance, Hungarian, ZygoteRules, Optim, Clustering, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares
 import FiniteDifferences
 import Base.@kwdef
 
@@ -31,7 +31,8 @@ IPOT
 export AR,
 ARMA,
 PLR,
-LS
+LS,
+TLS
 
 export Continuous,
 Discrete,

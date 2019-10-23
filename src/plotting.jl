@@ -22,13 +22,12 @@ end
 Base.showable(::MIME"image/gif", agif::Plots.Animation) = true
 Base.showable(::MIME"text/html", agif::Plots.Animation) = true
 
-@recipe function plot(v::Vector{<:Complex})
+@recipe function plot(v::Vector{<:Complex}, d = determine_domain(v))
     @series begin
         primary := true
         seriestype := :scatter
         real.(v), imag.(v)
     end
-    d = determine_domain(v)
     if d isa Discrete
         t = LinRange(0, 2pi, 100)
         @series begin
@@ -48,11 +47,21 @@ using Plots
 Plots the poles of two models and the optimal assignment between them
 """
 function plot_assignment(m1,m2)
+    rf(a) = roots(Discrete(), a)
     plot(cos.(0:0.1:2pi),sin.(0:0.1:2pi),l=(:dash, :black), subplot=1, layout=1, lab="")
-    scatter!(real.(roots(m1)), imag.(roots(m1)), c=:blue, subplot=1, markerstrokealpha=0.1, label="m1")
-    scatter!(real.(roots(m2)), imag.(roots(m2)), c=:red, subplot=1, markerstrokealpha=0.1, label="m2")
-    hungariansort(roots(m1), roots(m2))
-    xc = [real(roots(m1)) real(roots(m2)) fill(Inf, length(m1.p))]'[:]
-    yc = [imag(roots(m1)) imag(roots(m2)) fill(Inf, length(m1.p))]'[:]
+    r1 = anglesort(rf(m1))
+    r2 = hungariansort(r1, anglesort(rf(m2)))
+    scatter!(real.(r1), imag.(r1), c=:blue, subplot=1, markerstrokealpha=0.1, label="m1")
+    scatter!(real.(r2), imag.(r2), c=:red, subplot=1, markerstrokealpha=0.1, label="m2")
+    xc = [real(r1) real(r2) fill(Inf, length(m1.p))]'[:]
+    yc = [imag(r1) imag(r2) fill(Inf, length(m1.p))]'[:]
     plot!(xc,yc, subplot=1, lab="") |> display
+end
+
+
+@recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)))
+    mag = evalfr.(Discrete(), Identity(), w, m)
+    yscale --> :log10
+    xscale --> :log10
+    w, sqrt.(mag)
 end

@@ -61,20 +61,23 @@ Random.seed!(0)
 @testset "modeldistance" begin
     t = 1:100
     ϵ = 1e-7
-    ls_loss = ModelDistance(LS(na=2), EuclideanRootDistance(domain=Discrete()))
-    @test ls_loss(sin.(t), sin.(t)) < ϵ
-    @test ls_loss(sin.(t), -sin.(t)) < ϵ # phase flip invariance
-    @test ls_loss(sin.(t), sin.(t .+ 1)) < ϵ # phase shift invariance
-    @test ls_loss(sin.(t), sin.(t .+ 0.1)) < ϵ # phase shift invariance
-    @test ls_loss(10sin.(t), sin.(t .+ 1)) < ϵ # amplitude invariance
-    @test ls_loss(sin.(t), sin.(1.1 .* t)) < 0.2 # small frequency shifts gives small errors
-    @test ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # small frequency shifts gives small errors
+    for fitmethod in [LS, TLS]
+        @info "Testing fitmethod $(string(fitmethod))"
+        ls_loss = ModelDistance(fitmethod(na=2), EuclideanRootDistance(domain=Discrete()))
+        @test ls_loss(sin.(t), sin.(t)) < ϵ
+        @test ls_loss(sin.(t), -sin.(t)) < ϵ # phase flip invariance
+        @test ls_loss(sin.(t), sin.(t .+ 1)) < ϵ # phase shift invariance
+        @test ls_loss(sin.(t), sin.(t .+ 0.1)) < ϵ # phase shift invariance
+        @test ls_loss(10sin.(t), sin.(t .+ 1)) < ϵ # amplitude invariance
+        @test ls_loss(sin.(t), sin.(1.1 .* t)) < 0.2 # small frequency shifts gives small errors
+        @test ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # small frequency shifts gives small errors
 
-    @test_broken ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # frequency shifts of relative size should result in the same error
-    ls_loss = ModelDistance(LS(na=10), CoefficientDistance(domain=Discrete()))
-    @test ls_loss(randn(100), randn(100)) > 0.05
-    @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.3 # Filtered through same filter
-    @test_broken ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(9),[9], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters
+        @test_broken ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # frequency shifts of relative size should result in the same error
+        ls_loss = ModelDistance(fitmethod(na=10), CoefficientDistance(domain=Discrete()))
+        @test ls_loss(randn(100), randn(100)) > 0.05
+        @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.3 # Filtered through same filter
+        @test_broken ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(9),[9], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters
+    end
 end
 
 
@@ -107,7 +110,11 @@ end
 
     e = roots(randn(7))
     ed = DiscreteRoots(e)
+    @test issorted(ed, by=angle)
+    @test all(<(1) ∘ abs, ed)
     ec = log(ed)
+    @test issorted(ec, by=imag)
+    @test all(<(0) ∘ real, ec)
     @test domain_transform(Continuous(), ed) isa ContinuousRoots
     @test domain_transform(Continuous(), ed) == log.(ed) == ContinuousRoots(ed)
     @test domain_transform(Discrete(), ed) == ed

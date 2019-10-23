@@ -1,6 +1,7 @@
 const AbstractTuple = Tuple #Union{Tuple, Flux.Tracker.TrackedTuple}
 
 abstract type AbstractModel end
+Base.Broadcast.broadcastable(p::AbstractModel) = Ref(p)
 
 """
     struct AR{T} <: AbstractModel
@@ -17,13 +18,13 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     ac::T
     p::Rt
     pc::Ct
-    function AR(xo::AbstractTuple,λ=1e-2)
-        a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
-        r = DiscreteRoots(hproots(reverse(nograd(a))))
-        rc = ContinuousRoots(r)
-        ac = roots2poly(rc)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
-    end
+    # function AR(xo::AbstractTuple,λ=1e-2)
+    #     a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
+    #     r = DiscreteRoots(hproots(reverse(nograd(a))))
+    #     rc = ContinuousRoots(r)
+    #     ac = roots2poly(rc)
+    #     new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+    # end
     function AR(a::AbstractVector)
         r = DiscreteRoots(hproots(reverse(a)))
         rc = ContinuousRoots(r)
@@ -42,8 +43,19 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
         ac = roots2poly(rc)
         new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     end
-
 end
+
+"""
+    AR(X::AbstractArray, order::Int, λ=0.01)
+
+Fit an AR model using [`LS`](@ref) as `fitmethod`
+
+# Arguments:
+- `X`: a signal
+- `order`: number of roots
+- `λ`: reg factor
+"""
+AR(X::AbstractArray,order::Int,λ=1e-2) = fitmodel(LS(na=order, λ=λ), X)
 
 """
     struct ARMA{T} <: AbstractModel
@@ -122,8 +134,66 @@ end
 
 "Abstract type that represents a way to fit a model to data"
 abstract type FitMethod end
+Base.Broadcast.broadcastable(p::FitMethod) = Ref(p)
+(fm::FitMethod)(X) = fitmodel(fm, X)
 
 fitmodel(fm,X::AbstractModel) = X
+
+"""
+    LS <: FitMethod
+
+
+# Arguments:
+- `na::Int`: number of roots (order of the system)
+- `λ::Float64 = 0.01`: reg factor
+"""
+@kwdef struct LS <: FitMethod
+    na::Int
+    λ::Float64 = 1e-2
+end
+
+"""
+    fitmodel(fm::LS, X::AbstractArray)
+"""
+function fitmodel(fm::LS,X::AbstractArray)
+    y,A = getARregressor(X, fm.na)
+    a = ls(A, y, fm.λ) |> polyvec
+    AR(a)
+end
+
+
+"""
+    ls(yA::AbstractTuple, λ=0.01)
+
+Regularized Least-squares
+"""
+function ls(A, y, λ=1e-2)
+    # (A'A + 1e-9I)\(A'y) #src
+    A2 = [A; λ*I]
+    (A2'A2)\(A'y)
+end
+
+
+"""
+    TLS <: FitMethod
+
+Total least squares
+
+# Arguments:
+- `na::Int`: number of roots (order of the system)
+"""
+@kwdef struct TLS <: FitMethod
+    na::Int
+end
+
+"""
+    fitmodel(fm::TLS, X::AbstractArray)
+"""
+function fitmodel(fm::TLS,X::AbstractArray)
+    y,A = getARregressor(X, fm.na)
+    a = tls(A,y) |> vec |> polyvec
+    AR(a)
+end
 
 """
     PLR <: FitMethod
@@ -148,53 +218,7 @@ end
 function fitmodel(fm::PLR,X::AbstractArray)
     plr(X,fm.na,fm.nc; initial_order = fm.initial_order, λ=fm.λ)
 end
-(fm::PLR)(X) = fitmodel(fm, X)
 
-"""
-    LS <: FitMethod
-
-
-# Arguments:
-- `na::Int`: number of roots (order of the system)
-- `λ::Float64 = 0.01`: reg factor
-"""
-@kwdef struct LS <: FitMethod
-    na::Int
-    λ::Float64 = 1e-2
-end
-
-"""
-    fitmodel(fm::LS, X::AbstractArray)
-"""
-function fitmodel(fm::LS,X::AbstractArray)
-    AR(X,fm.na,fm.λ)
-end
-(fm::LS)(X) = fitmodel(fm, X)
-
-
-"""
-    ls(yA::AbstractTuple, λ=0.01)
-
-Regularized Least-squares
-"""
-function ls(yA::AbstractTuple,λ=1e-2)
-    y,A = yA[1], yA[2]
-    # (A'A + 1e-9I)\(A'y) #src
-    A2 = [A; λ*I]
-    (A2'A2)\(A'y)
-end
-
-"""
-    AR(X::AbstractArray, order::Int, λ=0.01) = begin
-
-DOCSTRING
-
-# Arguments:
-- `X`: a signal
-- `order`: number of roots
-- `λ`: reg factor
-"""
-AR(X::AbstractArray,order::Int,λ=1e-2) = AR((X,order),λ)
 
 """
     plr(y, na, nc; initial_order=20, λ=0.01)
@@ -210,19 +234,17 @@ Performs pseudo-linear regression to estimate an ARMA model.
 """
 function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
-    y_trainA = getARregressor(y,initial_order)
-    y_train,A = y_trainA[1], y_trainA[2]
-    w1 = ls((y_train, A),λ)
+    y_train,A = getARregressor(y,initial_order)
+    w1 = ls(A,y_train,λ)
     yhat = A*w1
     ehat = yhat - y_train
     ΔN = length(y)-length(ehat)
-    y_trainA = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
-    y_train,A = y_trainA[1], y_trainA[2]
-    w = ls((y_train,A),λ)
+    y_train,A = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
+    w = ls(A,y_train,λ)
     a,c = params2poly(w,na,nc)
-    rc = roots(reverse(c))
-    ra = roots(reverse(a))
-    ARMA{typeof(c)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
+    rc = DiscreteRoots(hproots(reverse(c)))
+    ra = DiscreteRoots(hproots(reverse(a)))
+    ARMA{typeof(c), typeof(rc)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
 end
 
 function params2poly(w,na,nb)
@@ -452,7 +474,7 @@ function spectralenergy(G::LTISystem)
     2π*tr(sys.C*X*sys.C')
 end
 
-spectralenergy(a) = spectralenergy(determine_domain(roots(reverse(a))), a)
+# spectralenergy(a::AbstractArray) = spectralenergy(determine_domain(roots(reverse(a))), a)
 spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m))
 
 """
@@ -460,7 +482,8 @@ spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m)
 
 Calculates the energy in the spectrum associated with denominator polynomial `a`
 """
-function spectralenergy(d::TimeDomain, a::AbstractVector)
+function spectralenergy(d::TimeDomain, a::AbstractVector)::eltype(a)
+    a = Double64.(a)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
     r2 = roots(reverse(a2))
@@ -469,12 +492,9 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)
     res = residues(a2, r2)
     e = 2π*sum(res)
     ae = real(e)
-    if ae < 1e-3  && !((eltype(a) <: DoubleFloat) || (eltype(a) <: BigFloat)) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
-        if ae > 1e-12
-            return eltype(a)(spectralenergy(d, Double64.(a)))
-        else
-            return eltype(a)(spectralenergy(d, big.(a)))
-        end
+    if ae < 1e-3  && !(eltype(a) <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+        return eltype(a)(spectralenergy(d, big.(a)))
+
     end
     abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"
     ae

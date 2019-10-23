@@ -5,6 +5,8 @@ struct Continuous <: TimeDomain end
 "Discrete (sampled) time domain"
 struct Discrete <: TimeDomain end
 
+Base.Broadcast.broadcastable(p::TimeDomain) = Ref(p)
+
 abstract type AbstractAssignmentMethod end
 
 """
@@ -99,7 +101,7 @@ Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Bas
 for R in (:ContinuousRoots, :DiscreteRoots)
     for ff in [abs, abs2, real, imag]
         f = nameof(ff)
-        @eval Base.$f(r::$R) = R($f.(r.r))
+        @eval Base.$f(r::$R) = $R($f.(r.r))
     end
     for ff in [+, -, *, /]
         f = nameof(ff)
@@ -109,7 +111,6 @@ for R in (:ContinuousRoots, :DiscreteRoots)
         @eval Base.$f(a::AbstractArray,r::$R) = $R($f.(a, r.r))
 
         @eval Base.$f(r::$R,a::$R) = $R($f.(r.r, a.r))
-        @eval Base.$f(a::$R,r::$R) = $R($f.(a.r, r.r))
     end
 end
 
