@@ -343,10 +343,12 @@ end
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
+    n,p = length(e1), d.p
+    β = (1-p)/2
     sum(eachindex(e1)) do i
         i1 = I1[i]
         i2 = I2[i]
-        sqrt(w1[i1]*w2[i2])abs((e1[i1]-e2[i2]))^d.p
+        (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
     end
 end
 

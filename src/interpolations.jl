@@ -91,11 +91,15 @@ function interpolator(d::ClosedFormSpectralDistance,A1,A2)
 end
 
 function interpolator(d::EuclideanRootDistance,A1,A2; normalize=false)
-    @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
+    p = d.p
+    @assert p == 2 "Interpolation only supported for p=2, you have p=$p"
     RT = domain(d) isa Continuous ? ContinuousRoots : DiscreteRoots
-    r1,r2 = roots(domain(d), A1), roots(domain(d), A2)
+    e1,e2 = roots(domain(d), A1), roots(domain(d), A2)
+    I1,I2 = d.assignment(e1, e2)
+    e1,e2 = RT(e1[I1]),RT(e2[I2])
+    w1,w2 = d.weight(e1), d.weight(e2)
     function (w,t)
-        A = AR(RT((1-t)*r1 + t*r2))
+        A = AR(RT(((1-t)*w1.*e1 + t*w2.*e2)./((1-t).*w1.+t.*w2)))
         e = normalize ? 1/sqrt(spectralenergy(domain(d), A)) : 1
         tmap1(6,w) do w
             evalfr(domain(d), magnitude(d), w, A, e)
