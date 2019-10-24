@@ -37,13 +37,16 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
         ac = roots2poly(rc)
         new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     end
-    function AR(rc::DiscreteRoots)
+    function AR(r::DiscreteRoots)
         rc = ContinuousRoots(r)
         a = roots2poly(r)
         ac = roots2poly(rc)
         new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     end
 end
+
+"`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."
+checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn "Roots on negative real axis, no corresponding continuous time representation exists."
 
 """
     AR(X::AbstractArray, order::Int, λ=0.01)
@@ -244,6 +247,7 @@ function plr(y,na,nc; initial_order = 20, λ = 1e-2)
     a,c = params2poly(w,na,nc)
     rc = DiscreteRoots(hproots(reverse(c)))
     ra = DiscreteRoots(hproots(reverse(a)))
+    checkroots(ra)
     ARMA{typeof(c), typeof(rc)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
 end
 
@@ -482,8 +486,8 @@ spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m)
 
 Calculates the energy in the spectrum associated with denominator polynomial `a`
 """
-function spectralenergy(d::TimeDomain, a::AbstractVector)::eltype(a)
-    a = Double64.(a)
+function spectralenergy(d::TimeDomain, ai::AbstractVector{T})::T where T
+    a = Double64.(ai)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
     r2 = roots(reverse(a2))
@@ -492,8 +496,8 @@ function spectralenergy(d::TimeDomain, a::AbstractVector)::eltype(a)
     res = residues(a2, r2)
     e = 2π*sum(res)
     ae = real(e)
-    if ae < 1e-3  && !(eltype(a) <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
-        return eltype(a)(spectralenergy(d, big.(a)))
+    if ae < 1e-3  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+        return spectralenergy(d, big.(a))
 
     end
     abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"

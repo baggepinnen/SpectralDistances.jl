@@ -22,22 +22,27 @@ end
 Base.showable(::MIME"image/gif", agif::Plots.Animation) = true
 Base.showable(::MIME"text/html", agif::Plots.Animation) = true
 
-@recipe function plot(v::Vector{<:Complex}, d = determine_domain(v))
+@recipe function plot(v::Vector{<:Complex}, d = determine_domain(v); circle=true)
     @series begin
         primary := true
         seriestype := :scatter
         real.(v), imag.(v)
     end
-    if d isa Discrete
+    if circle && d isa Discrete
         t = LinRange(0, 2pi, 100)
         @series begin
+            seriestype := :path
+            marker := false
             primary := false
             linestyle := :dash
             linecolor := :black
             cos.(t), sin.(t)
         end
     end
+end
 
+@recipe function plot(r::AbstractRoots)
+    r.r, domain(r)
 end
 
 using Plots

@@ -78,9 +78,9 @@ Base.:(≈)(r1::T, r2::T) where T <: AbstractRoots = sort(r1, by=LinearAlgebra.e
 
 Change the domain of the roots
 """
-domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::ContinuousRoots) = exp(e)
 domain_transform(d::Continuous,e::DiscreteRoots) = log(e)
+domain_transform(d::Continuous,e::ContinuousRoots) = e
 domain_transform(d::Discrete,e::DiscreteRoots) = e
 domain(::DiscreteRoots) = Discrete()
 domain(::ContinuousRoots) = Continuous()
@@ -90,9 +90,12 @@ eigsort(e) = sort(e, by=imag)
 anglesort(e) = sort(e, by=angle)
 
 Base.Vector(r::AbstractRoots) = r.r
-Base.log(r::DiscreteRoots) = ContinuousRoots(log.(r.r))
+function Base.log(r::DiscreteRoots)
+    checkroots(r)
+    ContinuousRoots(log.(r.r))
+end
 Base.exp(r::ContinuousRoots) = DiscreteRoots(exp.(r.r))
-ControlSystems.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log.(r.r) ./ h)
+ControlSystems.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log(r) ./ h)
 d2c(r::ContinuousRoots,h=1) = DiscreteRoots(exp.(h .* r.r))
 
 Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2, Base.real, Base.imag)
@@ -188,6 +191,8 @@ function residueweight(e::AbstractRoots)
     res = residues(ContinuousRoots(e))
     abs.(π*abs2.(res)./ real.(e))
 end
+
+unitweight(e) = ones(size(e))
 
 """
     polar(e::Number)
