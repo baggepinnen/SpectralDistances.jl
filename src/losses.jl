@@ -90,6 +90,7 @@ The Sinkhorn distance between roots. The weights are provided by `weight`, which
 - `weight::F2 = `[`s1`](@ref) `∘` [`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
 - `β::Float64 = 0.01`: Amount of entropy regularization
 - `iters::Int = 10000`: Number of iterations of the Sinkhorn algorithm.
+- `p::Int = 2` : Order of the distance
 """
 SinkhornRootDistance
 @kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
@@ -98,6 +99,7 @@ SinkhornRootDistance
     weight::F2 = s1 ∘ residueweight
     β::Float64 = 0.01
     iters::Int = 10000
+    p::Int = 2
 end
 
 # TODO: Merge the two above
@@ -167,6 +169,7 @@ Calculates the Wasserstein distance between two signals by estimating a Welch pe
 - `distmat::DT`: you may provide a matrix array for this
 - `args::AT = ()`: Options to the Welch function
 - `kwargs::KWT = NamedTuple()`: Options to the Welch function
+- `p::Int = 2` : Order of the distance
 """
 WelchOptimalTransportDistance
 @kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
@@ -175,6 +178,7 @@ WelchOptimalTransportDistance
     iters::Int = 10000
     args::AT = ()
     kwargs::KWT = NamedTuple()
+    p::Int = 2
 end
 
 """
@@ -265,7 +269,7 @@ transform(d::AbstractRootDistance) = d.transform
 transform(d::AbstractRootDistance, x) = d.transform(x)
 
 
-distmat_euclidean(e1::AbstractVector,e2::AbstractVector) = abs2.(e1 .- transpose(e2))
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p
 
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
@@ -353,7 +357,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
 end
 
 function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    D     = distmat_euclidean(e1,e2)
+    D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
     C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
@@ -471,7 +475,7 @@ function evaluate(d::OptimalTransportModelDistance, b1, b2)
 end
 
 function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
-    D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq) : d.distmat
+    D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     if issorted(w1.freq) && issorted(w2.freq)
         C = trivial_transport(s1(w1.power),s1(w2.power), 1e-3)
     else
