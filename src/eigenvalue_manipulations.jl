@@ -98,8 +98,8 @@ Base.exp(r::ContinuousRoots) = DiscreteRoots(exp.(r.r))
 ControlSystems.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log(r) ./ h)
 d2c(r::ContinuousRoots,h=1) = DiscreteRoots(exp.(h .* r.r))
 
-Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2, Base.real, Base.imag)
-Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate, Base.abs, Base.abs2, Base.real, Base.imag)
+Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)
+Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)
 
 for R in (:ContinuousRoots, :DiscreteRoots)
     for ff in [abs, abs2, real, imag]
@@ -262,9 +262,9 @@ scalereal(x) = complex(1x.re, x.im)
 
 takes two vectors of numbers and sorts and returns `p2` such that it is in the order of the best Hungarian assignement between `p1` and `p2`. Uses `abs` for comparisons, works on complex numbers.
 """
-function hungariansort(p1,p2)
-    length(p1) <= 2 && (return p2)
-    distmat = abs.(p1 .- transpose(p2))
+function hungariansort(p1,p2,p=2)
+    length(p1) <= 1 && (return p2)
+    distmat = abs.(p1 .- transpose(p2)).^p
     ass,cost = hungarian(distmat)
     p2[ass]
 end

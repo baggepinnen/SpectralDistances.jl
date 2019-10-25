@@ -47,25 +47,47 @@ end
 
 using Plots
 """
-    plot_assignment(m1, m2)
+    assignmentplot(m1, m2)
 
 Plots the poles of two models and the optimal assignment between them
 """
-function plot_assignment(m1,m2)
-    rf(a) = roots(Discrete(), a)
-    plot(cos.(0:0.1:2pi),sin.(0:0.1:2pi),l=(:dash, :black), subplot=1, layout=1, lab="")
-    r1 = anglesort(rf(m1))
-    r2 = hungariansort(r1, anglesort(rf(m2)))
-    scatter!(real.(r1), imag.(r1), c=:blue, subplot=1, markerstrokealpha=0.1, label="m1")
-    scatter!(real.(r2), imag.(r2), c=:red, subplot=1, markerstrokealpha=0.1, label="m2")
-    xc = [real(r1) real(r2) fill(Inf, length(m1.p))]'[:]
-    yc = [imag(r1) imag(r2) fill(Inf, length(m1.p))]'[:]
-    plot!(xc,yc, subplot=1, lab="") |> display
+assignmentplot
+@userplot AssignmentPlot
+
+@recipe function assignmentplot(h::AssignmentPlot; d=Discrete(),p=2)
+    m1,m2 = h.args[1:2]
+    rf(a) = roots(d, a)
+    r1 = (rf(m1))
+    r2 = hungariansort(r1, (rf(m2)), p)
+    @series begin
+        markerstrokealpha --> 0.1
+        label --> "m1"
+        seriestype := :scatter
+        real.(r1), imag.(r1)
+    end
+    @series begin
+        markerstrokealpha --> 0.1
+        label --> "m2"
+        seriestype := :scatter
+        real.(r2), imag.(r2)
+    end
+    @series begin
+        primary := false
+        seriestype := :path
+        xc = [real.(r1) real.(r2) fill(Inf, length(m1.p))]'[:]
+        yc = [imag.(r1) imag.(r2) fill(Inf, length(m1.p))]'[:]
+        xc,yc
+    end
+    d isa Discrete && @series begin
+        l := (:dash, :black)
+        primary := false
+        cos.(0:0.1:2pi),sin.(0:0.1:2pi)
+    end
 end
 
 
 @recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)))
-    mag = evalfr.(Discrete(), Identity(), w, m)
+    mag = evalfr.(Continuous(), Identity(), w, m)
     yscale --> :log10
     xscale --> :log10
     w, sqrt.(mag)

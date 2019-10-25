@@ -47,6 +47,21 @@ function v1(x, dims=:)
 end
 
 """
+    median1(x, dims=:)
+
+normalize x median 0, median absolute deviation = 1
+"""
+function m1(x, dims=:)
+    x = x .- median(x, dims=dims)
+    # x .= x./mapslices(mad, x, dims=dims)
+end
+function m1(x::AbstractVector)
+    x = x .- median(x)
+    x .= x./mad(x, normalize=true)
+end
+
+
+"""
     bp_filter(x, passband)
 
 Band-pass filter, passband is tuple, `fs` assumed = 1

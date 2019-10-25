@@ -3,59 +3,64 @@ using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 # using ForwardDiff
 using DSP
+using Flux
 
 
 Random.seed!(0)
 
+
+
 @testset "SpectralDistances.jl" begin
 
-#     @testset "gradients" begin
-#         y = param(randn(10))
-#         u = param(randn(10))
-#         using ForwardDiff
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,2,2)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,2,2)[1]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,5,2)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,5,2)[1]), y.data)
-#
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,2,1)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,2,1)[1]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,5,1)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u.data,5,1)[1]), y.data)
-#
-#
-#
-#         y = param(randn(10))
-#         @test Flux.jacobian((y)->vec(getARregressor(y,2)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARregressor(y,2)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y.data)
-#         @test Flux.jacobian((y)->vec(getARregressor(y,5)[2]), y.data) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y.data)
-#         @test Flux.jacobian((y)->vec(getARregressor(y,5)[1]), y.data) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y.data)
-#
-#
-#
-#         let Gc = tf(1,[1,1,1,1])
-#             w = c2d(Gc,1).matrix[1] |> ControlSystems.denvec
-#             @test d2c(w) ≈ pole(Gc)
-#         end
-#
-#         y = randn(5000)
-#         plr(y,40,2)
-#         @test Flux.gradient(y->sum(plr(y,4,2)[1]), y)[1][1].data ≈ ForwardDiff.gradient(y->sum(plr(y,4,2)[1]), y)
-#         @test Flux.gradient(y->sum(plr(y,4,2)[2]), y)[1][1].data ≈ ForwardDiff.gradient(y->sum(plr(y,4,2)[2]), y)
-#
-#
-#         p = [1.,1,1]
-#         # @btime riroots(p)
-#         fd = central_fdm(3, 1)
-#         @test Flux.gradient(p) do p
-#             r = riroots(p)
-#             sum([r[1]; r[2]])
-#         end[1][1].data ≈ FiniteDifferences.grad(fd, p->begin
-#         r = roots(p)
-#         sum([real(r); imag(r)])
-#     end, p)
-#
-# end
+    @testset "gradients" begin
+        using SpectralDistances: getARXregressor, getARregressor
+        y = (randn(10))
+        u = (randn(10))
+        jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
+        using ForwardDiff
+        @test jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y)
+
+        @test jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y)
+        @test jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y)
+
+
+
+        y = (randn(10))
+        @test jacobian((y)->vec(getARregressor(y,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[2]), y)
+        @test jacobian((y)->vec(getARregressor(y,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y)
+        @test jacobian((y)->vec(getARregressor(y,5)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y)
+        @test jacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
+
+
+
+        let Gc = tf(1,[1,1,1,1])
+            w = c2d(Gc,1).matrix[1] |> ControlSystems.denvec
+            @test d2c(w) ≈ pole(Gc)
+        end
+
+        y = randn(5000)
+        plr(y,40,2)
+        @test Flux.gradient(y->sum(plr(y,4,2)[1]), y)[1][1] ≈ ForwardDiff.gradient(y->sum(plr(y,4,2)[1]), y)
+        @test Flux.gradient(y->sum(plr(y,4,2)[2]), y)[1][1] ≈ ForwardDiff.gradient(y->sum(plr(y,4,2)[2]), y)
+
+
+        p = [1.,1,1]
+        # @btime riroots(p)
+        fd = central_fdm(3, 1)
+        @test Flux.gradient(p) do p
+            r = roots(p)
+            sum(abs2, r)
+        end[1] ≈ FiniteDifferences.grad(fd, p->begin
+            r = roots(p)
+            sum(abs2, r)
+        end, p)
+
+end
 
 
 @testset "modeldistance" begin
@@ -110,6 +115,8 @@ end
 
     e = roots(randn(7))
     ed = DiscreteRoots(e)
+    @test real(e) == real.(e)
+    @test real(ed) == real.(ed)
     @test issorted(ed, by=angle)
     @test all(<(1) ∘ abs, ed)
     ec = log(ed)

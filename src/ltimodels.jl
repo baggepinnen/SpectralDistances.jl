@@ -26,6 +26,7 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     #     new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     # end
     function AR(a::AbstractVector)
+        a = SVector{length(a)}(a)
         r = DiscreteRoots(hproots(reverse(a)))
         rc = ContinuousRoots(r)
         ac = roots2poly(rc)
@@ -193,8 +194,14 @@ end
     fitmodel(fm::TLS, X::AbstractArray)
 """
 function fitmodel(fm::TLS,X::AbstractArray)
+    Ay = getARregressor_(X, fm.na)
+    a = tls!(Ay, size(Ay,2)-1) |> vec |> reverse |> polyvec
+    AR(a)
+end
+
+function fitmodel(fm::TLS,X::AbstractArray,diff::Bool)
     y,A = getARregressor(X, fm.na)
-    a = tls(A,y) |> vec |> polyvec
+    a = tls(A,y) |> vec |> reverse |> polyvec
     AR(a)
 end
 
@@ -206,25 +213,25 @@ DOCSTRING
 # Arguments:
 - `nc::Int`: order of numerator
 - `na::Int`: order of denomenator
-- `initial_order::Int = 100`: This order model is fit in initial step
+- `initial::T = TLS(na=80)`: fitmethod for the initial fit. Can be, e.g., [`LS`](@ref), [`TLS`](@ref) or any function that returns a coefficient vector
 - `λ::Float64 = 0.0001`: reg factor
 """
-@kwdef struct PLR <: FitMethod
+@kwdef struct PLR{T} <: FitMethod
     nc::Int
     na::Int
-    initial_order::Int = 100
+    initial::T = TLS(na=80)
     λ::Float64 = 1e-4
 end
 """
     fitmodel(fm::PLR, X::AbstractArray)
 """
 function fitmodel(fm::PLR,X::AbstractArray)
-    plr(X,fm.na,fm.nc; initial_order = fm.initial_order, λ=fm.λ)
+    plr(X,fm.na,fm.nc, fm.initial, λ=fm.λ)
 end
 
 
 """
-    plr(y, na, nc; initial_order=20, λ=0.01)
+    plr(y, na, nc, initial; λ=0.01)
 
 Performs pseudo-linear regression to estimate an ARMA model.
 
@@ -232,13 +239,12 @@ Performs pseudo-linear regression to estimate an ARMA model.
 - `y`: signal
 - `na`: denomenator order
 - `nc`: numerator order
-- `initial_order`: order of the first step model
+- `initial`: fitmethod for the initial fit. Can be, e.g., [`LS`](@ref), [`TLS`](@ref) or any function that returns a coefficient vector
 - `λ`: reg
 """
-function plr(y,na,nc; initial_order = 20, λ = 1e-2)
+function plr(y,na,nc,initial; λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
-    y_train,A = getARregressor(y,initial_order)
-    w1 = ls(A,y_train,λ)
+    w1 = initial(y)
     yhat = A*w1
     ehat = yhat - y_train
     ΔN = length(y)-length(ehat)
@@ -290,21 +296,21 @@ function getARregressor(y, na)
     return y,A
 end
 
+function getARregressor_(y, na)
+    y    = reverse(y)
+    m    = na+1 # Start of yr
+    n    = length(y) - m + 1 # Final length of yr
+    Ay   = toeplitz(y[m:m+n-1],y[m:-1:m-na])
+    return Ay
+end
+
+
+
+
+
 # getARregressor(a::TrackedArray, b) = Flux.Tracker.track(getARregressor, a, b)
 
-ZygoteRules.@adjoint function getARregressor(y,na)
-    getARregressor((y),na),  function (Δ)
-        d = zero(y)
-        d[na+1:end] .= Δ[1]
-        for j in 1:size(Δ[2], 2)
-            for i in 1:size(Δ[2], 1)
-                di = na+1-j + i-1
-                d[di] += Δ[2][i,j]
-            end
-        end
-        (d,nothing)
-    end
-end
+
 
 
 # @grad reshape(xs, dims) = reshape(data(xs), dims), Δ -> (reshape(Δ, size(xs)),nothing)
@@ -322,32 +328,6 @@ function getARXregressor(y::AbstractVector,u::AbstractVector, na, nb)
     return y,A
 end
 
-# getARXregressor(y::TrackedArray, u::TrackedArray, na::Int, nb::Int) = Flux.Tracker.track(getARXregressor, y, u, na, nb)
-
-ZygoteRules.@adjoint function getARXregressor(y, u, na::Int, nb)
-    @assert nb <= na # This is not a fundamental requirement, but this adjoint does not support it yet.
-    getARXregressor((y),(u),na,nb),  function (Δ)
-    dy = zero(y)
-    du = zero(u)
-    dy[na+1:end] .= Δ[1]
-    # du[na+1:end] .= Δ[1] #src
-    for j in 1:size(Δ[2], 2)
-        for i in 1:size(Δ[2], 1)
-            if j <= na
-                dyi = na+1-j + i-1
-                dy[dyi] += Δ[2][i,j]
-            else
-                ju = j -na
-                dui = na+1-ju + i-1
-                du[dui] += Δ[2][i,j]
-            end
-        end
-    end
-    (dy,du,nothing,nothing)
-end
-end
-
-
 
 
 poly(w) = [-reverse(w); 1]
@@ -355,18 +335,9 @@ polyvec(w) = [1; -w]
 polyroots(w) = roots(poly(w))
 
 riroots(p) = (r=roots(p); (real.(r),imag.(r)))
-# riroots(p::TrackedArray) = Flux.Tracker.track(riroots, p)
 # polyroots(w::TrackedArray) = riroots(poly(w))
 
-ZygoteRules.@adjoint function riroots(p)
-    dp = (p)
-    r = riroots(dp)
-    r, function (Δ)
-        fd = FiniteDifferences.central_fdm(3,1)
-        d = FiniteDifferences.j′vp(fd, riroots, Δ, dp)
-        (d,)
-    end
-end
+
 
 function d2c(a,c=1)
     error("This method should go")
@@ -394,7 +365,6 @@ function polyconv(a,b)
 end
 
 
-
 """
     roots2poly(roots)
 
@@ -405,21 +375,24 @@ function roots2poly(roots)
     for r in 1:length(roots)
         p = _roots2poly_kernel(p, roots[r])
     end
-    Vector(real(p))
+    (real(p))
 end
 
-function _roots2poly_kernel(a::Union{StaticVector{N,T},StaticVector{N,T}},b) where {N,T}
+function _roots2poly_kernel(a::AbstractArray{T,N},b) where {T,N}
     vT = T <: Real ? Complex{T} : T
-    c = MVector{N+1,vT}(ntuple(_->0, N+1))
+    @show N, T
+    ci = MVector{N+1,vT}(ntuple(_->0, N+1))
+    c = make_buffer(_roots2poly_kernel, ci)
     c[1] = 1
-    for i in 2:length(a)
+    n = length(a)
+    for i in 2:n
         c[i] = -b*a[i-1] + a[i]
     end
-    c[end] = -b*a[end]
+    c[n] = -b*a[n]
+    release_buffer(_roots2poly_kernel, c)
     c
 end
 
-# Base.delete_method.(methods(_roots2poly_kernel))
 
 """
     residues(a::AbstractVector, r=roots(reverse(a)))

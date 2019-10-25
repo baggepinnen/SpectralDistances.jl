@@ -50,4 +50,7 @@ include("utils.jl")
 include("plotting.jl")
 include("sinkhorn.jl")
 
+using BackwardsLinalg
+include("adjoints.jl")
+
 end # module
