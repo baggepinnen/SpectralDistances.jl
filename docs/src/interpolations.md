@@ -35,7 +35,7 @@ A2 = AR(r2)
 ##
 fig1 = plot()
 t = 0.1
-dist = ClosedFormSpectralDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
+dist = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
 interp = SpectralDistances.interpolator(dist, A1, A2)
 w = exp10.(LinRange(-1.5, 1, 300))
 for t = LinRange(0, 1, 7)

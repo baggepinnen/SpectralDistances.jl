@@ -118,11 +118,11 @@ end
 end
 
 
-@testset "trivial_transport" begin
+@testset "discrete_grid_transportplan" begin
     x = [1.,0,0]
     y = [0,0.5,0.5]
 
-    g = SpectralDistances.trivial_transport(x,y)
+    g = SpectralDistances.discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] == y
     @test sum(g,dims=2)[:] == x
 end
@@ -241,7 +241,7 @@ end
 
     m1,m2 = AR(a1), AR(a2)
 
-    dist2 = ClosedFormSpectralDistance(domain=Continuous(), p=2, interval=(-200.,200.))
+    dist2 = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-200.,200.))
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
     @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m1) rtol=1e-3
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m2)
@@ -261,7 +261,7 @@ end
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         @show d = D(domain=Continuous())
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
-        d isa Union{ClosedFormSpectralDistance, CramerSpectralDistance} && continue
+        d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         @show d = D(domain=Discrete())
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
     end
@@ -279,7 +279,7 @@ end
         @show d = D(domain=Continuous())
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
-        d isa Union{ClosedFormSpectralDistance, CramerSpectralDistance} && continue
+        d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         @show d = D(domain=Discrete())
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
@@ -302,11 +302,11 @@ end
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
     fm = TLS(na=6)
-    dist = ModelDistance(fm, ClosedFormSpectralDistance(domain=Continuous(), p=1))
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1))
     @test dist(x1,x2) < dist(x1,x3)
-    dist = ModelDistance(fm, ClosedFormSpectralDistance(domain=Continuous(), p=2))
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=2))
     @test dist(x1,x2) < dist(x1,x3)
-    dist = ClosedFormSpectralDistance(domain=Continuous(), p=1, interval=(0., 15.))
+    dist = RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15.))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
 end
@@ -340,7 +340,7 @@ end
     function scaleddist(alpha,p)
         r1a,r2a = ContinuousRoots(alpha.*r1), ContinuousRoots(alpha.*r2)
         m1,m2 = AR(r1a), AR(r2a)
-        # dist = ClosedFormSpectralDistance(domain=Continuous(), p=p, interval=(-20.,20.))
+        # dist = RationalOptimalTransportDistance(domain=Continuous(), p=p, interval=(-20.,20.))
         rdist = EuclideanRootDistance(domain=Continuous(), weight=residueweight, p=p)
         rdist(m1,m2)
     end

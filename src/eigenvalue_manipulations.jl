@@ -112,71 +112,79 @@ for R in (:ContinuousRoots, :DiscreteRoots)
         @eval Base.$f(r::$R,a::$R) = $R($f.(r.r, a.r))
     end
 end
-
-sqrtmag(magang::Tuple) = sqrt.(magang[1]), magang[2]
-logmag(magang::Tuple) = log.(magang[1]), magang[2]
-
-# FIXME: what does it mean to have negative magnitude??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-function logmag(e::Number)
-    m,a = polar(e)
-    m = log(m)
-    polar2complex(m,a)
-end
-
 polar2complex(m,a) = m * cis(a)
-
-function sqrtreim(e)
-    r,i = real(e), imag(e)
-    complex(sqrt(abs(r))*sign(r), sqrt(abs(i))*sign(i))
-end
-
-function sqrtim(e)
-    r,i = real(e), imag(e)
-    complex(r, sqrt(abs(i))*sign(i))
-end
-
-function sqrtre(e)
-    r,i = real(e), imag(e)
-    complex(sqrt(abs(r))*sign(r), i)
-end
-
-function logreim(e, ϵ=1e-4)
-    r,i = real(e), imag(e)
-    complex(log(abs(r) + ϵ)*sign(r), log(abs(i) + ϵ)*sign(i))
-end
-
-function logim(e, ϵ=1e-4)
-    r,i = real(e), imag(e)
-    complex(r, log(abs(i) + ϵ)*sign(i))
-end
-
-function logre(e, ϵ=1e-4)
-    r,i = real(e), imag(e)
-    complex(log(abs(r) + ϵ)*sign(r), i)
-end
-
-function invre(e)
-    r,i = real(e), imag(e)
-    complex(1/r,i)
-end
-
-function squarere(e)
-    r,i = real(e), imag(e)
-    complex(r*r,i)
-end
-
-function expre(e)
-    r,i = real(e), imag(e)
-    complex(exp(r),i)
-end
-
-function projim(e)
-    complex(0,imag(e))
-end
-
 function polar(e)
     abs.(e), angle.(e)
 end
+
+"""
+    polar(e::Number)
+
+magnitude and angle of a complex number
+"""
+function polar(e::Number)
+    abs(e), angle(e)
+end
+
+# sqrtmag(magang::Tuple) = sqrt.(magang[1]), magang[2]
+# logmag(magang::Tuple) = log.(magang[1]), magang[2]
+#
+# function logmag(e::Number)
+#     m,a = polar(e)
+#     m = log(m)
+#     polar2complex(m,a)
+# end
+#
+#
+# function sqrtreim(e)
+#     r,i = real(e), imag(e)
+#     complex(sqrt(abs(r))*sign(r), sqrt(abs(i))*sign(i))
+# end
+#
+# function sqrtim(e)
+#     r,i = real(e), imag(e)
+#     complex(r, sqrt(abs(i))*sign(i))
+# end
+#
+# function sqrtre(e)
+#     r,i = real(e), imag(e)
+#     complex(sqrt(abs(r))*sign(r), i)
+# end
+#
+# function logreim(e, ϵ=1e-4)
+#     r,i = real(e), imag(e)
+#     complex(log(abs(r) + ϵ)*sign(r), log(abs(i) + ϵ)*sign(i))
+# end
+#
+# function logim(e, ϵ=1e-4)
+#     r,i = real(e), imag(e)
+#     complex(r, log(abs(i) + ϵ)*sign(i))
+# end
+#
+# function logre(e, ϵ=1e-4)
+#     r,i = real(e), imag(e)
+#     complex(log(abs(r) + ϵ)*sign(r), i)
+# end
+#
+# function invre(e)
+#     r,i = real(e), imag(e)
+#     complex(1/r,i)
+# end
+#
+# function squarere(e)
+#     r,i = real(e), imag(e)
+#     complex(r*r,i)
+# end
+#
+# function expre(e)
+#     r,i = real(e), imag(e)
+#     complex(exp(r),i)
+# end
+#
+# function projim(e)
+#     complex(0,imag(e))
+# end
+
 
 """
     residueweight(e::AbstractRoots)
@@ -190,30 +198,21 @@ end
 
 unitweight(e) = ones(size(e))
 
-"""
-    polar(e::Number)
-
-magnitude and angle of a complex number
-"""
-function polar(e::Number)
-    abs(e), angle(e)
-end
-
-function polar_ang(e)
-    mag, ang = polar(e)
-    I   = sortperm(ang)
-    mag[I], ang[I], I
-end
-
-function polar_mag(e)
-    mag, ang = polar(e)
-    I   = sortperm(mag)
-    mag[I], ang[I], I
-end
-
+# function polar_ang(e)
+#     mag, ang = polar(e)
+#     I   = sortperm(ang)
+#     mag[I], ang[I], I
+# end
+#
+# function polar_mag(e)
+#     mag, ang = polar(e)
+#     I   = sortperm(mag)
+#     mag[I], ang[I], I
+# end
+#
 toreim(x::AbstractVector{<:Complex}) = (real.(x), imag.(x))
 toreim(x::Tuple) = x
-# toreim(x::Flux.Tracker.TrackedTuple) = x
+
 
 reflectc(x::Real) = x < 0 ? x : -x
 reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)
@@ -251,7 +250,7 @@ reflect(r::DiscreteRoots) = DiscreteRoots(reflectd.(r.r))
 #     p
 # end
 
-scalereal(x) = complex(1x.re, x.im)
+# scalereal(x) = complex(1x.re, x.im)
 
 """
     hungariansort(p1, p2)

@@ -25,9 +25,9 @@ Of these, [`ModelDistance`](@ref) is a bit special, works like this
 ```@docs
 ModelDistance
 ```
-The inner distance in [`ModelDistance`](@ref) can be any [`AbstractModelDistance`](@ref). The options are
+The inner distance in [`ModelDistance`](@ref) can be any [`AbstractRationalDistance`](@ref). The options are
 ```@example dist
-foreach(println, subtypes(SpectralDistances.AbstractModelDistance)) # hide
+foreach(println, subtypes(SpectralDistances.AbstractRationalDistance)) # hide
 ```
 These distances operate on LTI models. Some operate on the coefficients of the models
 ```@example dist
@@ -42,7 +42,7 @@ foreach(println, subtypes(SpectralDistances.AbstractRootDistance)) # hide
 To use the [`SinkhornRootDistance`](@ref) and let it operate on signals, we may construct our distance object as follows
 ```@repl dist
 innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
-dist = ModelDistance(LS(na=30), innerdistance)
+dist = ModelDistance(TLS(na=30), innerdistance)
 X1, X2 = randn(1000), randn(1000);
 dist(X1,X2)
 

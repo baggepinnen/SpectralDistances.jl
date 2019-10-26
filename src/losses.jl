@@ -3,13 +3,13 @@ import Distances.evaluate
 "The top level distance type"
 abstract type AbstractDistance <: Distances.Metric end
 "All subtypes of this type operates on rational transfer functions"
-abstract type AbstractModelDistance <: AbstractDistance end
+abstract type AbstractRationalDistance <: AbstractDistance end
 "All subtypes of this type operates on signals"
 abstract type AbstractSignalDistance <: AbstractDistance end
 "All subtypes of this type operates on the roots of rational transfer functions"
-abstract type AbstractRootDistance <: AbstractModelDistance end
+abstract type AbstractRootDistance <: AbstractRationalDistance end
 "All subtypes of this type operates on the coefficients of rational transfer functions"
-abstract type AbstractCoefficientDistance <: AbstractModelDistance end
+abstract type AbstractCoefficientDistance <: AbstractRationalDistance end
 
 Base.Broadcast.broadcastable(p::AbstractDistance) = Ref(p)
 
@@ -50,7 +50,7 @@ end
 A model distance operates on signals and works by fitting an LTI model to the signals before calculating the distance. The distance between the LTI models is defined by the field `distance`. This is essentially a wrapper around the inner distance that handles the fitting of a model to the signals. How the model is fit is determined by `fitmethod`.
 
 # Arguments:
-- `fitmethod::FitMethod`: `LS` or `PLR`
+- `fitmethod::[`FitMethod`](@ref)`: [`LS`](@ref), [`TLS`](@ref) or [`PLR`](@ref)
 - `distance::D`: The inner distance between the models
 """
 struct ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
@@ -102,13 +102,6 @@ SinkhornRootDistance
     p::Int = 2
 end
 
-# TODO: Merge the two above
-@kwdef struct ManhattanRootDistance{D,A,F} <: AbstractRootDistance
-    domain::D
-    assignment::A = SortAssignement(imag)
-    transform::F = identity
-end
-
 """
     HungarianRootDistance{D, ID <: Distances.PreMetric, F} <: AbstractRootDistance
 
@@ -146,16 +139,16 @@ KernelWassersteinRootDistance
 end
 
 """
-    OptimalTransportModelDistance{WT, DT} <: AbstractModelDistance
+    DiscretizedRationalDistance{WT, DT} <: AbstractRationalDistance
 
-DOCSTRING
+This distance discretizes the spectrum before performing the calculations.
 
 # Arguments:
 - `w::WT = LinRange(0.01, 0.5, 300)`: Frequency set
 - `distmat::DT = distmat_euclidean(w, w)`: DESCRIPTION
 """
-OptimalTransportModelDistance
-@kwdef struct OptimalTransportModelDistance{WT,DT} <: AbstractModelDistance
+DiscretizedRationalDistance
+@kwdef struct DiscretizedRationalDistance{WT,DT} <: AbstractRationalDistance
     w::WT = LinRange(0.01, 0.5, 300)
     distmat::DT = distmat_euclidean(w,w)
 end
@@ -195,7 +188,7 @@ OptimalTransportHistogramDistance
 end
 
 """
-    ClosedFormSpectralDistance{DT, MT} <: AbstractModelDistance
+    RationalOptimalTransportDistance{DT, MT} <: AbstractRationalDistance
 
 calculates the Wasserstein distance using the closed-form solution based on integrals and inverse cumulative functions.
 
@@ -205,27 +198,27 @@ calculates the Wasserstein distance using the closed-form solution based on inte
 - `magnitude::MT = Identity()`:
 - `interval = (-(float(π)), float(π))`: Integration interval
 """
-ClosedFormSpectralDistance
-@kwdef struct ClosedFormSpectralDistance{DT,MT} <: AbstractModelDistance
+RationalOptimalTransportDistance
+@kwdef struct RationalOptimalTransportDistance{DT,MT} <: AbstractRationalDistance
     domain::DT
     p::Int = 1
     magnitude::MT = Identity()
     interval = (-float(π,),float(π))
 end
-magnitude(d::ClosedFormSpectralDistance) = d.magnitude
+magnitude(d::RationalOptimalTransportDistance) = d.magnitude
 
 """
-    CramerSpectralDistance{DT} <: AbstractModelDistance
+    RationalCramerDistance{DT} <: AbstractRationalDistance
 
-Similar to `ClosedFormSpectralDistance` but does not use inverse functions.
+Similar to `RationalOptimalTransportDistance` but does not use inverse functions.
 
 # Arguments:
 - `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `p::Int = 2`: order
 - `interval = (-(float(π)), float(π))`: Integration interval
 """
-CramerSpectralDistance
-@kwdef struct CramerSpectralDistance{DT} <: AbstractModelDistance
+RationalCramerDistance
+@kwdef struct RationalCramerDistance{DT} <: AbstractRationalDistance
     domain::DT
     p::Int = 2
     interval = (-float(π,),float(π))
@@ -314,8 +307,6 @@ function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots
     dist  = d.distance
     dm    = [dist(e1[1][i],e2[1][j]) + dist(e1[2][i],e2[2][j]) for i = 1:n, j=1:n]
     c     = hungarian(dm)[2]
-    # P,c = hungarian(Flux.data.(dm))
-    # mean([(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=P])
 end
 
 # function kernelsum(e1,e2,λ)
@@ -368,12 +359,6 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
         eltype(D).(C)
     end
     sum(C.*D)
-end
-
-manhattan(c) = abs(c.re) + abs(c.im)
-function evaluate(d::ManhattanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    I1,I2 = d.assignment(e1, e2)
-    sum(manhattan, e1[I1]-e2[I2])
 end
 
 # function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
@@ -442,7 +427,7 @@ Perform computations that only need to be donce once when several pairwise dista
 - `As`: A vector of models
 - `threads`: Us multithreading? (true)
 """
-function precompute(d::OptimalTransportModelDistance, As::AbstractArray{<:AbstractModel}, threads=true)
+function precompute(d::DiscretizedRationalDistance, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     mapfun(As) do A1
         w = d.w
@@ -454,7 +439,7 @@ function precompute(d::OptimalTransportModelDistance, As::AbstractArray{<:Abstra
     end
 end
 
-function evaluate(d::OptimalTransportModelDistance, m1::AbstractModel, m2::AbstractModel)
+function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel)
     w = d.w
     noise_model = tf(m1)
     b1,_,_ = bode(noise_model, w.*2π) .|> vec
@@ -469,15 +454,15 @@ function evaluate(d::OptimalTransportModelDistance, m1::AbstractModel, m2::Abstr
     evaluate(d, b1, b2)
 end
 
-function evaluate(d::OptimalTransportModelDistance, b1, b2)
-    plan = trivial_transport(b1, b2)
+function evaluate(d::DiscretizedRationalDistance, b1, b2)
+    plan = discrete_grid_transportplan(b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
 function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     if issorted(w1.freq) && issorted(w2.freq)
-        C = trivial_transport(s1(w1.power),s1(w2.power), 1e-3)
+        C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     else
         C = sinkhorn(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
     end
@@ -500,11 +485,11 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
 end
 
 """
-    trivial_transport(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T))) where T
+    discrete_grid_transportplan(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T))) where T
 
 Calculate the optimal-transport plan between two vectors that are assumed to have the same support, with sorted support points.
 """
-function trivial_transport(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
+function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
     x  = copy(x)
     yf = zero(T)
     n  = length(x)
@@ -613,7 +598,7 @@ function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     ∫(z->abs(inv(F1, interval)(z) - inv(F2, interval)(z))^p, 0, 1)
 end
 
-function closed_form_wass(d::ClosedFormSpectralDistance,sol1,sol2)
+function closed_form_wass(d::RationalOptimalTransportDistance,sol1,sol2)
     p,interval = d.p, d.interval
     invfunctionbarrier(sol1,sol2,p,interval)
 end
@@ -630,7 +615,7 @@ function functionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}
     end
 end
 
-function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, A2::AbstractModel)
+function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, A1::AbstractModel, A2::AbstractModel)
     sc   = d.interval[1] == 0 ? sqrt(2) : 1
     e1   = sc/sqrt(spectralenergy(domain(d), A1))
     f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
@@ -638,22 +623,22 @@ function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, 
     f2   = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
     sol1 = c∫(f1,d.interval...)
     sol2 = c∫(f2,d.interval...)
-    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
+    d isa RationalOptimalTransportDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
     evaluate(d, sol1, sol2)
 end
 
-function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, sol1, sol2)
-    d isa ClosedFormSpectralDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
+function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, sol1, sol2)
+    d isa RationalOptimalTransportDistance && d.p > 1 && (return closed_form_wass(d,sol1,sol2))
     functionbarrier(sol1,sol2,d.p,d.interval)
 end
 
-function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
+function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
     @assert d.interval[1] == 0 "Integration interval must start at 0 to compare against a periodogram"
     p    = d.p
     e    = sqrt(2)/sqrt(spectralenergy(domain(d), A1))
     f    = w -> evalfr(domain(d), magnitude(d), w, A1, e)
     w    = P.freq .* (2π)
-    plan = trivial_transport(s1(f.(w)), s1(sqrt.(P.power)))
+    plan = discrete_grid_transportplan(s1(f.(w)), s1(sqrt.(P.power)))
     c    = 0.
     for i in axes(plan,1), j in axes(plan,2)
         c += abs(w[i]-w[j])^p * plan[i,j]
@@ -662,7 +647,7 @@ function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, 
     c
 end
 
-function precompute(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
+function precompute(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, As::AbstractArray{<:AbstractModel}, threads=true)
     mapfun = threads ? tmap : map
     sc   = d.interval[1] == 0 ? sqrt(2) : 1
     mapfun(As) do A1

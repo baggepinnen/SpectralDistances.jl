@@ -1,5 +1,5 @@
 using Documenter
-using SpectralDistances
+using SpectralDistances, ControlSystems
 # using DocumenterLaTeX
 
 makedocs(

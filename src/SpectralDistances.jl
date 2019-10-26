@@ -10,31 +10,33 @@ export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungarians
 export CoefficientDistance,
 ModelDistance,
 EuclideanRootDistance,
-ManhattanRootDistance,
 HungarianRootDistance,
 SinkhornRootDistance,
 KernelWassersteinRootDistance,
-OptimalTransportModelDistance,
+DiscretizedRationalDistance,
 WelchOptimalTransportDistance,
-ClosedFormSpectralDistance,
-CramerSpectralDistance,
+RationalOptimalTransportDistance,
+OptimalTransportHistogramDistance,
+RationalCramerDistance,
 BuresDistance,
 EnergyDistance,
 CompositeDistance,
-trivial_transport
+discrete_grid_transportplan
 # closed_form_wass,
 # closed_form_wass_noinverse
 
 export sinkhorn,
 IPOT
 
-export AR,
+export AbstractModel,
+AR,
 ARMA,
 PLR,
 LS,
 TLS
 
-export Continuous,
+export TimeDomain,
+Continuous,
 Discrete,
 SortAssignement,
 HungarianAssignement,

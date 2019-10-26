@@ -60,11 +60,11 @@ function centraldiff(v::AbstractVector)
 end
 
 """
-    interpolator(d::ClosedFormSpectralDistance, A1, A2)
+    interpolator(d::RationalOptimalTransportDistance, A1, A2)
 
 Perform displacement interpolation between two models.
 """
-function interpolator(d::ClosedFormSpectralDistance,A1,A2)
+function interpolator(d::RationalOptimalTransportDistance,A1,A2)
     @assert d.p == 2 "Interpolation only supported for p=2, you have p=$(d.p)"
     interval   = (0., d.interval[2])
     @assert (interval[1] == 0 || interval[1] == -interval[2])

@@ -52,14 +52,14 @@ checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @w
 """
     AR(X::AbstractArray, order::Int, λ=0.01)
 
-Fit an AR model using [`LS`](@ref) as `fitmethod`
+Fit an AR model using [`TLS`](@ref) as `fitmethod`
 
 # Arguments:
 - `X`: a signal
 - `order`: number of roots
 - `λ`: reg factor
 """
-AR(X::AbstractArray,order::Int,λ=1e-2) = fitmodel(LS(na=order, λ=λ), X)
+AR(X::AbstractArray,order::Int,λ=1e-2) = fitmodel(TLS(na=order, λ=λ), X)
 
 """
     struct ARMA{T} <: AbstractModel
@@ -113,9 +113,9 @@ PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 ControlSystems.pole(::TimeDomain, m::AbstractModel) = roots(d,m)
 ControlSystems.tzero(m::ARMA) = m.z
 """
-    ControlSystems.denvec(m::AbstractModel) = begin
+    ControlSystems.denvec(::TimeDomain, m::AbstractModel)
 
-DOCSTRING
+Get the denominator polynomial vector
 """
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
@@ -151,6 +151,7 @@ fitmodel(fm,X::AbstractModel) = X
 - `na::Int`: number of roots (order of the system)
 - `λ::Float64 = 0.01`: reg factor
 """
+LS
 @kwdef struct LS <: FitMethod
     na::Int
     λ::Float64 = 1e-2
@@ -186,6 +187,7 @@ Total least squares
 # Arguments:
 - `na::Int`: number of roots (order of the system)
 """
+TLS
 @kwdef struct TLS <: FitMethod
     na::Int
 end
@@ -208,7 +210,7 @@ end
 """
     PLR <: FitMethod
 
-DOCSTRING
+Pseudo linear regression. Estimates the noise components by performing an initial fit of higher order.
 
 # Arguments:
 - `nc::Int`: order of numerator
@@ -216,6 +218,7 @@ DOCSTRING
 - `initial::T = TLS(na=80)`: fitmethod for the initial fit. Can be, e.g., [`LS`](@ref), [`TLS`](@ref) or any function that returns a coefficient vector
 - `λ::Float64 = 0.0001`: reg factor
 """
+PLR
 @kwdef struct PLR{T} <: FitMethod
     nc::Int
     na::Int
