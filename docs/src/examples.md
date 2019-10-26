@@ -6,7 +6,7 @@
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
 using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
-gr(grid=false)
+pyplot(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])
 G2   = tf(1,[1,0.12,2])*tf(1,[1,0.1,0.4])
