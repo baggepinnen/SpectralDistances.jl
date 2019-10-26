@@ -123,7 +123,7 @@ function logmag(e::Number)
     polar2complex(m,a)
 end
 
-polar2complex(m,a) = m * exp(im*a)
+polar2complex(m,a) = m * cis(a)
 
 function sqrtreim(e)
     r,i = real(e), imag(e)
@@ -220,7 +220,7 @@ reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)
 function reflectd(x)
     a = abs(x)
     a < 1 && return x
-    1/a * exp(im*angle(x))
+    1/a * cis(angle(x))
 end
 """
     reflect(r::AbstractRoots)

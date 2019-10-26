@@ -591,11 +591,11 @@ function c∫(f,a,b;kwargs...)
 end
 
 @inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
-        (n=length(a);abs2(scale/sum(j->a[j]*exp(im*w*(n-j)), 1:n)))
+        (n=length(a);abs2(scale/sum(j->a[j]*cis(w*(n-j)), 1:n)))
 @inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);abs2(scale/sum(j->a[j]*(im*w)^(n-j), 1:n)))
 @inline ControlSystems.evalfr(::Discrete, m::Log, w, a::AbstractArray, scale::Number=1) =
-        (n=length(a);-log(abs2(sum(j->a[j]*exp(im*w*(n-j)), 1:n))) + scale/(2π))
+        (n=length(a);-log(abs2(sum(j->a[j]*cis(w*(n-j)), 1:n))) + scale/(2π))
 @inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + scale/(2π))
 
