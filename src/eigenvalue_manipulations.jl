@@ -102,10 +102,6 @@ Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.
 Lazy.@forward ContinuousRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)
 
 for R in (:ContinuousRoots, :DiscreteRoots)
-    for ff in [abs, abs2, real, imag]
-        f = nameof(ff)
-        @eval Base.$f(r::$R) = $R($f.(r.r))
-    end
     for ff in [+, -, *, /]
         f = nameof(ff)
         @eval Base.$f(r::$R,a::Number) = $R($f.(r.r, a))
