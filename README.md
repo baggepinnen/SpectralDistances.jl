@@ -9,4 +9,4 @@ This repository implements all optimal-transport based distances between spectra
 
 [New Metrics Between Rational Spectra and their Connection to Optimal Transport, Bagge Carlson 2019](https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view?usp=sharing)
 
-See the [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://baggepinnen.github.io/SpectralDistances.jl/latest) for instructions.
+See the [documentation](https://baggepinnen.github.io/SpectralDistances.jl/latest) for instructions.
