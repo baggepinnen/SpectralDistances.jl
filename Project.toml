@@ -4,6 +4,7 @@ authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+BackwardsLinalg = "442b4e1a-8b9d-11e9-03b0-f14b31742153"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
@@ -29,6 +30,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ThreadTools = "dbf13d8f-d36e-4350-8970-f3a99faba1a8"
 TotalLeastSquares = "028f657a-7ace-5159-a694-8cfd97933b0c"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]

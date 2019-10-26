@@ -62,20 +62,46 @@ ZygoteRules.@adjoint function getARXregressor(y, u, na::Int, nb)
 end
 end
 
-ZygoteRules.@adjoint function riroots(p)
-    dp = (p)
-    r = riroots(dp)
-    r, function (Δ)
-        fd = FiniteDifferences.central_fdm(3,1)
-        d = FiniteDifferences.j′vp(fd, riroots, Δ, dp)
-        (d,)
+# ZygoteRules.@adjoint function riroots(p)
+#     dp = (p)
+#     r = riroots(dp)
+#     r, function (Δ)
+#         fd = FiniteDifferences.central_fdm(3,1)
+#         d = FiniteDifferences.j′vp(fd, riroots, Δ, dp)
+#         (d,)
+#     end
+# end
+
+PolynomialRoots.roots(p) = eigvals(companion(p))
+
+function eigvals_back(eV, Δ)
+  e,V = eV
+  inv(V)'Diagonal(Δ)*V'
+end
+
+function companion(r)
+    A = zeros(length(r)-1, length(r)-1)
+    A[diagind(A,-1)] .= 1
+    A[:,end] .= .- r[1:end-1]
+    A
+end
+
+Zygote.@nograd companion, eigen
+
+ZygoteRules.@adjoint function roots(p)
+    eV = eigen(companion(p))
+    eV.values, function (Δ)
+        e,V = eV
+        d = inv(V)'*Diagonal(Δ)*V'
+        d2 = zeros(eltype(d),length(p),length(p)-1)
+        d2[1:end-1, :] .= .-d
+        (d2, )
     end
 end
 
-
-ZygoteRules.@adjoint function svd(A)
-    s = svd(A)
-    s,  function (Δ)
-        BackwardsLinalg.svd_back(s.U, s.S, s.V, Δ...)
-    end
-end
+# ZygoteRules.@adjoint function svd(A)
+#     s = svd(A)
+#     s,  function (Δ)
+#         BackwardsLinalg.svd_back(s.U, s.S, s.V, Δ...)
+#     end
+# end

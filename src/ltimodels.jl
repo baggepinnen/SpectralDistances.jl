@@ -378,18 +378,15 @@ function roots2poly(roots)
     (real(p))
 end
 
-function _roots2poly_kernel(a::AbstractArray{T,N},b) where {T,N}
+function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
     vT = T <: Real ? Complex{T} : T
-    @show N, T
-    ci = MVector{N+1,vT}(ntuple(_->0, N+1))
-    c = make_buffer(_roots2poly_kernel, ci)
+    c = MVector{N+1,vT}(ntuple(_->0, N+1))
     c[1] = 1
     n = length(a)
     for i in 2:n
         c[i] = -b*a[i-1] + a[i]
     end
-    c[n] = -b*a[n]
-    release_buffer(_roots2poly_kernel, c)
+    c[end] = -b*a[end]
     c
 end
 
