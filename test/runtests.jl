@@ -1,10 +1,7 @@
 @info "Running tests"
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
-using ForwardDiff, FiniteDifferences
 using DSP
-using ForwardDiff
-using Zygote
 
 
 Random.seed!(0)
@@ -24,8 +21,11 @@ end
 
 @testset "SpectralDistances.jl" begin
 
-    @testset "gradients" begin
+    get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
 
+        using ForwardDiff, FiniteDifferences
+        using ForwardDiff
+        using Zygote
         using SpectralDistances: getARXregressor, getARregressor
         y = (randn(10))
         u = (randn(10))
