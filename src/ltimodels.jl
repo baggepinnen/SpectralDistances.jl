@@ -90,15 +90,15 @@ hproots(a::AbstractVector{T}) where T = roots(Double64.(a))
 
 Convert model to a transfer function compatible with ControlSystems.jl
 """
-ControlSystems.tf(m::AR, ts) = tf(1, m.a, ts)
+ControlSystems.tf(m::AR, ts) = tf(1, Vector(m.a), ts)
 """
     ControlSystems.tf(m::AR)
 
 Convert model to a transfer function compatible with ControlSystems.jl
 """
-ControlSystems.tf(m::AR) = tf(1, m.ac)
-ControlSystems.tf(m::ARMA, ts) = tf(m.c, m.a, ts)
-ControlSystems.tf(m::ARMA) = tf(m.cc, m.ac)
+ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
+ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
+ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
 """
     roots(m::AbstractModel)
 
@@ -376,7 +376,7 @@ function roots2poly(roots)
     for r in 1:length(roots)
         p = _roots2poly_kernel(p, roots[r])
     end
-    (real(p))
+    SVector(real(p))
 end
 
 function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
@@ -413,7 +413,7 @@ end
 Returns a vector of residues for the system represented by roots `r`
 
 """
-residues(r::AbstractRoots) = residues(roots2poly(Vector(r)), Vector(r))
+residues(r::AbstractRoots) = residues(roots2poly(r), r)
 
 # Base.delete_method.(methods(residues))
 """
