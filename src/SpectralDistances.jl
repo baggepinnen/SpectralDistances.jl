@@ -1,7 +1,7 @@
 module SpectralDistances
 
 using LinearAlgebra, Statistics
-using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Clustering, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares
+using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares
 
 import Base.@kwdef
 
@@ -51,8 +51,10 @@ include("plotting.jl")
 include("sinkhorn.jl")
 
 include("adjoints.jl")
+
+import Requires
 function __init__()
-    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" begin
+    Requires.@require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" begin
         @eval using BackwardsLinalg
     end
 end
