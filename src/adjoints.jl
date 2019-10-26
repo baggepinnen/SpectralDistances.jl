@@ -6,23 +6,8 @@
 #     return release_buffer(myfun, y, x)
 # end
 #
-using Zygote
-make_buffer(f, args...) = similar(args...)
-@adjoint make_buffer(f, args...) = Zygote.Buffer(args...), _->nothing
-release_buffer(f, y, args...) = y
-release_buffer(f, y::Zygote.Buffer, args...) = copy(y)
 
-function jacobian(m,x)
-    y  = m(x)
-    k  = length(y)
-    n  = length(x)
-    J  = Matrix{eltype(x)}(undef,k,n)
-    for i = 1:k
-        g = Flux.gradient(x->m(x)[i], x)[1] # Populate gradient accumulator
-        J[i,:] .= g
-    end
-    J
-end
+
 
 ZygoteRules.@adjoint function getARregressor(y,na)
     getARregressor((y),na),  function (Δ)
