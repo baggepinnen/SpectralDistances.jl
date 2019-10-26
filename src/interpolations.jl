@@ -101,7 +101,7 @@ function interpolator(d::EuclideanRootDistance,A1,A2; normalize=false)
     function (w,t)
         A = AR(RT(((1-t)*w1.*e1 + t*w2.*e2)./((1-t).*w1.+t.*w2)))
         e = normalize ? 1/sqrt(spectralenergy(domain(d), A)) : 1
-        tmap1(6,w) do w
+        tmap(w) do w
             evalfr(domain(d), magnitude(d), w, A, e)
         end
     end

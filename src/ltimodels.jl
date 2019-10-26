@@ -335,22 +335,6 @@ poly(w) = [-reverse(w); 1]
 polyvec(w) = [1; -w]
 polyroots(w) = roots(poly(w))
 
-riroots(p) = (r=roots(p); (real.(r),imag.(r)))
-# polyroots(w::TrackedArray) = riroots(poly(w))
-
-
-
-function d2c(a,c=1)
-    error("This method should go")
-    @assert a[1] == 1 "Convert to polynomial first"
-    Gd = ss(tf(c,a,1))
-    n = Gd.nx
-    Md = [Gd.A Gd.B; zeros(1,n) 1]
-    Mc = log(Md)
-    Ac = Mc[1:n, 1:n]
-    e = eigvals(Ac)
-    e
-end
 
 function polyconv(a,b)
     na,nb = length(a),length(b)
@@ -505,47 +489,3 @@ end
 function normalize_energy(r)
     normalization_factor(r)*r
 end
-
-
-
-# roots2poly([-1,-2,-3])
-
-
-# function PolynomialRoots.roots(poly::AbstractVector{<:N}; epsilon::AbstractFloat=NaN,
-#     polish::Bool=false) where {N}
-#     degree = length(poly) - 1
-#     PolynomialRoots.roots!(zeros(Complex{real((N))}, degree), (complex(poly)),
-#     epsilon, degree, polish)
-# end
-#
-# function PolynomialRoots.roots!(roots::AbstractVector{<:Complex{T}}, poly::AbstractVector{<:Complex{T}}, epsilon::E,
-#     degree::Integer, polish::Bool) where {T<:Union{AbstractFloat, AbstractParticles},E<:Union{AbstractFloat, AbstractParticles}}
-#     isnan(epsilon) && (epsilon = eps(T))
-#     poly2 = copy(poly)
-#     if degree <= 1
-#         if degree == 1
-#             roots[1] = -poly[1] / poly[2]
-#         end
-#         return roots
-#     end
-#     @inbounds for n = degree:-1:3
-#         roots[n], iter, success = PolynomialRoots.laguerre2newton(poly2, n, roots[n], 2, epsilon)
-#         if ! success
-#             roots[n], iter, success = PolynomialRoots.laguerre(poly2, n,
-#             zero(Complex{T}), epsilon)
-#         end
-#         coef = poly2[n+1]
-#         @inbounds for i = n:-1:1
-#             prev = poly2[i]
-#             poly2[i] = coef
-#             coef = prev + roots[n]*coef
-#         end
-#     end
-#     roots[1], roots[2] = PolynomialRoots.solve_quadratic_eq(poly2)
-#     if polish
-#         @inbounds for n = 1:degree # polish roots one-by-one with a full polynomial
-#             roots[n], iter, success = PolynomialRoots.laguerre(poly, degree, roots[n], epsilon)
-#         end
-#     end
-#     return roots
-# end

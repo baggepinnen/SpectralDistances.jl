@@ -190,7 +190,7 @@ What it sounds like
 - `p::Int = 1`: order
 """
 OptimalTransportHistogramDistance
-@kwdef struct OptimalTransportHistogramDistance{DT} <: AbstractDistance
+@kwdef struct OptimalTransportHistogramDistance <: AbstractDistance
     p::Int = 1
 end
 
@@ -318,31 +318,31 @@ function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots
     # mean([(e1[1][i]-e2[1][j])^2 + (e1[2][i]-e2[2][j])^2 for i = 1:n, j=P])
 end
 
-function kernelsum(e1,e2,λ)
-    s = 0.
-    λ = -λ
-    @inbounds for i in eachindex(e1)
-        s += exp(λ*abs(e1[i]-e2[i])^2)
-        for j in i+1:length(e2)
-            s += 2exp(λ*abs(e1[i]-e2[j])^2)
-        end
-    end
-    s / length(e1)^2
-end
-
-function logkernelsum(e1,e2,λ)
-    s = 0.
-    λ = -λ
-    le2 = logreim.(e2)
-    @inbounds for i in eachindex(e1)
-        le1 = logreim(e1[i])
-        s += exp(λ*abs2(le1-le2[i]))
-        for j in i+1:length(e2)
-            s += 2exp(λ*abs2(le1-le2[j]))
-        end
-    end
-    s / length(e1)^2
-end
+# function kernelsum(e1,e2,λ)
+#     s = 0.
+#     λ = -λ
+#     @inbounds for i in eachindex(e1)
+#         s += exp(λ*abs(e1[i]-e2[i])^2)
+#         for j in i+1:length(e2)
+#             s += 2exp(λ*abs(e1[i]-e2[j])^2)
+#         end
+#     end
+#     s / length(e1)^2
+# end
+#
+# function logkernelsum(e1,e2,λ)
+#     s = 0.
+#     λ = -λ
+#     le2 = logreim.(e2)
+#     @inbounds for i in eachindex(e1)
+#         le1 = logreim(e1[i])
+#         s += exp(λ*abs2(le1-le2[i]))
+#         for j in i+1:length(e2)
+#             s += 2exp(λ*abs2(le1-le2[j]))
+#         end
+#     end
+#     s / length(e1)^2
+# end
 
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     I1,I2 = d.assignment(e1, e2)
@@ -376,20 +376,20 @@ function evaluate(d::ManhattanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     sum(manhattan, e1[I1]-e2[I2])
 end
 
-function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
-    λ     = d.λ
-    error("this does not yield symmetric results")
-    # e1 = [complex((logmag(magangle(e1)))...) for e1 in e1]
-    # e2 = [complex((logmag(magangle(e2)))...) for e2 in e2]
-    # e1    = logreim.(e1)
-    # e2    = logreim.(e2)
-    # e1    = sqrtreim.(e1)
-    # e2    = sqrtreim.(e2)
-    dm1   = logkernelsum(e1,e1,λ)
-    dm2   = logkernelsum(e2,e2,λ)
-    dm12  = logkernelsum(e1,e2,λ)
-    dm1 - 2dm12 + dm2
-end
+# function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+#     λ     = d.λ
+#     error("this does not yield symmetric results")
+#     # e1 = [complex((logmag(magangle(e1)))...) for e1 in e1]
+#     # e2 = [complex((logmag(magangle(e2)))...) for e2 in e2]
+#     # e1    = logreim.(e1)
+#     # e2    = logreim.(e2)
+#     # e1    = sqrtreim.(e1)
+#     # e2    = sqrtreim.(e2)
+#     dm1   = logkernelsum(e1,e1,λ)
+#     dm2   = logkernelsum(e2,e2,λ)
+#     dm12  = logkernelsum(e1,e2,λ)
+#     dm1 - 2dm12 + dm2
+# end
 function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     λ     = d.λ
     # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
@@ -648,15 +648,12 @@ function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, 
 end
 
 function evaluate(d::Union{ClosedFormSpectralDistance, CramerSpectralDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
+    @assert d.interval[1] == 0 "Integration interval must start at 0 to compare against a periodogram"
     p    = d.p
-    sc   = d.interval[1] == 0 ? sqrt(2) : 1
-    e    = sc/sqrt(spectralenergy(domain(d), A1))
+    e    = sqrt(2)/sqrt(spectralenergy(domain(d), A1))
     f    = w -> evalfr(domain(d), magnitude(d), w, A1, e)
     w    = P.freq .* (2π)
-    sol  = c∫(f,d.interval...; saveat=w)
-    cP   = cumsum(sqrt.(P.power))
-    cP ./= cP[end]
-    plan = trivial_transport(sol.u./sol.u[end], cP)
+    plan = trivial_transport(s1(f.(w)), s1(sqrt.(P.power)))
     c    = 0.
     for i in axes(plan,1), j in axes(plan,2)
         c += abs(w[i]-w[j])^p * plan[i,j]

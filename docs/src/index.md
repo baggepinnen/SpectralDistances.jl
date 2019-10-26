@@ -8,6 +8,10 @@
 
 This package facilitates the calculation of distances between signals, primarily in the frequency domain. The main functionality revolves around *rational spectra*, i.e., the spectrum of a rational function, commonly known as a transfer function.
 
+This repository implements all optimal-transport based distances between spectra detailed in the following pre-pre print
+
+[New Metrics Between Rational Spectra and their Connection to Optimal Transport, Bagge Carlson 2019](https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view?usp=sharing)
+
 ## High-level overview
 The main workflow is as follows
 1. Define a distance

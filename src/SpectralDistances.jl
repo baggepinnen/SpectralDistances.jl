@@ -5,7 +5,7 @@ using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, L
 
 import Base.@kwdef
 
-export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, unitweight, normalize_energy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots
+export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots
 
 export CoefficientDistance,
 ModelDistance,

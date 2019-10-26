@@ -243,9 +243,11 @@ end
 
     dist2 = ClosedFormSpectralDistance(domain=Continuous(), p=2, interval=(-200.,200.))
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
-    @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ SpectralDistances.spectralenergy(Continuous(), m1) rtol=1e-3
+    @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m1) rtol=1e-3
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m2)
-    @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ SpectralDistances.spectralenergy(Continuous(), m2) rtol=1e-3
+    @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m2) rtol=1e-3
+
+    @test spectralenergy(Continuous(), AR(ContinuousRoots([-1.]))) ≈ spectralenergy(tf(1,[1,1])) rtol=1e-3
 
 
 end
@@ -283,6 +285,43 @@ end
         @test d(m1,m2) > 1e-10
     end
 end
+
+
+@testset "Welch" begin
+    x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
+    x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
+    x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
+    dist = WelchOptimalTransportDistance(p=1)
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = WelchOptimalTransportDistance(p=2)
+    @test dist(x1,x2) < dist(x1,x3)
+end
+
+@testset "ClosedForm" begin
+    x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
+    x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
+    x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
+    fm = TLS(na=6)
+    dist = ModelDistance(fm, ClosedFormSpectralDistance(domain=Continuous(), p=1))
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = ModelDistance(fm, ClosedFormSpectralDistance(domain=Continuous(), p=2))
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = ClosedFormSpectralDistance(domain=Continuous(), p=1, interval=(0., 15.))
+    @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
+    @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
+end
+
+@testset "Histogram" begin
+    x1 = randn(100)
+    x2 = randn(100) .+ 1
+    x3 = randn(100) .+ 2
+    dist = SpectralDistances.OptimalTransportHistogramDistance(p=1)
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = SpectralDistances.OptimalTransportHistogramDistance(p=2)
+    @test dist(x1,x2) < dist(x1,x3)
+end
+
+
 
 
 @testset "Theoretical scaling from paper" begin
