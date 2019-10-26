@@ -9,6 +9,7 @@ Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DoubleFloats = "497a8b3b-efae-58df-a0af-a86822472b78"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 Hungarian = "e91730f6-4275-51fb-a7a0-7064cfbd3b39"
@@ -33,7 +34,9 @@ TotalLeastSquares = "028f657a-7ace-5159-a694-8cfd97933b0c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
+
 [compat]
+Documenter = "~0.23"
 TotalLeastSquares = "1.0"
 
 [extras]

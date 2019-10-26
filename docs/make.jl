@@ -1,6 +1,6 @@
 using Documenter
 using SpectralDistances
-using DocumenterLaTeX
+# using DocumenterLaTeX
 
 makedocs(
     sitename = "SpectralDistances",
@@ -14,5 +14,5 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "https://github.com/baggepinnen/SpectralDistances.jl"
+    repo = "github.com/baggepinnen/SpectralDistances.jl"
 )
