@@ -41,7 +41,7 @@ foreach(println, subtypes(SpectralDistances.AbstractRootDistance)) # hide
 ## A full example
 To use the [`SinkhornRootDistance`](@ref) and let it operate on signals, we may construct our distance object as follows
 ```@repl dist
-innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005)
+innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
 dist = ModelDistance(LS(na=30), innerdistance)
 X1, X2 = randn(1000), randn(1000);
 dist(X1,X2)
@@ -53,6 +53,20 @@ dist(X1,X2)
 X1, X2 = sin.(2π*1 .*t), sin.(2π*2 .*t);   # Two signals that are further apart in frequency
 dist(X1,X2)
 ```
+
+## Using Welch periodograms
+We can calculate the Wasserstein distance between spectra estimated using the Welch method like so
+```@repl dist
+dist = WelchOptimalTransportDistance(p=2)
+X1, X2 = randn(1000), randn(1000);
+dist(X1,X2)
+t = 0:0.01:10;
+X1, X2 = sin.(2π*1 .*t), sin.(2π*1.1 .*t); # Two signals that are close in frequency
+dist(X1,X2)
+X1, X2 = sin.(2π*1 .*t), sin.(2π*2 .*t);   # Two signals that are further apart in frequency
+dist(X1,X2)
+```
+
 
 ## Function reference
 

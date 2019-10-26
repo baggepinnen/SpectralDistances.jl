@@ -6,7 +6,7 @@
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
 using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
-pyplot(grid=false)
+gr(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])
 G2   = tf(1,[1,0.12,2])*tf(1,[1,0.1,0.4])
@@ -29,7 +29,7 @@ vline!([0], l=(:black, :dash))
 hline!([0], l=(:black, :dash))
 
 plot(fig1, fig2, fig3, layout=(1,3))
-savefig("cumulative.svg"); nothing # hide
+savefig("cumulative.png"); nothing # hide
 ```
 
-![](cumulative.svg)
+![](cumulative.png)

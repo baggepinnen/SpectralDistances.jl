@@ -173,7 +173,7 @@ Calculates the Wasserstein distance between two signals by estimating a Welch pe
 """
 WelchOptimalTransportDistance
 @kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
-    distmat::DT
+    distmat::DT = nothing
     β::Float64 = 0.01
     iters::Int = 10000
     args::AT = ()
