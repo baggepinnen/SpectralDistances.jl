@@ -50,7 +50,9 @@ include("utils.jl")
 include("plotting.jl")
 include("sinkhorn.jl")
 
-using BackwardsLinalg
 include("adjoints.jl")
-
+function __init__()
+    @require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" begin
+        @eval using BackwardsLinalg
+    end
 end # module
