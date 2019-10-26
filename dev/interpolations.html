@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Interpolations · SpectralDistances</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>SpectralDistances</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search.html"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="index.html">SpectralDistances</a></li><li><a class="toctext" href="ltimodels.html">Models and root manipulations</a></li><li><a class="toctext" href="distances.html">Distances</a></li><li class="current"><a class="toctext" href="interpolations.html">Interpolations</a><ul class="internal"></ul></li><li><a class="toctext" href="plotting.html">Plotting</a></li><li><a class="toctext" href="misc.html">Misc.</a></li><li><a class="toctext" href="examples.html">Examples</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href="interpolations.html">Interpolations</a></li></ul><a class="edit-page" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/master/docs/src/interpolations.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Interpolations</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Interpolations-1" href="#Interpolations-1">Interpolations</a></h1><p>Whenever you define a distance, that distance implies the existence of a shortest path, a <em>geodesic</em>. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models.</p><ul></ul><p>Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter <span>$t \in (0,1)$</span></p><pre><code class="language-">using SpectralDistances, ControlSystems, Distances, Plots, LaTeXStrings, Random
+pyplot()
+Random.seed!(0)
+
+n = 4
+
+r1 = complex.(-0.01 .+ 0.001randn(3), 2randn(3))
+r1 = ContinuousRoots([r1; conj.(r1)])
+
+r2 = complex.(-0.01 .+ 0.001randn(3), 2randn(3))
+r2 = ContinuousRoots([r2; conj.(r2)])
+
+r1,r2 = normalize_energy.((r1, r2))
+
+A1 = AR(r1)
+A2 = AR(r2)
+
+
+##
+fig1 = plot()
+t = 0.1
+dist = ClosedFormSpectralDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
+interp = SpectralDistances.interpolator(dist, A1, A2)
+w = exp10.(LinRange(-1.5, 1, 300))
+for t = LinRange(0, 1, 7)
+    Φ = clamp.(interp(w,t), 1e-10, 100)
+    plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab=&quot;&quot;, xlabel=&quot;Frequency&quot;, title=L&quot;W_2&quot;, ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
+end
+
+rdist = EuclideanRootDistance(domain=Continuous(), p=2)
+interp = SpectralDistances.interpolator(rdist, A1, A2, normalize=false)
+fig2 = plot()
+w = exp10.(LinRange(-1.5, 1, 300))
+for t = LinRange(0, 1, 7)
+    Φ = interp(w,t)
+    plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab=&quot;&quot;, xlabel=&quot;&quot;, title=L&quot;RD&quot;, ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
+end
+
+fig3 = plot()
+w = exp10.(LinRange(-1.5, 1, 300))
+Φ1 = bode(tf(A1), w)[1][:]
+Φ2 = bode(tf(A2), w)[1][:]
+for t = LinRange(0, 1, 7)
+    plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab=&quot;&quot;, xlabel=&quot;&quot;, title=L&quot;L_2&quot;, ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
+end
+
+fig = plot(fig1, fig2, fig3, layout=(3,1))
+savefig(&quot;interpolation.svg&quot;); nothing # hide</code></pre><p><img src="interpolation.svg" alt/></p><footer><hr/><a class="previous" href="distances.html"><span class="direction">Previous</span><span class="title">Distances</span></a><a class="next" href="plotting.html"><span class="direction">Next</span><span class="title">Plotting</span></a></footer></article></body></html>
