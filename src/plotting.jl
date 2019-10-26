@@ -45,7 +45,6 @@ end
     r.r, domain(r)
 end
 
-using Plots
 """
     assignmentplot(m1, m2)
 
