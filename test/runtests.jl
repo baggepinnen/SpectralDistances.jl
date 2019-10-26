@@ -10,21 +10,21 @@ using Zygote
 Random.seed!(0)
 
 
+function jacobian(m,x)
+    y  = m(x)
+    k  = length(y)
+    n  = length(x)
+    J  = Matrix{eltype(x)}(undef,k,n)
+    for i = 1:k
+        g = Zygote.gradient(x->m(x)[i], x)[1]
+        J[i,:] .= g
+    end
+    J
+end
 
 @testset "SpectralDistances.jl" begin
 
     @testset "gradients" begin
-        function jacobian(m,x)
-            y  = m(x)
-            k  = length(y)
-            n  = length(x)
-            J  = Matrix{eltype(x)}(undef,k,n)
-            for i = 1:k
-                g = Zygote.gradient(x->m(x)[i], x)[1] # Populate gradient accumulator
-                J[i,:] .= g
-            end
-            J
-        end
 
         using SpectralDistances: getARXregressor, getARregressor
         y = (randn(10))
@@ -112,7 +112,7 @@ end
         @test_broken ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # frequency shifts of relative size should result in the same error
         ls_loss = ModelDistance(fitmethod(na=10), CoefficientDistance(domain=Discrete()))
         @test ls_loss(randn(100), randn(100)) > 0.05
-        @test_broken ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.3 # Filtered through same filter
+        @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 1 # Filtered through same filter
         # @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(9),[9], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
     end
 end
