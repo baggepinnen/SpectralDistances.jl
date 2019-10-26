@@ -74,10 +74,6 @@ end
 
 PolynomialRoots.roots(p) = eigvals(companion(p))
 
-function eigvals_back(eV, Δ)
-  e,V = eV
-  inv(V)'Diagonal(Δ)*V'
-end
 
 function companion(r)
     A = zeros(length(r)-1, length(r)-1)
@@ -86,16 +82,12 @@ function companion(r)
     A
 end
 
-Zygote.@nograd companion, eigen
-
 ZygoteRules.@adjoint function roots(p)
     eV = eigen(companion(p))
     eV.values, function (Δ)
         e,V = eV
-        d = inv(V)'*Diagonal(Δ)*V'
-        d2 = zeros(eltype(d),length(p),length(p)-1)
-        d2[1:end-1, :] .= .-d
-        (d2, )
+        d = [-(inv(V)'*Diagonal(Δ)*V')[:,end]; 0]
+        (d, )
     end
 end
 

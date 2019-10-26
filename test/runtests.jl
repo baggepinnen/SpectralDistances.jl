@@ -52,13 +52,13 @@ Random.seed!(0)
         p = [1.,1,1]
         # @btime riroots(p)
         fd = central_fdm(3, 1)
-        @test_skip Flux.gradient(p) do p
+        @test Flux.gradient(p) do p
             r = roots(p)
             sum(abs2, r)
-        end[1] ≈ FiniteDifferences.grad(fd, p->begin
+        end[1][1:end-1] ≈ FiniteDifferences.grad(fd, p->begin
             r = roots(p)
             sum(abs2, r)
-        end, p)
+        end, p)[1:end-1]
 
         fm = TLS(na=4)
         y = randn(50)
@@ -66,6 +66,21 @@ Random.seed!(0)
         @test_broken Flux.gradient(y) do y
             sum(abs2, fitmodel(fm,y,true).pc)
         end
+
+
+
+
+        a = randn(5)
+        a[end] = 1
+        f(x) = sum(abs2(r) for r in roots(x))
+        G = Zygote.gradient(f, a)[1]
+        f'(a)
+
+
+        fdm = central_fdm(5,1)
+        @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1:end-1]
+
+
 end
 
 fm = TLS(na=4)
