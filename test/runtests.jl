@@ -23,7 +23,7 @@ end
 
     @testset "Model estimation" begin
         y = sin.(0:0.1:100)
-        fm = LS(na=2)
+        fm = LS(na=2, λ=0)
         m = fm(y)
         @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
 
@@ -38,9 +38,9 @@ end
 
 
         y = sin.(0:0.1:100) .+ sin.(2 .* (0:0.1:100) .+ 0.3)
-        fm = LS(na=4)
+        fm = LS(na=4, λ=0)
         m = fm(y)
-        @test_broken imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1 # Too biased for this example
+        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1
 
         fm = TLS(na=4)
         m = fm(y)
@@ -48,9 +48,9 @@ end
         @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
 
         y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.01 .*randn.()
-        fm = PLR(na=4, nc=1)
+        fm = PLR(na=4, nc=1, λ=0.0)
         m = fm(y)
-        @test_broken imag.(log(m.p)) ≈ [-0.1, 0.1] rtol=1e-3
+        @test_broken imag.(log(m.p)) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-3
 
     end
 

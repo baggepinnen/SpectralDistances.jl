@@ -268,7 +268,7 @@ Performs pseudo-linear regression to estimate an ARMA model.
 function plr(y,na,nc,initial; λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
     y_train,A = getARregressor(y,initial.na)
-    w1 = initial isa TLS ? tls(A,y_train) : ls(A,y_train,λ)
+    w1 = initial isa TLS ? tls(A,y_train) : ls(A,y_train,initial.λ)
     yhat = A*w1
     ehat = yhat - y_train
     ΔN = length(y)-length(ehat)
