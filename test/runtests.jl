@@ -21,6 +21,40 @@ end
 
 @testset "SpectralDistances.jl" begin
 
+    @testset "Model estimation" begin
+        y = sin.(0:0.1:100)
+        fm = LS(na=2)
+        m = fm(y)
+        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
+
+        fm = TLS(na=2)
+        m = fm(y)
+        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
+
+        y = sin.(0:0.1:1000) .+ 0.01 .*randn.()
+        fm = PLR(na=2, nc=1)
+        m = fm(y)
+        @test imag.(log(m.p)) ≈ [-0.1, 0.1] rtol=1e-3
+
+
+        y = sin.(0:0.1:100) .+ sin.(2 .* (0:0.1:100) .+ 0.3)
+        fm = LS(na=4)
+        m = fm(y)
+        @test_broken imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1 # Too biased for this example
+
+        fm = TLS(na=4)
+        m = fm(y)
+        @test_broken spectralenergy(Continuous(), m) ≈ 2π*var(y)
+        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
+
+        y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.01 .*randn.()
+        fm = PLR(na=4, nc=1)
+        m = fm(y)
+        @test_broken imag.(log(m.p)) ≈ [-0.1, 0.1] rtol=1e-3
+
+    end
+
+
     get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
 
         using ForwardDiff, FiniteDifferences
