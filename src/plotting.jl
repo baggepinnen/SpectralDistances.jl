@@ -85,9 +85,10 @@ assignmentplot
 end
 
 
-@recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)))
+@recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)); rad=true)
     mag = evalfr.(Continuous(), Identity(), w, m)
     yscale --> :log10
     xscale --> :log10
+    rad || (w = w .* 2π)
     w, sqrt.(mag)
 end

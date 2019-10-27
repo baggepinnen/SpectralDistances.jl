@@ -48,7 +48,5 @@ Pages   = ["ltimodels.jl","eigenvalue_manipulations.jl"]
 ```@docs
 ControlSystems.tf(m::AR, ts)
 ControlSystems.tf(m::AR)
-ControlSystems.pole(::TimeDomain, m::AbstractModel)
-ControlSystems.tzero(m::ARMA)
 ControlSystems.denvec(::Discrete, m::AbstractModel)
 ```

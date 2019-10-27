@@ -54,9 +54,10 @@ A model distance operates on signals and works by fitting an LTI model to the si
 - `distance::D`: The inner distance between the models
 
 # Example:
-```jldoctest; output = false
+```julia
+using SpectralDistances
 innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
-dist = ModelDistance(TLS(na=30), innerdistance);
+dist = ModelDistance(TLS(na=30), innerdistance)
 ```
 """
 struct ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
@@ -111,7 +112,7 @@ end
 """
     HungarianRootDistance{D, ID <: Distances.PreMetric, F} <: AbstractRootDistance
 
-DOCSTRING
+Similar to [`EuclideanRootDistance`](@ref) but does the pole assignment using the Hungarian method.
 
 # Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
@@ -128,11 +129,11 @@ end
 """
     KernelWassersteinRootDistance{D, F, DI} <: AbstractRootDistance
 
-DOCSTRING
+A kernel version of the root distance
 
 # Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
-- `λ::Float64 = 1.0`: reg param
+- `λ::Float64 = 1.0`: Kernel precision, lower value means wider kernel.
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
 - `distance::DI = SqEuclidean()`: Inner distance
 """
@@ -242,6 +243,8 @@ end
     EnergyDistance <: AbstractSignalDistance
 
 `std(x1) - std(x2)`
+This distance can be added to a loss function to ensure that the energy in the two signals is the same. Some of the optimal transport-based distances are invariant to the energy in the signal, requiring this extra cost if that invariance is not desired. Combining distances is done by putting two or more in a tuple.
+    Usage: `combined_loss = (primary_distance, EnergyDistance())`
 """
 struct EnergyDistance <: AbstractSignalDistance
 end
