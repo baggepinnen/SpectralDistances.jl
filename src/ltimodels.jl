@@ -1,17 +1,18 @@
 const AbstractTuple = Tuple #Union{Tuple, Flux.Tracker.TrackedTuple}
 
-abstract type AbstractModel end
+abstract type AbstractModel <: ControlSystems.LTISystem end
 Base.Broadcast.broadcastable(p::AbstractModel) = Ref(p)
 
 """
-    struct AR{T} <: AbstractModel
+    struct AR <: AbstractModel
 
 Represents an all-pole transfer function, i.e., and AR model
 
 # Arguments:
 - `a`: denvec
 - `ac`: denvec cont. time
-- `p`: poles
+- `p`: discrete time poles
+- `pc`: continuous time poles
 """
 struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     a::T
@@ -99,6 +100,11 @@ Convert model to a transfer function compatible with ControlSystems.jl
 ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
 ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
 ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
+
+Base.convert(::Type{ControlSystems.TransferFunction}, m::AbstractModel) = tf(m)
+Base.promote_rule(::Type{<:ControlSystems.TransferFunction}, ::Type{<:AbstractModel}) = ControlSystems.TransferFunction
+
+
 """
     roots(m::AbstractModel)
 
@@ -119,9 +125,22 @@ ControlSystems.tzero(::Continuous, m::ARMA) = error("Zeros in Continuous time no
 Get the denominator polynomial vector
 """
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
+ControlSystems.numvec(::Discrete, m::AR) = [1.]
+ControlSystems.numvec(::Continuous, m::AR) = [1.]
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
 ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
+
+ControlSystems.bode(m::AbstractModel, args...; kwargs...) = bode(tf(m), args...; kwargs...)
+ControlSystems.nyquist(m::AbstractModel, args...; kwargs...) = nyquist(tf(m), args...; kwargs...)
+ControlSystems.freqresp(m::AbstractModel, w::AbstractVector{<:Real}, args...; kwargs...) = freqresp(tf(m), w, args...; kwargs...)
+ControlSystems.step(m::AbstractModel, Tf::Real, args...; kwargs...) = step(tf(m), Tf, args...; kwargs...)
+
+function Base.getproperty(m::AbstractModel, p::Symbol)
+    p === :Ts && return 0.0
+    getfield(m,p)
+end
+
 """
     coefficients(::Domain, m::AbstractModel)
 

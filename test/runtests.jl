@@ -191,6 +191,20 @@ end
 
 end
 
+@testset "ControlSystems interoperability" begin
+    m = AR(ContinuousRoots([-1]))
+    g = tf(1,[1.,1])
+    @test tf(m) == g
+    @test m*g == g*g
+    @test denvec(Continuous(), m) == denvec(g)[1]
+    @test numvec(Continuous(), m) == numvec(g)[1]
+    @test pole(Continuous(), m) == pole(g)
+    @test all(ControlSystems.bode(m) .≈ bode(g))
+    @test all(ControlSystems.nyquist(m) .≈ nyquist(g))
+    @test ControlSystems.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
+    @test all(ControlSystems.step(m, 10) .≈ step(g, 10))
+end
+
 @testset "polynomial acrobatics" begin
     a = randn(5)
     b = randn(5)

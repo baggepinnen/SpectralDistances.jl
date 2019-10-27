@@ -50,8 +50,14 @@ end
 A model distance operates on signals and works by fitting an LTI model to the signals before calculating the distance. The distance between the LTI models is defined by the field `distance`. This is essentially a wrapper around the inner distance that handles the fitting of a model to the signals. How the model is fit is determined by `fitmethod`.
 
 # Arguments:
-- `fitmethod::[`FitMethod`](@ref)`: [`LS`](@ref), [`TLS`](@ref) or [`PLR`](@ref)
+- `fitmethod::`[`FitMethod`](@ref): [`LS`](@ref), [`TLS`](@ref) or [`PLR`](@ref)
 - `distance::D`: The inner distance between the models
+
+# Example:
+```jldoctest; output = false
+innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
+dist = ModelDistance(TLS(na=30), innerdistance);
+```
 """
 struct ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
     fitmethod::FitMethod
