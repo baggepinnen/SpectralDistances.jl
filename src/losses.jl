@@ -295,8 +295,8 @@ function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
     evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2))
 end
 function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
-    d1 = evaluate(d, preprocess_roots(d,pole(w1)), preprocess_roots(d,pole(w2)))
-    d2 = evaluate(d, preprocess_roots(d,tzero(w1)), preprocess_roots(d,tzero(w2)))
+    d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
+    d2 = evaluate(d, preprocess_roots(d,tzero(domain(d),w1)), preprocess_roots(d,tzero(domain(d),w2)))
     d1 + d2
 end
 
@@ -336,6 +336,7 @@ end
 # end
 
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+    length(e1) == 0 && return zero(real(eltype(e1)))
     I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
     n,p = length(e1), d.p

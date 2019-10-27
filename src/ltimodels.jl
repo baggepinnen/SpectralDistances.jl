@@ -110,8 +110,9 @@ PolynomialRoots.roots(::Discrete, m::AR) = m.p
 PolynomialRoots.roots(::Continuous, m::AR) = m.pc
 PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
-ControlSystems.pole(::TimeDomain, m::AbstractModel) = roots(d,m)
-ControlSystems.tzero(m::ARMA) = m.z
+ControlSystems.pole(d::TimeDomain, m::AbstractModel) = roots(d,m)
+ControlSystems.tzero(::Discrete, m::ARMA) = m.z
+ControlSystems.tzero(::Continuous, m::ARMA) = error("Zeros in Continuous time not yet implemented")
 """
     ControlSystems.denvec(::TimeDomain, m::AbstractModel)
 
