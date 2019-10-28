@@ -21,6 +21,19 @@ end
 
 @testset "SpectralDistances.jl" begin
 
+    @testset "Energy" begin
+        for σ² = [0.1, 1., 2., 3]
+            m = AR(ContinuousRoots([-1.]), σ²)
+            e = spectralenergy(Continuous(),m)
+            @test e ≈ σ²
+            x = sqrt(σ²)randn(10000)
+            m = TLS(na=10)(x)
+            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.05
+        end
+        # y = filt(numvec(Discrete(),m), denvec(Discrete(),m), x)
+        # @test var(y) ≈ var(x)
+    end
+
     @testset "Model estimation" begin
         y = sin.(0:0.1:100)
         fm = LS(na=2, λ=0)
@@ -309,7 +322,7 @@ end
 
     m1,m2 = AR(a1), AR(a2)
 
-    dist2 = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-200.,200.))
+    dist2 = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-20.,20.))
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
     @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m1) rtol=1e-3
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m2)
@@ -422,3 +435,31 @@ end
 end
 
 end
+
+# x1 = randn(1000)
+# x2 = randn(1000)
+# fm = TLS(na=4)
+# inner = EuclideanRootDistance(domain=Continuous(), p=2)
+# dist = ModelDistance(fm, inner)
+# dist(x1,x2)
+# using Zygote
+# m1,m2 = fm(x1), fm(x2)
+# Zygote.gradient(inner, m1,m2)
+#
+# function di(e1,e2)
+#     w1 = ones(1)
+#     l = 0.
+#     for i in 1:length(e1)
+#         l += abs(w1[1]*e1[i]-e2[i])
+#     end
+#     l
+# end
+#
+# Zygote.gradient(di, [complex(1.2)], [complex(1.2)])
+#
+# function g(v)
+#     z = complex(v[1],v[2])
+#     sum(eachindex(z)) do i
+#         abs2(1*z)
+#     end
+# end

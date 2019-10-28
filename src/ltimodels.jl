@@ -13,12 +13,14 @@ Represents an all-pole transfer function, i.e., and AR model
 - `ac`: denvec cont. time
 - `p`: discrete time poles
 - `pc`: continuous time poles
+- `b`: Numerator scalar
 """
 struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     a::T
     ac::T
     p::Rt
     pc::Ct
+    b::Float64
     # function AR(xo::AbstractTuple,λ=1e-2)
     #     a = ls(getARregressor(xo[1], xo[2]),λ) |> polyvec
     #     r = DiscreteRoots(hproots(reverse(nograd(a))))
@@ -26,24 +28,27 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     #     ac = roots2poly(rc)
     #     new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     # end
-    function AR(a::AbstractVector)
+    function AR(a::AbstractVector, σ²=nothing)
         a = SVector{length(a)}(a)
         r = DiscreteRoots(hproots(reverse(a)))
         rc = ContinuousRoots(r)
         ac = roots2poly(rc)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
     end
-    function AR(rc::ContinuousRoots)
+    function AR(rc::ContinuousRoots, σ²=nothing)
         r = DiscreteRoots(rc)
         a = roots2poly(r)
         ac = roots2poly(rc)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
     end
-    function AR(r::DiscreteRoots)
+    function AR(r::DiscreteRoots, σ²=nothing)
         rc = ContinuousRoots(r)
         a = roots2poly(r)
         ac = roots2poly(rc)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
+        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
     end
 end
 
@@ -51,16 +56,15 @@ end
 checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn "Roots on negative real axis, no corresponding continuous time representation exists."
 
 """
-    AR(X::AbstractArray, order::Int, λ=0.01)
+    AR(X::AbstractArray, order::Int)
 
 Fit an AR model using [`TLS`](@ref) as `fitmethod`
 
 # Arguments:
 - `X`: a signal
 - `order`: number of roots
-- `λ`: reg factor
 """
-AR(X::AbstractArray,order::Int,λ=1e-2) = fitmodel(TLS(na=order, λ=λ), X)
+AR(X::AbstractArray,order::Int) = fitmodel(TLS(na=order, λ=λ), X, var(X))
 
 """
     struct ARMA{T} <: AbstractModel
@@ -125,8 +129,8 @@ ControlSystems.tzero(::Continuous, m::ARMA) = error("Zeros in Continuous time no
 Get the denominator polynomial vector
 """
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
-ControlSystems.numvec(::Discrete, m::AR) = [1.]
-ControlSystems.numvec(::Continuous, m::AR) = [1.]
+ControlSystems.numvec(::Discrete, m::AR) = error("Not yet implemented")#[m.b]
+ControlSystems.numvec(::Continuous, m::AR) = [m.b]
 ControlSystems.numvec(::Discrete, m::ARMA) = m.c
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
 ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
@@ -183,7 +187,7 @@ end
 function fitmodel(fm::LS,X::AbstractArray)
     y,A = getARregressor(X, fm.na)
     a = ls(A, y, fm.λ) |> polyvec
-    AR(a)
+    AR(a, var(X))
 end
 
 
@@ -216,15 +220,16 @@ end
     fitmodel(fm::TLS, X::AbstractArray)
 """
 function fitmodel(fm::TLS,X::AbstractArray)
+    isderiving() && return fitmodel(fm,X,true)
     Ay = getARregressor_(X, fm.na)
     a = tls!(Ay, size(Ay,2)-1) |> vec |> reverse |> polyvec
-    AR(a)
+    AR(a, var(X))
 end
 
 function fitmodel(fm::TLS,X::AbstractArray,diff::Bool)
     y,A = getARregressor(X, fm.na)
     a = tls(A,y) |> vec |> reverse |> polyvec
-    AR(a)
+    AR(a, var(X))
 end
 
 """
@@ -277,6 +282,7 @@ function plr(y,na,nc,initial; λ = 1e-2)
     a,c = params2poly(w,na,nc)
     rc = DiscreteRoots(hproots(reverse(c)))
     ra = DiscreteRoots(hproots(reverse(a)))
+    # TODO: scalefactor for PLR
     checkroots(ra)
     ARMA{typeof(c), typeof(rc)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
 end
@@ -457,14 +463,18 @@ function spectralenergy(G::LTISystem)
 end
 
 # spectralenergy(a::AbstractArray) = spectralenergy(determine_domain(roots(reverse(a))), a)
-spectralenergy(d::TimeDomain, m::AbstractModel) = spectralenergy(d, denvec(d, m))
+function spectralenergy(d::TimeDomain, m::AbstractModel)
+    b = numvec(d,m)
+    @assert length(b) == 1
+    spectralenergy(d, denvec(d, m), b[1])
+end
 
 """
-    spectralenergy(d::TimeDomain, a::AbstractVector)
+    spectralenergy(d::TimeDomain, a::AbstractVector, b)
 
 Calculates the energy in the spectrum associated with denominator polynomial `a`
 """
-function spectralenergy(d::TimeDomain, ai::AbstractVector{T})::T where T
+function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b::Number)::T where T
     a = Double64.(ai)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
@@ -472,10 +482,10 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T})::T where T
     filterfun = d isa Continuous ? r -> real(r) < 0 : r -> abs(r) < 1
     r2 = filter(filterfun, r2)
     res = residues(a2, r2)
-    e = 2π*sum(res)
+    e = 2π*b^2*sum(res)
     ae = real(e)
     if ae < 1e-3  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
-        return spectralenergy(d, big.(a))
+        return spectralenergy(d, big.(a), b)
 
     end
     abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"
@@ -504,11 +514,32 @@ end
 normalization_factor(r) = normalization_factor(AutoRoots(r))
 
 
+"""
+    normalize_energy(r)
+
+Returns the factor that, when used to multiply the poles, results in a system with unit spectral energy.
+"""
 function normalization_factor(r::AbstractRoots)
-    e = spectralenergy(domain(r), roots2poly(r))
+    e = spectralenergy(domain(r), roots2poly(r), 1)
     n = length(r)
     s = e^(1/(2n-1))
 end
+
+"""
+    normalize_energy(r)
+
+Returns poles scaled to achieve unit spectral energy.
+"""
 function normalize_energy(r)
     normalization_factor(r)*r
+end
+
+"""
+    scalefactor(::TimeDomain, a, σ²)
+
+Returns `b` such that the system with numerator `b` and denomenator `a` has spectral energy `σ²`. `σ²` should typically be the variance of the corresponding time signal.
+"""
+function scalefactor(d::TimeDomain, a, σ²)
+    e = spectralenergy(d, a, 1)
+    sqrt(σ²/(e))
 end
