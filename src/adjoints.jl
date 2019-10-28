@@ -6,7 +6,9 @@
 #     return release_buffer(myfun, y, x)
 # end
 #
+isderiving() = false
 
+@adjoint isderiving() = true, _ -> nothing
 
 
 ZygoteRules.@adjoint function getARregressor(y,na)

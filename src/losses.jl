@@ -350,11 +350,18 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     w1,w2 = d.weight(e1), d.weight(e2)
     n,p = length(e1), d.p
     β = (1-p)/2
-    sum(eachindex(e1)) do i
+    # sum(eachindex(e1)) do i
+    #     i1 = I1[i]
+    #     i2 = I2[i]
+    #     (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
+    # end # below is workaround for zygote #314
+    l = 0.
+    for i in 1:length(e1)
         i1 = I1[i]
         i2 = I2[i]
-        (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
+        l += (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
     end
+    l
 end
 
 function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
