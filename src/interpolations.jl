@@ -1,18 +1,4 @@
 
-function feedback_interpolate(a1,c1,a2,c2,α)
-    sys1 = ss(tf(c1,a1,1))
-    sys2 = ss(tf(c2,a2,1))
-    K = place(sys1, pole(sys2))
-    sysi = ss(sys1.A - α*sys1.B*K, sys1.B, sys1.C, sys1.D, 1) |> tf
-    sysi = minreal(sysi)
-    ar,cr = denvec(sysi)[], numvec(sysi)[]
-    ar,cr
-end
-
-function spectral_interpolate(args...)
-    error("Not implemented")
-end
-
 
 """
     slerp(p1, p2, t)
