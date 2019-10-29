@@ -44,7 +44,7 @@ for t = LinRange(0, 1, 7)
     plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab=&quot;&quot;, xlabel=&quot;&quot;, title=&quot;L_2&quot;, ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
-fig = plot(fig1, fig2, fig3, layout=(3,1))</code></pre><pre><code class="language-none">/home/travis/.julia/packages/GR/ZI5OE/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+fig = plot(fig1, fig2, fig3, layout=(3,1))</code></pre><pre><code class="language-none">/home/travis/.julia/packages/GR/f1Iqi/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
 connect: Connection refused
 GKS: can&#39;t connect to GKS socket application
 Did you start &#39;gksqt&#39;?
