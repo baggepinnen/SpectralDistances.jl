@@ -18,24 +18,24 @@ function slerp(p1,p2,t)
     m*((sin((1-t)*Ω)/sin(Ω))*p1 + (sin(t*Ω)/sin(Ω))*p2)
 end
 
-function sinkhorn_interpolate(a1,c1,a2,c2,ai,ci,α)
-    error("Update to new interface")
-    α == 0 && return a1,c1,0
-    α == 1 && return a2,c2,0
-    # ai = (1-α)*a1 + α*a2
-    # ci  = (1-α)*c1 + α*c2
-    distmat = loss_spectral_ot(a1,c1,a2,c2)[2]
-    function loss(r)
-        ar,cr = r[1:length(ai)], r[length(ai)+1:end]
-        ar[1] = 1
-        (1-α)*loss_spectral_ot!(distmat,a1,c1,ar,cr) +  α*loss_spectral_ot!(distmat,a2,c2,ar,cr)
-    end
-    res = Optim.optimize(loss, [ai;ci], BFGS(), Optim.Options(store_trace=false, show_trace=true, iterations=500, allow_f_increases=false, time_limit=20, x_tol=1e-6, f_tol=1e-6), inplace=false, autodiff=:forward)
-
-    ai,ci = res.minimizer[1:length(ai)], res.minimizer[length(ai)+1:end]
-    ai[1] = 1
-    ai, ci, res
-end
+# function sinkhorn_interpolate(a1,c1,a2,c2,ai,ci,α)
+#     error("Update to new interface")
+#     α == 0 && return a1,c1,0
+#     α == 1 && return a2,c2,0
+#     # ai = (1-α)*a1 + α*a2
+#     # ci  = (1-α)*c1 + α*c2
+#     distmat = loss_spectral_ot(a1,c1,a2,c2)[2]
+#     function loss(r)
+#         ar,cr = r[1:length(ai)], r[length(ai)+1:end]
+#         ar[1] = 1
+#         (1-α)*loss_spectral_ot!(distmat,a1,c1,ar,cr) +  α*loss_spectral_ot!(distmat,a2,c2,ar,cr)
+#     end
+#     res = Optim.optimize(loss, [ai;ci], BFGS(), Optim.Options(store_trace=false, show_trace=true, iterations=500, allow_f_increases=false, time_limit=20, x_tol=1e-6, f_tol=1e-6), inplace=false, autodiff=:forward)
+#
+#     ai,ci = res.minimizer[1:length(ai)], res.minimizer[length(ai)+1:end]
+#     ai[1] = 1
+#     ai, ci, res
+# end
 
 
 function centraldiff(v::AbstractVector)

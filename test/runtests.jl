@@ -434,6 +434,68 @@ end
 
 end
 
+
+@testset "Interpolations" begin
+    # NOTE: Only testing that it runs, not that it does the right thing. Have a look at the figure in the docs to deteermine if it works well
+    n = 4
+    r1 = complex.(-0.01 .+ 0.001randn(3), 2randn(3))
+    r1 = ContinuousRoots([r1; conj.(r1)])
+    r2 = complex.(-0.01 .+ 0.001randn(3), 2randn(3))
+    r2 = ContinuousRoots([r2; conj.(r2)])
+    r1,r2 = normalize_energy.((r1, r2))
+    A1 = AR(r1)
+    A2 = AR(r2)
+    t = 0.1
+    dist = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
+    interp = SpectralDistances.interpolator(dist, A1, A2)
+    w = exp10.(LinRange(-1.5, 1, 300))
+    for t = LinRange(0, 1, 7)
+        Φ = clamp.(interp(w,t), 1e-10, 100)
+    end
+
+    rdist = EuclideanRootDistance(domain=Continuous(), p=2)
+    interp = SpectralDistances.interpolator(rdist, A1, A2, normalize=false)
+    w = exp10.(LinRange(-1.5, 1, 300))
+    for t = LinRange(0, 1, 7)
+        Φ = interp(w,t)
+    end
+
+
+@testset "Slerp" begin
+    a = n1(randn(3))
+    b = n1(randn(3))
+    c = SpectralDistances.slerp(a,b,0.5)
+    @test c ≈ n1((a+b)/2)
+end
+
+
+@testset "Utils" begin
+    X = randn(1000,10)
+    x1,x2 = twoD(X)
+    @test length(x1) == length(x2) == size(X,1)
+    x1,x2,x3 = threeD(X)
+    @test length(x1) == length(x3) == size(X,1)
+
+    @test norm(n1(x1)) ≈ 1
+    @test sum(s1(abs.(x1))) ≈ 1
+    @test var(v1(x1)) ≈ 1
+    @test mean(v1(x1)) ≈ 0 atol=sqrt(eps())
+    @test mean(SpectralDistances.m1(x1)) ≈ 0 atol=0.08
+    @test var(SpectralDistances.m1(x1)) ≈ 1 atol=0.2
+
+
+    # @test norm(n1(X,1)) ≈ 1
+    @test  all(sum(s1(abs.(X),1), dims=1) .≈ 1)
+    @test  all(var(v1(X,1), dims=1) .≈ 1)
+    @test  mean(v1(X,1)) ≈ 0 atol = sqrt(eps())
+    @test  mean(SpectralDistances.m1(X,1)) ≈ 0 atol=0.08
+    @test  var(SpectralDistances.m1(X,1)) ≈ 1 atol=0.2
+
+
+end
+
+end
+
 end
 
 # x1 = randn(1000)
