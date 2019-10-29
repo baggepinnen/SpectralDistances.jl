@@ -298,8 +298,6 @@ end
         evalfr(G,r)[] *1/(w - r)
     end ≈ F
 
-
-
     res = residues(a)
     @test sum(eachindex(r)) do i
         res[i]/(w-r[i])
@@ -391,18 +389,20 @@ end
     x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
-    fm = TLS(na=6)
+    fm = TLS(na=4)
     dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1))
     @test dist(x1,x2) < dist(x1,x3)
-    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=2))
     @test dist(x1,x2) < dist(x1,x3)
     dist = RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15.))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
 
-    w = LinRange(0, 15, 200)
-    ddist = DiscretizedRationalDistance(w, SpectralDistances.distmat_euclidean(w,w))
-    @test_nowarn ddist(fm(x1), fm(x2)) # TODO: this is a poor test
+    w = LinRange(0, 2pi*15, 3000)
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15)))
+    ddist = ModelDistance(fm, DiscretizedRationalDistance(w, sqrt.(SpectralDistances.distmat_euclidean(w,w))))
+    @test ddist(x1, x1) == 0
+    @test_broken ddist(x1, x2) ≈ dist(x1, x2)
+
 end
 
 @testset "Histogram" begin

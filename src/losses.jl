@@ -601,7 +601,7 @@ end
 @inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + scale/(2π))
 
-@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale)
+@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale*numvec(d, a)[])
 @inline ControlSystems.evalfr(r::AbstractRoots, m, w, scale=1) = evalfr(domain(r),m,w,roots2poly(r), scale)
 
 
