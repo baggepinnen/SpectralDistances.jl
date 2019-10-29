@@ -1,7 +1,7 @@
 @info "Running tests"
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
-using DSP
+using DSP, Distances
 
 
 Random.seed!(1)
@@ -368,6 +368,15 @@ end
 end
 
 
+@testset "distmat" begin
+    e = complex.(randn(3), randn(3))
+    D = SpectralDistances.distmat(SqEuclidean(), e)
+    @test issymmetric(D)
+    @test tr(D) == 0
+    @test SpectralDistances.distmat_euclidean(e,e) ≈ D
+end
+
+
 @testset "Welch" begin
     x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
@@ -390,6 +399,10 @@ end
     dist = RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15.))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
+
+    w = LinRange(0, 15, 200)
+    ddist = DiscretizedRationalDistance(w, SpectralDistances.distmat_euclidean(w,w))
+    @test_nowarn ddist(fm(x1), fm(x2)) # TODO: this is a poor test
 end
 
 @testset "Histogram" begin

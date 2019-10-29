@@ -288,7 +288,7 @@ function distmat(dist,e::AbstractVector)
     Symmetric(D)
 end
 
-distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
+# distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))
 
 function preprocess_roots(d::AbstractRootDistance, e::AbstractRoots)
     e2 = domain_transform(d,e)
@@ -448,8 +448,8 @@ function precompute(d::DiscretizedRationalDistance, As::AbstractArray{<:Abstract
     mapfun = threads ? tmap : map
     mapfun(As) do A1
         w = d.w
-        noise_model = tf(m1)
-        b1 = bode(noise_model, w.*2π)[1] |> vec
+        tm = tf(m1)
+        b1 = bode(tm, w.*2π)[1] |> vec
         b1 .= abs2.(b1)
         b1 ./= sum(b1)
         b1
@@ -458,13 +458,13 @@ end
 
 function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel)
     w = d.w
-    noise_model = tf(m1)
-    b1,_,_ = bode(noise_model, w.*2π) .|> vec
+    m1 = tf(m1)
+    b1,_,_ = bode(m1, w.*2π) .|> vec
     b1 .= abs2.(b1)
     # b1 .-= (minimum(b1) - 1e-9) # reg to ensure no value is exactly 0
     b1 ./= sum(b1)
-    noise_model = tf(m2)
-    b2,_,_ = bode(noise_model, w.*2π) .|> vec
+    m2 = tf(m2)
+    b2,_,_ = bode(m2, w.*2π) .|> vec
     b2 .= abs2.(b2)
     # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
