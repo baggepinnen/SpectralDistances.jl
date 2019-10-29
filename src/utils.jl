@@ -36,6 +36,7 @@ s1(x, dims=:) = x./sum(x, dims=dims)
 normalize x norm 1
 """
 n1(x) = x./norm(x)
+n1(x::AbstractMatrix, dims=:) = mapslices(n1, x, dims=dims)
 """
     v1(x, dims=:)
 
