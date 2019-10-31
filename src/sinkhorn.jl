@@ -4,7 +4,7 @@
 The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
 """
 function sinkhorn(C, a, b; β=1e-1, iters=1000)
-    K = exp.(-C / β)
+    K = exp.(.-C ./ β)
     v = one.(b)
     u = a ./ (K * v)
     v = b ./ (K' * u)
@@ -28,8 +28,8 @@ https://arxiv.org/abs/1802.04307
 function IPOT(C, μ, ν; β=1, iters=1000)
     G = exp.(.- C ./ β)
     a = similar(μ)
-    b = fill(1/length(ν), length(ν))
-    Γ = ones(size(G)...)
+    b = fill(eltype(ν)(1/length(ν)), length(ν))
+    Γ = ones(eltype(ν), size(G)...)
     Q = similar(G)
     local a
     for iter = 1:iters

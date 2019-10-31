@@ -393,7 +393,8 @@ function roots2poly(roots)
 end
 
 function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
-    vT = T <: Real ? Complex{T} : T
+    T2 = promote_type(T,typeof(b))
+    vT = T2 <: Real ? Complex{T} : T2
     c = MVector{N+1,vT}(ntuple(_->0, N+1))
     c[1] = 1
     n = length(a)
@@ -404,21 +405,42 @@ function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
     c
 end
 
+@inline function polyderivative(a)
+    n = length(a)-1
+    powers = n:-1:1
+    ap     = powers.*a[1:end-1]
+end
+
+# @inline function polyval(ap,r)
+#     n = length(ap)
+#     sum(j->ap[j]*r^(n-j), 1:n)
+# end # Below is workaround for Zygote bug
+
+@inline function polyval(ap,r)
+    n = length(ap)
+    s = zero(promote_type(eltype(ap), typeof(r)))
+    @inbounds for j = 1:n
+        s += ap[j]*r^(n-j)
+    end
+    s
+end
+
+rev(x) = x[end:-1:1] # Workaround for Zygote not being able to reverse vectors
 
 """
     residues(a::AbstractVector, r=roots(reverse(a)))
 
 Returns a vector of residues for the system represented by denominator polynomial `a`
 """
-function residues(a::AbstractVector, r = roots(reverse(a)))
-    a[1] ≈ 1 || @warn "a[1] is $(a[1])"
+function residues(a::AbstractVector, r = roots(rev(a)))
+    # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that
     n = length(a)-1
+    ap = polyderivative(a)
     res = map(r) do r
-        powers = n:-1:1
-        ap     = powers.*a[1:end-1]
-        1/sum(j->ap[j]*r^(n-j), 1:n)
+        1/polyval(ap, r)
     end
 end
+
 
 """
     residues(r::AbstractRoots)
@@ -484,11 +506,12 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b::Number)::T wher
     res = residues(a2, r2)
     e = 2π*b^2*sum(res)
     ae = real(e)
-    if ae < 1e-3  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+    if (ae < 1e-3 || ae < 0)  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         return spectralenergy(d, big.(a), b)
 
     end
     abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"
+    @assert ae >= 0 "Computed energy was negative: $ae"
     ae
 end
 

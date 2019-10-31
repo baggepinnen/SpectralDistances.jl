@@ -5,7 +5,7 @@ using SpectralDistances, ControlSystems
 makedocs(
     sitename = "SpectralDistances",
     # format = LaTeX(),
-    format = Documenter.HTML(prettyurls = true),
+    format = Documenter.HTML(prettyurls = haskey(ENV, "CI")),
     modules = [SpectralDistances],
     pages = ["index.md", "ltimodels.md", "distances.md", "interpolations.md", "plotting.md", "misc.md", "examples.md"]
 )

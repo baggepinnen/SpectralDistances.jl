@@ -19,59 +19,13 @@ function jacobian(m,x)
     J
 end
 
+
+
 @testset "SpectralDistances.jl" begin
-
-    @testset "Energy" begin
-        for σ² = [0.1, 1., 2., 3]
-            m = AR(ContinuousRoots([-1.]), σ²)
-            e = spectralenergy(Continuous(),m)
-            @test e ≈ σ²
-            x = sqrt(σ²)randn(10000)
-            m = TLS(na=10)(x)
-            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.05
-        end
-        # y = filt(numvec(Discrete(),m), denvec(Discrete(),m), x)
-        # @test var(y) ≈ var(x)
-    end
-
-    @testset "Model estimation" begin
-        y = sin.(0:0.1:100)
-        fm = LS(na=2, λ=0)
-        m = fm(y)
-        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
-
-        fm = TLS(na=2)
-        m = fm(y)
-        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
-
-        y = sin.(0:0.1:1000) .+ 0.01 .*randn.()
-        fm = PLR(na=2, nc=1)
-        m = fm(y)
-        @test imag.(log(m.p)) ≈ [-0.1, 0.1] rtol=1e-3
-
-
-        y = sin.(0:0.1:100) .+ sin.(2 .* (0:0.1:100) .+ 0.3)
-        fm = LS(na=4, λ=0)
-        m = fm(y)
-        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1
-
-        fm = TLS(na=4)
-        m = fm(y)
-        @test_broken spectralenergy(Continuous(), m) ≈ 2π*var(y)
-        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
-
-        y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.01 .*randn.()
-        fm = PLR(na=4, nc=1, λ=0.0)
-        m = fm(y)
-        @test_broken imag.(log(m.p)) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-3
-
-    end
-
 
     get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
 
         using ForwardDiff, FiniteDifferences
-        using ForwardDiff
         using Zygote
         using SpectralDistances: getARXregressor, getARregressor
         y = (randn(10))
@@ -131,16 +85,101 @@ end
 
         a = randn(5)
         a[end] = 1
-        f(x) = sum(abs2(r) for r in roots(x))
+        f = x -> sum(abs2(r) for r in roots(x))
         G = Zygote.gradient(f, a)[1]
-        f'(a)
 
 
         fdm = central_fdm(5,1)
         @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1:end-1]
 
 
-end
+        fd = central_fdm(5,1)
+        a = randn(30)
+        a[1] = 1
+        r = roots(reverse(a)) |> ContinuousRoots
+        residues(a,r)
+        f = a -> sum(abs2, residues(a,r))
+        g = a -> real(residues(complex.(a),r)[2])
+        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < sqrt(eps())
+        @test sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps())
+
+        fd = central_fdm(7,1)
+        a = randn(30)
+        a[1] = 1
+        residues(a)
+        f = a -> sum(abs2, residues(a))
+        g = a -> real(residues(complex.(a))[2])
+        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < sqrt(eps())
+        @test_broken sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps())
+
+
+        @testset "Sinkhorn" begin
+
+            function sinkdist(D,a,b)
+                ai = s1(a)
+                bi = s1(a+b)
+                P,u,v = sinkhorn(D,ai,bi, iters=1000, β=0.1)
+                sum(P.*D)
+            end
+            a,b = abs.(randn(6)),abs.(randn(6))
+            D = SpectralDistances.distmat_euclidean(1:length(a), 1:length(a))
+            dD, da, db = Zygote.gradient(sinkdist, D,a,b)
+            @test n1(ForwardDiff.gradient(a->sinkdist(D,a,b), a))'n1(da) > 0.9
+        end
+
+
+    end
+
+
+
+    @testset "Energy" begin
+        for σ² = [0.1, 1., 2., 3]
+            m = AR(ContinuousRoots([-1.]), σ²)
+            e = spectralenergy(Continuous(),m)
+            @test e ≈ σ²
+            x = sqrt(σ²)randn(10000)
+            m = TLS(na=10)(x)
+            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.05
+        end
+        # y = filt(numvec(Discrete(),m), denvec(Discrete(),m), x)
+        # @test var(y) ≈ var(x)
+    end
+
+    @testset "Model estimation" begin
+        y = sin.(0:0.1:100)
+        fm = LS(na=2, λ=0)
+        m = fm(y)
+        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
+
+        fm = TLS(na=2)
+        m = fm(y)
+        @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
+
+        y = sin.(0:0.1:1000) .+ 0.01 .*randn.()
+        fm = PLR(na=2, nc=1)
+        m = fm(y)
+        @test imag.(log(m.p)) ≈ [-0.1, 0.1] rtol=1e-3
+
+
+        y = sin.(0:0.1:100) .+ sin.(2 .* (0:0.1:100) .+ 0.3)
+        fm = LS(na=4, λ=0)
+        m = fm(y)
+        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1
+
+        fm = TLS(na=4)
+        m = fm(y)
+        @test_broken spectralenergy(Continuous(), m) ≈ 2π*var(y)
+        @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
+
+        y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.01 .*randn.()
+        fm = PLR(na=4, nc=1, λ=0.0)
+        m = fm(y)
+        @test_broken imag.(log(m.p)) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-3
+
+    end
+
+
+
 
 @testset "modeldistance" begin
     t = 1:100
