@@ -361,7 +361,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
         i2 = I2[i]
         l += (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
     end
-    l
+    real(l) # Workaround for expanding to complex for Zygote support
 end
 
 function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)

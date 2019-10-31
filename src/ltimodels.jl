@@ -29,10 +29,11 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     #     new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     # end
     function AR(a::AbstractVector, σ²=nothing)
-        a = SVector{length(a)}(a)
-        r = DiscreteRoots(hproots(reverse(a)))
+        a = isderiving() ? complex.(a) : SVector{length(a)}(a)
+        r = DiscreteRoots(hproots(rev(a)))
         rc = ContinuousRoots(r)
         ac = roots2poly(rc)
+        ac = isderiving() ? complex.(ac) : ac
         b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
         new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
     end
@@ -222,13 +223,13 @@ end
 function fitmodel(fm::TLS,X::AbstractArray)
     isderiving() && return fitmodel(fm,X,true)
     Ay = getARregressor_(X, fm.na)
-    a = tls!(Ay, size(Ay,2)-1) |> vec |> reverse |> polyvec
+    a = tls!(Ay, size(Ay,2)-1) |> vec |> rev |> polyvec
     AR(a, var(X))
 end
 
 function fitmodel(fm::TLS,X::AbstractArray,diff::Bool)
     y,A = getARregressor(X, fm.na)
-    a = tls(A,y) |> vec |> reverse |> polyvec
+    a = tls(A,y) |> vec |> rev |> polyvec
     AR(a, var(X))
 end
 
@@ -280,8 +281,8 @@ function plr(y,na,nc,initial; λ = 1e-2)
     y_train,A = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
     w = tls(A,y_train)
     a,c = params2poly(w,na,nc)
-    rc = DiscreteRoots(hproots(reverse(c)))
-    ra = DiscreteRoots(hproots(reverse(a)))
+    rc = DiscreteRoots(hproots(rev(c)))
+    ra = DiscreteRoots(hproots(rev(a)))
     # TODO: scalefactor for PLR
     checkroots(ra)
     ARMA{typeof(c), typeof(rc)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
@@ -327,7 +328,7 @@ function getARregressor(y, na)
 end
 
 function getARregressor_(y, na)
-    y    = reverse(y)
+    y    = rev(y)
     m    = na+1 # Start of yr
     n    = length(y) - m + 1 # Final length of yr
     Ay   = toeplitz(y[m:m+n-1],y[m:-1:m-na])
@@ -360,14 +361,14 @@ end
 
 
 
-poly(w) = [-reverse(w); 1]
+poly(w) = [-rev(w); 1]
 polyvec(w) = [1; -w]
 polyroots(w) = roots(poly(w))
 
 
 function polyconv(a,b)
     na,nb = length(a),length(b)
-    c = zeros(eltype(a), na+nb-1)
+    c = zeros(promote_type(eltype(a), eltype(b)), na+nb-1)
     for i = 1:length(c)
         for j = 1:min(i,na,nb)
             av = j ∈ eachindex(a) ? a[j] : zero(eltype(a))
@@ -385,6 +386,7 @@ end
 Accepts a vector of complex roots and returns the polynomial with those roots
 """
 function roots2poly(roots)
+    isderiving() && return roots2poly_zygote(roots)
     p = @MVector [1.]
     for r in 1:length(roots)
         p = _roots2poly_kernel(p, roots[r])
@@ -404,6 +406,15 @@ function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
     c[end] = -b*a[end]
     c
 end
+
+function roots2poly_zygote(roots)
+    p = [complex(1.)]
+    for r in 1:length(roots)
+        p = polyconv(p, [1, -roots[r]])
+    end
+    real(p)
+end
+
 
 @inline function polyderivative(a)
     n = length(a)-1
@@ -425,7 +436,13 @@ end
     s
 end
 
-rev(x) = x[end:-1:1] # Workaround for Zygote not being able to reverse vectors
+function rev(x)
+    if isderiving()
+        x[end:-1:1] # Workaround for Zygote not being able to reverse vectors
+    else
+        reverse(x)
+    end
+end
 
 """
     residues(a::AbstractVector, r=roots(reverse(a)))
@@ -448,7 +465,10 @@ end
 Returns a vector of residues for the system represented by roots `r`
 
 """
-residues(r::AbstractRoots) = residues(roots2poly(r), r)
+function residues(r::AbstractRoots)
+    a = isderiving() ? complex.(roots2poly(r)) : roots2poly(r)
+    residues(a, r)
+end
 
 # Base.delete_method.(methods(residues))
 """

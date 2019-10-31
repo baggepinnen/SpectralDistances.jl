@@ -10,6 +10,14 @@ isderiving() = false
 
 @adjoint isderiving() = true, _ -> nothing
 
+ZygoteRules.@adjoint sortperm(args...; kwargs...) = sortperm(args...; kwargs...), x->nothing
+
+ZygoteRules.@adjoint ContinuousRoots(r) = ContinuousRoots(r), x->(x,)
+ZygoteRules.@adjoint DiscreteRoots(r) = DiscreteRoots(r), x->(x,)
+
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(SArray{T1,T2,T3,T4}(x),)
+
+ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->x.data
 
 ZygoteRules.@adjoint function getARregressor(y,na)
     getARregressor((y),na),  function (Δ)
@@ -50,6 +58,26 @@ end
 end
 
 PolynomialRoots.roots(p) = eigvals(companion(p))
+
+ZygoteRules.@adjoint function polyconv(a,b)
+    c = polyconv(a,b)
+    function polyconv_back(Δ)
+        da = zeros(eltype(c), length(c), length(a))
+        for i = 0:length(b)-1
+            da[diagind(da,-i)] .= b[i+1]
+        end
+        d1 = da'Δ
+
+        db = zeros(eltype(c), length(c), length(b))
+        for i = 0:length(a)-1
+            db[diagind(db,-i)] .= a[i+1]
+        end
+        d2 = db'Δ
+
+        d1,d2
+    end
+    c, polyconv_back
+end
 
 # using ForwardDiff
 # PolynomialRoots.roots(p::Vector{<: Complex{<:ForwardDiff.Dual}}) = eigvals(companion(p))

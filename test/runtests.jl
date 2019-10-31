@@ -7,17 +7,75 @@ using DSP, Distances
 Random.seed!(1)
 
 
-function jacobian(m,x)
-    y  = m(x)
-    k  = length(y)
-    n  = length(x)
-    J  = Matrix{eltype(x)}(undef,k,n)
-    for i = 1:k
-        g = Zygote.gradient(x->m(x)[i], x)[1]
-        J[i,:] .= g
-    end
-    J
+# function jacobian(m,x)
+#     y  = m(x)
+#     k  = length(y)
+#     n  = length(x)
+#     J  = Matrix{eltype(x)}(undef,k,n)
+#     for i = 1:k
+#         g = Zygote.gradient(x->m(x)[i], x)[1]
+#         J[i,:] .= g
+#     end
+#     J
+# end
+#
+# function hessian(f, a)
+#     H = jacobian(f', a)
+# end
+#
+# function hessian_fd_reverse(f,a)
+#     fd = central_fdm(9,1)
+#     FiniteDifferences.jacobian(fd, f', a)
+# end
+#
+# a = randn(11)
+# a[1] = 1
+#
+# m = AR(ContinuousRoots([-0.1+im, -0.1-im]))
+# a = Vector(m.a)
+# dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=residueweight)
+# function forward(b)
+#     dist(m, AR((b)))
+# end
+# forward(a)
+# @time forward'(a)
+# @time H = hessian_fd_reverse(forward, a)
+# fd = central_fdm(5,1)
+#
+# eigvals(H[2:end,2:end])
+#
+#
+# grad(fd, forward, big.(a))
+#
+# @btime H = hessian_fd_reverse($(forward), $a)
+#
+#
+# hessian(forward, a)
+
+
+
+
+f = a -> sum(polyderivative(a))
+
+f'(a)
+function polyderivative(a)
+    a = Vector(a)
+    n = length(a)-1
+    powers = n:-1:1
+    ap     = powers.*a[1:end-1]
 end
+f'(SVector{length(a)}(a))
+
+
+
+a = randn(9)
+a[1] = 1
+r = roots(reverse(a)) |> ContinuousRoots
+
+forward,backward = wrdcurv(a)
+forward(a)
+H = backward(a)
+cond(H)
 
 
 
@@ -48,6 +106,11 @@ end
         @test jacobian((y)->vec(getARregressor(y,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y)
         @test jacobian((y)->vec(getARregressor(y,5)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y)
         @test jacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
+
+        a,b = randn(3), randn(4)
+        @test jacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a)
+
+        @test jacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b)
 
 
 
@@ -130,6 +193,8 @@ end
 
     end
 
+    a = randn(5); a[1]=1
+    @test SpectralDistances.roots2poly(a) ≈ SpectralDistances.roots2poly_zygote(a)
 
 
     @testset "Energy" begin

@@ -17,7 +17,7 @@ Contains a single Function field that determines what to sort roots by.
 struct SortAssignement{F} <: AbstractAssignmentMethod
     by::F
 end
-(a::SortAssignement)(e1,e2) = sortperm(nograd(e1), by=a.by), sortperm(nograd(e2), by=a.by)
+(a::SortAssignement)(e1,e2) = sortperm(e1, by=a.by), sortperm(e2, by=a.by)
 
 """
     HungarianAssignement <: AbstractAssignmentMethod
@@ -193,10 +193,11 @@ Returns a vector where each entry is roughly corresponding to the amount of ener
 """
 function residueweight(e::AbstractRoots)
     res = residues(ContinuousRoots(e))
-    abs.(π*abs2.(res)./ real.(e))
+    rw = abs.(π*abs2.(res)./ real.(e))
+    isderiving() ? complex.(rw) : rw
 end
 
-unitweight(e) = ones(size(e))
+unitweight(e) = isderiving() ? complex.(ones(size(e))) : ones(size(e))
 
 # function polar_ang(e)
 #     mag, ang = polar(e)
