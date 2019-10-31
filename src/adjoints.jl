@@ -49,6 +49,7 @@ ZygoteRules.@adjoint function getARXregressor(y, u, na::Int, nb)
 end
 end
 
+PolynomialRoots.roots(p) = eigvals(companion(p))
 
 # using ForwardDiff
 # PolynomialRoots.roots(p::Vector{<: Complex{<:ForwardDiff.Dual}}) = eigvals(companion(p))
