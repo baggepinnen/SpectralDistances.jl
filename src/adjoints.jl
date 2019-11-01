@@ -17,7 +17,8 @@ ZygoteRules.@adjoint DiscreteRoots(r) = DiscreteRoots(r), x->(x,)
 
 # ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(SArray{T1,T2,T3,T4}(x),)
 
-ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->x.data
+ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
+ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r::Vector) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
 
 ZygoteRules.@adjoint function getARregressor(y,na)
     getARregressor((y),na),  function (Δ)

@@ -370,9 +370,9 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     w2    = d.weight(e2)
     C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     if any(isnan, C)
-        @info "Nan in SinkhornRootDistance, increasing precision"
+        println("Nan in SinkhornRootDistance, increasing precision")
         C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
-        any(isnan, C) && @error "Sinkhorn failed, consider increasing β"
+        any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)
     end
     sum(C.*D)
