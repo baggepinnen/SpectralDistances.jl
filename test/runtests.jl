@@ -6,21 +6,8 @@ using DSP, Distances
 
 Random.seed!(1)
 
-# function ngradient(f, xs::AbstractArray...)
-#   grads = zero.(xs)
-#   for (x, Δ) in zip(xs, grads), i in 1:length(x)
-#     δ = sqrt(eps())
-#     tmp = x[i]
-#     x[i] = tmp - δ/2
-#     y1 = f(xs...)
-#     x[i] = tmp + δ/2
-#     y2 = f(xs...)
-#     x[i] = tmp
-#     Δ[i] = (y2-y1)/δ
-#   end
-#   return grads
-# end
-#
+
+
 # function jacobian(m,x)
 #     y  = m(x)
 #     k  = length(y)
@@ -32,41 +19,50 @@ Random.seed!(1)
 #     end
 #     J
 # end
+# using ForwardDiff, FiniteDifferences
+# using Zygote
 #
 # function hessian(f, a)
 #     H = jacobian(f', a)
 # end
+#
 #
 # function hessian_fd_reverse(f,a)
 #     fd = central_fdm(9,1)
 #     FiniteDifferences.jacobian(fd, f', a)
 # end
 #
+# function nhessian_reverse(f,a)
+#     njacobian(f', a)
+# end
+#
 # a = randn(11)
 # a[1] = 1
-#
-# m = AR(ContinuousRoots([-0.1+im, -0.1-im]))
-# a = Vector(m.a)
+# using DoubleFloats
+# m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
+# a = Vector(m.ac)
 # dist = EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight)
 # dist = EuclideanRootDistance(domain=Continuous(), p=1, weight=unitweight)
-# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=100, β=0.1)
+# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)
 # function forward(b)
-#     real(dist(m, AR((b))))
+#     real(dist(a, b))
 # end
 # forward(a)
+# Zygote.refresh()
+#
+# # NOTE: Gradient at a should be almost zero as it is the minimum, everything else is incorrect. Hessian should be pos.def.
 # @time forward'(a)
 # @time H = hessian_fd_reverse(forward, a)
-# fd = central_fdm(5,1)
+# @time H = nhessian_reverse(forward, a)
+# c∇ = central_fdm(3,1)
 #
-# eigvals(H[2:end,2:end])
-#
-#
-# grad(fd, forward, big.(a))
-# @btime ngradient(forward, copy(a))
+# grad(c∇, forward, (a))
+# ngradient(forward, copy(a))
 #
 #
 # @btime H = hessian_fd_reverse($(forward), $a)
 #
+# eigvals(H[2:end,2:end])
 #
 # hessian(forward, a)
 
@@ -168,6 +164,22 @@ Random.seed!(1)
         g = a -> real(residues(complex.(a))[2])
         @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < 10sqrt(eps())
         @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps()) # Not robust
+
+        @testset "Numerical curvature" begin
+            @info "Testing Numerical curvature"
+            a = randn(11)
+            a[1] = 1
+            using DoubleFloats
+            m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
+            a = Vector(m.ac)
+            for dist in [EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight),
+                        SinkhornRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)]
+                    H = SpectralDistances.curvature(dist, a)
+                    @test all(>(0) ∘ real, eigvals(H[2:end,2:end]))
+                    @test all(==(0) ∘ imag, eigvals(H[2:end,2:end]))
+            end
+
+        end
 
 
         @testset "Sinkhorn" begin

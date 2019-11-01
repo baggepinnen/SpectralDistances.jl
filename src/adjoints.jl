@@ -1,11 +1,42 @@
-# myfun!(y, x) = ...
-#
-# function myfun(x)
-#     y = make_buffer(myfun, x)
-#     myfun!(y, x)
-#     return release_buffer(myfun, y, x)
-# end
-#
+function ngradient(f, xs::AbstractArray...)
+    grads = zero.(xs)
+    xs = copy.(xs)
+    for (x, Δ) in zip(xs, grads), i in 1:length(x)
+        δ = sqrt(eps())
+        tmp = x[i]
+        x[i] = tmp - δ/2
+        y1 = f(xs...)
+        x[i] = tmp + δ/2
+        y2 = f(xs...)
+        x[i] = tmp
+        Δ[i] = (y2-y1)/δ
+    end
+    return grads[1]
+end
+
+function njacobian(f,x)
+    y  = f(x)
+    k  = length(y)
+    n  = length(x)
+    J  = Matrix{eltype(y)}(undef,k,n)
+    for i = 1:k
+        g = ngradient(x->f(x)[i], x)
+        J[i,:] .= g
+    end
+    J
+end
+
+function nhessian(f, a)
+    H = njacobian(a->ngradient(f,a), a)
+end
+
+function curvature(dist, a)
+    function forward(b)
+        dist(a, b)
+    end
+    H = Symmetric(nhessian(forward, a))
+end
+
 isderiving() = false
 
 @adjoint isderiving() = true, _ -> nothing
@@ -17,8 +48,8 @@ ZygoteRules.@adjoint DiscreteRoots(r) = DiscreteRoots(r), x->(x,)
 
 # ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(SArray{T1,T2,T3,T4}(x),)
 
-ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
-ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r::Vector) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r::Vector) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
 
 ZygoteRules.@adjoint function getARregressor(y,na)
     getARregressor((y),na),  function (Δ)

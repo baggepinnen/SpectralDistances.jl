@@ -378,6 +378,10 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     sum(C.*D)
 end
 
+function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real})
+    evaluate(d, AutoRoots(domain(d), hproots(rev(a1))), AutoRoots(domain(d), hproots(rev(a2))))
+end
+
 # function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
 #     λ     = d.λ
 #     error("this does not yield symmetric results")

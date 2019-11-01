@@ -37,6 +37,16 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
         b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
         new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
     end
+
+    function AR(::Continuous, ac::AbstractVector, σ²=nothing)
+        ac = isderiving() ? complex.(ac) : SVector{length(ac)}(ac)
+        rc = ContinuousRoots(hproots(rev(ac)))
+        r = DiscreteRoots(rc)
+        a = roots2poly(r)
+        a = isderiving() ? complex.(a) : a
+        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
+    end
     function AR(rc::ContinuousRoots, σ²=nothing)
         r = DiscreteRoots(rc)
         a = roots2poly(r)
@@ -458,6 +468,8 @@ function residues(a::AbstractVector, r = roots(rev(a)))
     end
 end
 
+residues(d::TimeDomain, m::AbstractModel) = residues(denvec(d,m), roots(d,m))
+
 
 """
     residues(r::AbstractRoots)
@@ -551,6 +563,9 @@ function determine_domain(r)
     Discrete()
 end
 
+function AutoRoots(d::TimeDomain, r)
+    d isa Discrete ? DiscreteRoots(r) : ContinuousRoots(r)
+end
 function AutoRoots(r)
     determine_domain(r) isa Discrete ? DiscreteRoots(r) : ContinuousRoots(r)
 end
