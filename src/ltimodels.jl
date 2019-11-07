@@ -378,6 +378,9 @@ polyroots(w) = roots(poly(w))
 
 function polyconv(a,b)
     na,nb = length(a),length(b)
+    if na > nb
+        (a,b) = (b,a)
+    end
     c = zeros(promote_type(eltype(a), eltype(b)), na+nb-1)
     for i = 1:length(c)
         for j = 1:min(i,na,nb)
@@ -419,8 +422,8 @@ end
 
 function roots2poly_zygote(roots)
     p = [complex(1.)]
-    for r in 1:length(roots)
-        p = polyconv(p, [1, -roots[r]])
+    for r in roots
+        p = polyconv(p, [1, -r])
     end
     real(p)
 end
