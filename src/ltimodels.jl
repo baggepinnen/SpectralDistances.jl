@@ -83,16 +83,16 @@ AR(X::AbstractArray,order::Int) = fitmodel(TLS(na=order, λ=λ), X, var(X))
 Represents an ARMA model, i.e., transfer function
 
 # Arguments:
-- `c`: numvec
-- `cc`: numvec cont. time
+- `b`: numvec
+- `bc`: numvec cont. time
 - `a`: denvec
 - `ac`: denvec cont. time
 - `z`: zeros
 - `p`: poles
 """
 struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
-    c::T
-    cc::T
+    b::T
+    bc::T
     a::T
     ac::T
     z::Rt
@@ -117,8 +117,8 @@ struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
         zc = ContinuousRoots(hproots(rev(bc)))
         r = DiscreteRoots(rc)
         z = DiscreteRoots(zc)
-        a = roots2poly(r)
-        b = roots2poly(z)
+        a = roots2poly(r) |> Vector
+        b = roots2poly(z) |> Vector
         new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
     end
     function ARMA(zc::ContinuousRoots, rc::ContinuousRoots)
@@ -158,6 +158,12 @@ Convert model to a transfer function compatible with ControlSystems.jl
 ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
 ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
 ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
+function ARMA(g::ControlSystems.TransferFunction)
+    ControlSystems.issiso(g) || error("Can only convert SISO systems to ARMA")
+    b,a = numvec(g)[], denvec(g)[]
+    ControlSystems.iscontinuous(g) && return ARMA(Continuous(), b, a)
+    ARMA(b, a)
+end
 
 Base.convert(::Type{ControlSystems.TransferFunction}, m::AbstractModel) = tf(m)
 Base.promote_rule(::Type{<:ControlSystems.TransferFunction}, ::Type{<:AbstractModel}) = ControlSystems.TransferFunction
@@ -185,9 +191,9 @@ Get the denominator polynomial vector
 ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
 ControlSystems.numvec(::Discrete, m::AR) = error("Not yet implemented")#[m.b]
 ControlSystems.numvec(::Continuous, m::AR) = [m.b]
-ControlSystems.numvec(::Discrete, m::ARMA) = m.c
+ControlSystems.numvec(::Discrete, m::ARMA) = m.b
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
-ControlSystems.numvec(::Continuous, m::ARMA) = m.cc
+ControlSystems.numvec(::Continuous, m::ARMA) = m.bc
 
 ControlSystems.bode(m::AbstractModel, args...; kwargs...) = bode(tf(m), args...; kwargs...)
 ControlSystems.nyquist(m::AbstractModel, args...; kwargs...) = nyquist(tf(m), args...; kwargs...)
@@ -205,9 +211,12 @@ end
 Return all fitted coefficients
 """
 coefficients(::Discrete, m::AR) = m.a[2:end]
-coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.c]
+coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.b]
 coefficients(::Continuous, m::AR) = m.ac[2:end]
-coefficients(::Continuous, m::ARMA) = [m.ac[2:end]; m.cc]
+coefficients(::Continuous, m::ARMA) = [m.ac[2:end]; m.bc]
+
+Base.getindex(m::AbstractModel, i) = i < length(m.ac) ? m.ac[1+i] : m.bc[i-length(m.ac)+1]
+Base.length(m::AbstractModel) = length(m.a)+length(m.b)-1
 
 function domain_transform(d::Continuous, m::AR)
     p = domain_transform(d, roots(m))

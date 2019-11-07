@@ -30,12 +30,7 @@ function nhessian(f, a)
     H = njacobian(a->ngradient(f,a), a)
 end
 
-function curvature(dist, a)
-    function forward(b)
-        dist(a, b)
-    end
-    H = Symmetric(nhessian(forward, a))
-end
+curvature(dist, a) = Symmetric(nhessian(b->dist(a,b), a))
 
 isderiving() = false
 
