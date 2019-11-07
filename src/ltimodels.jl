@@ -449,6 +449,8 @@ end
     s
 end
 
+polyval(b::Number,_) = b
+
 function rev(x)
     if isderiving()
         x[end:-1:1] # Workaround for Zygote not being able to reverse vectors
@@ -458,20 +460,20 @@ function rev(x)
 end
 
 """
-    residues(a::AbstractVector, r=roots(reverse(a)))
+    residues(a::AbstractVector, b, r=roots(reverse(a)))
 
 Returns a vector of residues for the system represented by denominator polynomial `a`
 """
-function residues(a::AbstractVector, r = roots(rev(a)))
+function residues(a::AbstractVector, b, r = roots(rev(a)))
     # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that
     n = length(a)-1
     ap = polyderivative(a)
     res = map(r) do r
-        1/polyval(ap, r)
+        polyval(b, r)/polyval(ap, r)
     end
 end
 
-residues(d::TimeDomain, m::AbstractModel) = residues(denvec(d,m), roots(d,m))
+residues(d::TimeDomain, m::AbstractModel) = residues(denvec(d,m), numvec(d,m), roots(d,m))
 
 
 """
@@ -482,7 +484,14 @@ Returns a vector of residues for the system represented by roots `r`
 """
 function residues(r::AbstractRoots)
     a = isderiving() ? complex.(roots2poly(r)) : roots2poly(r)
-    residues(a, r)
+    residues(a, 1, r)
+end
+
+function residueweight(m::AbstractModel)
+    res = residues(Continuous(), m)
+    e = roots(Continuous(), m)
+    rw = abs.(π*abs2.(res)./ real.(e))
+    isderiving() ? complex.(rw) : rw
 end
 
 # Base.delete_method.(methods(residues))
@@ -521,25 +530,23 @@ end
 
 # spectralenergy(a::AbstractArray) = spectralenergy(determine_domain(roots(reverse(a))), a)
 function spectralenergy(d::TimeDomain, m::AbstractModel)
-    b = numvec(d,m)
-    @assert length(b) == 1
-    spectralenergy(d, denvec(d, m), b[1])
+    spectralenergy(d, denvec(d, m), numvec(d,m))
 end
 
 """
     spectralenergy(d::TimeDomain, a::AbstractVector, b)
 
-Calculates the energy in the spectrum associated with denominator polynomial `a`
+Calculates the energy in the spectrum associated with transfer function `b/a`
 """
-function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b::Number)::T where T
+function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
     a = Double64.(ai)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
     r2 = roots(reverse(a2))
     filterfun = d isa Continuous ? r -> real(r) < 0 : r -> abs(r) < 1
     r2 = filter(filterfun, r2)
-    res = residues(a2, r2)
-    e = 2π*b^2*sum(res)
+    res = residues(a2, b, r2)
+    e = 2π*sum(res)
     ae = real(e)
     if (ae < 1e-3 || ae < 0)  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         return spectralenergy(d, big.(a), b)
@@ -549,6 +556,7 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b::Number)::T wher
     @assert ae >= 0 "Computed energy was negative: $ae"
     ae
 end
+
 
 """
     determine_domain(r)
@@ -596,11 +604,16 @@ function normalize_energy(r)
 end
 
 """
-    scalefactor(::TimeDomain, a, σ²)
+    scalefactor(::TimeDomain, a, [b,] σ²)
 
-Returns `b` such that the system with numerator `b` and denomenator `a` has spectral energy `σ²`. `σ²` should typically be the variance of the corresponding time signal.
+Returns `k` such that the system with numerator `kb` and denomenator `a` has spectral energy `σ²`. `σ²` should typically be the variance of the corresponding time signal.
 """
+function scalefactor(d::TimeDomain, a, b, σ²)
+    e = spectralenergy(d, a, b)
+    (σ²/(e))
+end
+
 function scalefactor(d::TimeDomain, a, σ²)
     e = spectralenergy(d, a, 1)
-    sqrt(σ²/(e))
+    (σ²/(e))
 end

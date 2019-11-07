@@ -638,9 +638,9 @@ end
 
 function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, A1::AbstractModel, A2::AbstractModel)
     sc   = d.interval[1] == 0 ? sqrt(2) : 1
-    e1   = sc/sqrt(spectralenergy(domain(d), A1))
+    e1   = sc/sqrt(spectralenergy(domain(d), A1)*A1.b)
     f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
-    e2   = sc/sqrt(spectralenergy(domain(d), A2))
+    e2   = sc/sqrt(spectralenergy(domain(d), A2)*A2.b)
     f2   = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
     sol1 = c∫(f1,d.interval...)
     sol2 = c∫(f2,d.interval...)

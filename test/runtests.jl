@@ -74,33 +74,34 @@ Random.seed!(1)
     get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
 
         using ForwardDiff, FiniteDifferences
+        using SpectralDistances: njacobian, ngradient, nhessian
         using Zygote
         using SpectralDistances: getARXregressor, getARregressor
         y = (randn(10))
         u = (randn(10))
-        jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y)
+        njacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y)
 
-        @test jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y)
-        @test jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y)
+        @test njacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y)
 
 
 
         y = (randn(10))
-        @test jacobian((y)->vec(getARregressor(y,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[2]), y)
-        @test jacobian((y)->vec(getARregressor(y,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y)
-        @test jacobian((y)->vec(getARregressor(y,5)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y)
-        @test jacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
+        @test njacobian((y)->vec(getARregressor(y,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[2]), y)
+        @test njacobian((y)->vec(getARregressor(y,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y)
+        @test njacobian((y)->vec(getARregressor(y,5)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y)
+        @test njacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
 
         a,b = randn(3), randn(4)
-        @test jacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a)
+        @test njacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a)
 
-        @test jacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b)
+        @test njacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b)
 
 
 
@@ -150,18 +151,18 @@ Random.seed!(1)
         a = randn(30)
         a[1] = 1
         r = roots(reverse(a)) |> ContinuousRoots
-        residues(a,r)
-        f = a -> sum(abs2, residues(a,r))
-        g = a -> real(residues(complex.(a),r)[2])
+        residues(a,1,r)
+        f = a -> sum(abs2, residues(a,1,r))
+        g = a -> real(residues(complex.(a),1,r)[2])
         @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < sqrt(eps())
         @test sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps())
 
         fd = central_fdm(7,1)
         a = randn(30)
         a[1] = 1
-        residues(a)
-        f = a -> sum(abs2, residues(a))
-        g = a -> real(residues(complex.(a))[2])
+        residues(a,1)
+        f = a -> sum(abs2, residues(a,1))
+        g = a -> real(residues(complex.(a),1)[2])
         @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < 10sqrt(eps())
         @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps()) # Not robust
 
@@ -268,7 +269,6 @@ Random.seed!(1)
 
         @test ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(0.2t)) rtol=1e-3  # frequency shifts of relative size should result in the same error, probably only true for p=1
         ls_loss = ModelDistance(fitmethod(na=10), SinkhornRootDistance(domain=Discrete()))
-        @test ls_loss(randn(100), randn(100)) > 0.05
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.1 # Filtered through same filter, this test is very non-robust for TLS
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(4),[4], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
     end
@@ -409,7 +409,7 @@ end
         evalfr(G,r)[] *1/(w - r)
     end ≈ F
 
-    res = residues(a)
+    res = residues(a,1)
     @test sum(eachindex(r)) do i
         res[i]/(w-r[i])
     end ≈ F
@@ -449,10 +449,12 @@ end
                 subtypes(SpectralDistances.AbstractRootDistance);
                 subtypes(SpectralDistances.AbstractCoefficientDistance)]
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
-        @show d = D(domain=Continuous())
+        d = D(domain=Continuous())
+        display(D)
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
-        @show d = D(domain=Discrete())
+        d = D(domain=Discrete())
+        display(D)
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
     end
 end
@@ -466,11 +468,13 @@ end
                 subtypes(SpectralDistances.AbstractRootDistance);
                 subtypes(SpectralDistances.AbstractCoefficientDistance)]
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
-        @show d = D(domain=Continuous())
+        d = D(domain=Continuous())
+        display(D)
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
-        @show d = D(domain=Discrete())
+        d = D(domain=Discrete())
+        display(D)
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
     end
