@@ -64,7 +64,7 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
 end
 
 "`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."
-checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn "Roots on negative real axis, no corresponding continuous time representation exists."
+checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && println("Roots on negative real axis, no corresponding continuous time representation exists.")
 
 """
     AR(X::AbstractArray, order::Int)

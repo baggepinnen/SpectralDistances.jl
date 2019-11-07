@@ -505,7 +505,7 @@ end
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
     fm = TLS(na=4)
-    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1))
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(-15., 15)))
     @test dist(x1,x2) < dist(x1,x3)
     @test dist(x1,x2) < dist(x1,x3)
     dist = RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15.))
