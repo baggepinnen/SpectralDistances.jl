@@ -1,7 +1,7 @@
 function ngradient(f, xs::AbstractArray...)
     grads = zero.(xs)
     xs = copy.(xs)
-    for (x, Δ) in zip(xs, grads), i in 1:length(x)
+    for (x, Δ) in zip(xs, grads), i in eachindex(x)
         δ = sqrt(eps())
         tmp = x[i]
         x[i] = tmp - δ/2

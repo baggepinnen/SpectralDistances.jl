@@ -199,7 +199,7 @@ Random.seed!(1)
 
     end
 
-    a = randn(5); a[1]=1
+    a = -5:-1
     @test SpectralDistances.roots2poly(a) ≈ SpectralDistances.roots2poly_zygote(a)
 
 
@@ -370,6 +370,7 @@ end
     a = randn(5)
     b = randn(10)
     @test polyconv(a,b) ≈ DSP.conv(a,b)
+    @test polyconv(b,a) ≈ DSP.conv(b,a)
 
     a[1] = 1
     @test roots2poly(roots(reverse(a))) ≈ a
