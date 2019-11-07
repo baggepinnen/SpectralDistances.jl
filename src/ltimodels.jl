@@ -90,13 +90,56 @@ Represents an ARMA model, i.e., transfer function
 - `z`: zeros
 - `p`: poles
 """
-struct ARMA{T,Rt} <: AbstractModel  where Rt <: DiscreteRoots
+struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
     c::T
     cc::T
     a::T
     ac::T
     z::Rt
+    zc::Crt
     p::Rt
+    pc::Crt
+
+    function ARMA(b::AbstractVector,a::AbstractVector)
+        r = DiscreteRoots(hproots(rev(a)))
+        rc = ContinuousRoots(r)
+        ac = roots2poly(rc)
+        ac = isderiving() ? complex.(ac) : ac
+        z  = DiscreteRoots(hproots(rev(b)))
+        zc = ContinuousRoots(z)
+        b   = roots2poly(z)
+        bc  = roots2poly(zc)
+        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+    end
+
+    function ARMA(::Continuous, bc, ac::AbstractVector)
+        rc = ContinuousRoots(hproots(rev(ac)))
+        zc = ContinuousRoots(hproots(rev(bc)))
+        r = DiscreteRoots(rc)
+        z = DiscreteRoots(zc)
+        a = roots2poly(r)
+        b = roots2poly(z)
+        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+    end
+    function ARMA(zc::ContinuousRoots, rc::ContinuousRoots)
+        r = DiscreteRoots(rc)
+        z = DiscreteRoots(zc)
+        a = roots2poly(r)
+        ac = roots2poly(rc)
+        b = roots2poly(z)
+        bc = roots2poly(zc)
+        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+    end
+    function ARMA(z::DiscreteRoots, r::DiscreteRoots)
+        rc = ContinuousRoots(r)
+        zc = ContinuousRoots(z)
+        a = roots2poly(r)
+        ac = roots2poly(rc)
+        b = roots2poly(z)
+        bc = roots2poly(zc)
+        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+    end
+
 end
 
 
@@ -133,7 +176,7 @@ PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 ControlSystems.pole(d::TimeDomain, m::AbstractModel) = roots(d,m)
 ControlSystems.tzero(::Discrete, m::ARMA) = m.z
-ControlSystems.tzero(::Continuous, m::ARMA) = error("Zeros in Continuous time not yet implemented")
+ControlSystems.tzero(::Continuous, m::ARMA) = m.zc
 """
     ControlSystems.denvec(::TimeDomain, m::AbstractModel)
 
@@ -291,11 +334,8 @@ function plr(y,na,nc,initial; λ = 1e-2)
     y_train,A = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
     w = tls(A,y_train)
     a,c = params2poly(w,na,nc)
-    rc = DiscreteRoots(hproots(rev(c)))
-    ra = DiscreteRoots(hproots(rev(a)))
     # TODO: scalefactor for PLR
-    checkroots(ra)
-    ARMA{typeof(c), typeof(rc)}(c,roots2poly(log.(rc)),a,roots2poly(log.(ra)),rc,ra)
+    ARMA(c,a)
 end
 
 function params2poly(w,na,nb)

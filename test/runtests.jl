@@ -383,7 +383,6 @@ end
     m = AR([1., -0.1])
     @test rd(m,m) == 0
     @test SpectralDistances.preprocess_roots(rd, m)[] ≈ -2.3025850929940455
-
 end
 
 @testset "residues and roots" begin
@@ -440,6 +439,14 @@ end
     @test spectralenergy(Continuous(), AR(ContinuousRoots([-1.]))) ≈ spectralenergy(tf(1,[1,1])) rtol=1e-3
 
 
+    m1,m2 = ARMA([1], a1), ARMA([1], a2)
+
+    f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
+    @test_broken SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m1) rtol=1e-3 # The error is in the integration, spectgralenergy produces same result as for AR above
+    f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m2)
+    @test_broken SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m2) rtol=1e-3
+
+
 end
 
 @testset "d(m,m)" begin
@@ -450,11 +457,11 @@ end
                 subtypes(SpectralDistances.AbstractCoefficientDistance)]
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         d = D(domain=Continuous())
-        display(D)
+        println(D)
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
-        display(D)
+        println(D)
         @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
     end
 end
@@ -469,12 +476,12 @@ end
                 subtypes(SpectralDistances.AbstractCoefficientDistance)]
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         d = D(domain=Continuous())
-        display(D)
+        println(D)
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
-        display(D)
+        println(D)
         # @show d(m1,m2)
         @test d(m1,m2) > 1e-10
     end

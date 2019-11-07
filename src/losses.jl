@@ -596,6 +596,11 @@ function c∫(f,a,b;kwargs...)
     sol
 end
 
+@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, b::AbstractVector) =
+        (n=length(a);m=length(b);abs2(sum(j->b[j]*cis(w*(m-j)), 1:m)/sum(j->a[j]*cis(w*(n-j)), 1:n)))
+@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, b::AbstractVector) =
+        (n=length(a);m=length(b);abs2(sum(j->b[j]*(im*w)^(m-j), 1:m)/sum(j->a[j]*(im*w)^(n-j), 1:n)))
+
 @inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);abs2(scale/sum(j->a[j]*cis(w*(n-j)), 1:n)))
 @inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, scale::Number=1) =
@@ -605,7 +610,8 @@ end
 @inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + scale/(2π))
 
-@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale*numvec(d, a)[])
+@inline ControlSystems.evalfr(d, m, w, a::ARMA, scale=1) = evalfr(d,m,w,denvec(d, a), scale*denvec(d,a))
+@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale)
 @inline ControlSystems.evalfr(r::AbstractRoots, m, w, scale=1) = evalfr(domain(r),m,w,roots2poly(r), scale)
 
 
@@ -638,9 +644,9 @@ end
 
 function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, A1::AbstractModel, A2::AbstractModel)
     sc   = d.interval[1] == 0 ? sqrt(2) : 1
-    e1   = sc/sqrt(spectralenergy(domain(d), A1)*A1.b)
+    e1   = sc*sqrt(A1.b/spectralenergy(domain(d), A1))
     f1   = w -> evalfr(domain(d), magnitude(d), w, A1, e1)
-    e2   = sc/sqrt(spectralenergy(domain(d), A2)*A2.b)
+    e2   = sc*sqrt(A2.b/spectralenergy(domain(d), A2))
     f2   = w -> evalfr(domain(d), magnitude(d), w, A2, e2)
     sol1 = c∫(f1,d.interval...)
     sol2 = c∫(f2,d.interval...)
@@ -656,7 +662,7 @@ end
 function evaluate(d::Union{RationalOptimalTransportDistance, RationalCramerDistance}, A1::AbstractModel, P::DSP.Periodograms.TFR)
     @assert d.interval[1] == 0 "Integration interval must start at 0 to compare against a periodogram"
     p    = d.p
-    e    = sqrt(2)/sqrt(spectralenergy(domain(d), A1))
+    e    = sqrt(2)sqrt(A1.b/spectralenergy(domain(d), A1))
     f    = w -> evalfr(domain(d), magnitude(d), w, A1, e)
     w    = P.freq .* (2π)
     plan = discrete_grid_transportplan(s1(f.(w)), s1(sqrt.(P.power)))
