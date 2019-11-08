@@ -601,7 +601,7 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
         return spectralenergy(d, big.(a), b)
 
     end
-    abs(imag(e))/abs(real(e)) > 1e-3 && @warn "Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))"
+    abs(imag(e))/abs(real(e)) > 1e-3 && println("Got a large imaginary part in the spectral energy $(abs(imag(e))/abs(real(e)))")
     @assert ae >= 0 "Computed energy was negative: $ae"
     ae
 end
