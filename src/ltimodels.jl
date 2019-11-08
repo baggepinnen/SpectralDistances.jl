@@ -90,11 +90,11 @@ Represents an ARMA model, i.e., transfer function
 - `z`: zeros
 - `p`: poles
 """
-struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
-    b::T
-    bc::T
-    a::T
-    ac::T
+struct ARMA{T1,T2,T3,T4,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
+    b::T1
+    bc::T2
+    a::T3
+    ac::T4
     z::Rt
     zc::Crt
     p::Rt
@@ -109,7 +109,7 @@ struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
         zc = ContinuousRoots(z)
         b   = roots2poly(z)
         bc  = roots2poly(zc)
-        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+        new{typeof(b), typeof(bc), typeof(a), typeof(ac), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
     end
 
     function ARMA(::Continuous, bc, ac::AbstractVector)
@@ -117,9 +117,9 @@ struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
         zc = ContinuousRoots(hproots(rev(bc)))
         r = DiscreteRoots(rc)
         z = DiscreteRoots(zc)
-        a = roots2poly(r) |> Vector
-        b = roots2poly(z) |> Vector
-        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+        a = roots2poly(r) #|> Vector
+        b = roots2poly(z) #|> Vector
+        new{typeof(b), typeof(bc), typeof(a), typeof(ac), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
     end
     function ARMA(zc::ContinuousRoots, rc::ContinuousRoots)
         r = DiscreteRoots(rc)
@@ -128,7 +128,7 @@ struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
         ac = roots2poly(rc)
         b = roots2poly(z)
         bc = roots2poly(zc)
-        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+        new{typeof(b), typeof(bc), typeof(a), typeof(ac), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
     end
     function ARMA(z::DiscreteRoots, r::DiscreteRoots)
         rc = ContinuousRoots(r)
@@ -137,7 +137,7 @@ struct ARMA{T,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractModel
         ac = roots2poly(rc)
         b = roots2poly(z)
         bc = roots2poly(zc)
-        new{typeof(a), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
+        new{typeof(b), typeof(bc), typeof(a), typeof(ac), typeof(r), typeof(rc)}(b, bc, a, ac, z, zc, r, rc)
     end
 
 end

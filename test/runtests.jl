@@ -3,11 +3,13 @@ using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances
 
+using SpectralDistances: ngradient, nhessian, njacobian, polyconv
 
 Random.seed!(1)
 
 
 
+# using Zygote
 # function jacobian(m,x)
 #     y  = m(x)
 #     k  = length(y)
@@ -20,7 +22,6 @@ Random.seed!(1)
 #     J
 # end
 # using ForwardDiff, FiniteDifferences
-# using Zygote
 #
 # function hessian(f, a)
 #     H = jacobian(f', a)
@@ -39,15 +40,31 @@ Random.seed!(1)
 # a = randn(11)
 # a[1] = 1
 # using DoubleFloats
-# m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
+# m = AR(ContinuousRoots([-Float64(0.1)+im, -Float64(0.1)-im]))
+# m2 = AR(ContinuousRoots([-Float64(0.11)+im, -Float64(0.12)-im]))
 # a = Vector(m.ac)
-# dist = EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight)
-# dist = EuclideanRootDistance(domain=Continuous(), p=1, weight=unitweight)
-# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)
+# dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=residueweight)
+# dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=unitweight)
+# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=200, β=0.1)
 # function forward(b)
 #     real(dist(a, b))
 # end
 # forward(a)
+# forward'(a)
+# Zygote.refresh()
+# dist(m,m2) |> typeof
+# g = Zygote.gradient(Float64 ∘ dist, m.pc, m2.pc)
+#
+# mdist = ModelDistance(TLS(na=4), dist)
+# x1 = randn(1000)
+# x2 = randn(1000)
+# mdist(x1,x2)
+# Zygote.gradient(abs∘mdist, x1, x2)
+
+
+# ngradient(Float64 ∘ dist, m, m2)
+
+
 # Zygote.refresh()
 #
 # # NOTE: Gradient at a should be almost zero as it is the minimum, everything else is incorrect. Hessian should be pos.def.

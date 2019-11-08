@@ -192,7 +192,7 @@ end
 Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole.
 """
 function residueweight(e::AbstractRoots)
-    @warn "This method disregards the numerator"
+    # @warn "This method disregards the numerator"
     res = residues(ContinuousRoots(e))
     rw = abs.(π*abs2.(res)./ real.(e))
     isderiving() ? complex.(rw) : rw
