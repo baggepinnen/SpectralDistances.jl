@@ -43,7 +43,7 @@ function alg1(X,Y,â,b,λ=100)
     â
 end
 
-# TODO: the problem is that some entries in a becomes negative. Maybe the prox is important.
+# TODO: the problem is that some entries in a becomes negative. Maybe the prox is important. The paper gives a simple prox version
 
 function alg2(X,Y,a,b)
     N = length(Y)
