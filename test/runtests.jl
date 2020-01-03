@@ -43,9 +43,10 @@ Random.seed!(1)
 # m = AR(ContinuousRoots([-Float64(0.1)+im, -Float64(0.1)-im]))
 # m2 = AR(ContinuousRoots([-Float64(0.11)+im, -Float64(0.12)-im]))
 # a = Vector(m.ac)
+# dist = CoefficientDistance(domain=Discrete(),distance=CosineDist())
 # dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=residueweight)
 # dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=unitweight)
-# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=200, β=0.1)
+# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=500, β=0.5)
 # function forward(b)
 #     real(dist(a, b))
 # end
@@ -56,11 +57,42 @@ Random.seed!(1)
 # g = Zygote.gradient(Float64 ∘ dist, m.pc, m2.pc)
 #
 # mdist = ModelDistance(TLS(na=4), dist)
-# x1 = randn(1000)
-# x2 = randn(1000)
+# t = 0:0.01:100
+# x1 = sin.(70 .*t) .+ sin.(150 .* t) .+ 0.1 .*randn.()
+# # x1 = filt(ones(10),[10],randn(10000))
+# x2 = randn(10000)
 # mdist(x1,x2)
-# Zygote.gradient(abs∘mdist, x1, x2)
-
+#
+# using TotalLeastSquares
+# function TotalLeastSquares.tls(A::AbstractArray,y::AbstractArray)
+#     AA  = [A y]
+#     U,S,V   = svd(AA)
+#     n   = size(A,2)
+#     V21 = V[1:n,n+1:end]
+#     V22 = V[n+1:end,n+1:end]
+#     x   = -V21/V22
+# end
+#
+# shift1(x) = x .+ x[2]
+# g1,g2 = Zygote.gradient(abs ∘ mdist, x1, x2)
+# gradfun(xo,x2) = xo .= Zygote.gradient(abs ∘ mdist, x2, x1)[1]
+# gradfun(x2) = Zygote.gradient(abs ∘ mdist, x2, x1)[1]
+# gradfun(x2)
+# # x1 = filt(ones(10),[10],randn(10000))
+# # x2 = randn(10000)
+# for i = 1:1000
+#     if i % 40 == 0
+#         P = welch_pgram(x1)
+#         plot(P)
+#         P = welch_pgram(x2)
+#         plot!(P) |> display
+#     end
+#     @show mdist(x1,x2)
+#     x2 .-= 30 .* gradfun(x2)
+# end
+# using Optim
+# res = Optim.optimize(x2->mdist(x2,x1), gradfun, x2, LBFGS(), Optim.Options(store_trace=true, show_trace=true, show_every=1, iterations=100, allow_f_increases=true, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=100, g_calls_limit=0))
+# x2 = res.minimizer
 
 # ngradient(Float64 ∘ dist, m, m2)
 
@@ -142,7 +174,7 @@ Random.seed!(1)
         end[1][1:end-1] ≈ FiniteDifferences.grad(fd, p->begin
             r = roots(p)
             sum(abs2, r)
-        end, p)[1:end-1]
+        end, p)[1][1:end-1]
 
         fm = TLS(na=4)
         y = randn(50)
@@ -161,7 +193,7 @@ Random.seed!(1)
 
 
         fdm = central_fdm(5,1)
-        @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1:end-1]
+        @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1][1:end-1]
 
 
         fd = central_fdm(5,1)
@@ -171,8 +203,8 @@ Random.seed!(1)
         residues(a,1,r)
         f = a -> sum(abs2, residues(a,1,r))
         g = a -> real(residues(complex.(a),1,r)[2])
-        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < sqrt(eps())
-        @test sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps())
+        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[1][2:end]) < sqrt(eps())
+        @test sum(abs, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps())
 
         fd = central_fdm(7,1)
         a = randn(30)
@@ -180,8 +212,8 @@ Random.seed!(1)
         residues(a,1)
         f = a -> sum(abs2, residues(a,1))
         g = a -> real(residues(complex.(a),1)[2])
-        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[2:end]) < 10sqrt(eps())
-        @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[2:end]) < sqrt(eps()) # Not robust
+        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[1][2:end]) < 1e-5
+        @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps()) # Not robust
 
         @testset "Numerical curvature" begin
             @info "Testing Numerical curvature"

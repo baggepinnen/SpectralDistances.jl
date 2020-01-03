@@ -106,6 +106,14 @@ ZygoteRules.@adjoint function polyconv(a,b)
     c, polyconv_back
 end
 
+ZygoteRules.@adjoint function polyvec(w)
+    pv = polyvec(w)
+    function polyconv_back(Δ)
+        (-Δ[2:end],)
+    end
+    pv, polyconv_back
+end
+
 # using ForwardDiff
 # PolynomialRoots.roots(p::Vector{<: Complex{<:ForwardDiff.Dual}}) = eigvals(companion(p))
 

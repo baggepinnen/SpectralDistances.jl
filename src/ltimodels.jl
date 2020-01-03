@@ -591,9 +591,10 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
     a = Double64.(ai)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
-    r2 = roots(reverse(a2))
+    r2 = roots(rev(a2))
     filterfun = d isa Continuous ? r -> real(r) < 0 : r -> abs(r) < 1
-    r2 = filter(filterfun, r2)
+    # r2 = filter(filterfun, r2)
+    r2 = r2[filterfun.(r2)] # Zygote can't diff the filter above
     res = residues(a2, b, r2)
     e = 2π*sum(res)
     ae = real(e)
