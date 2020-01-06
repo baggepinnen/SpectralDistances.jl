@@ -57,3 +57,32 @@ end
 #     end
 #     Γ, a, b
 # end
+
+
+function sinkhorn2(C, a, b; λ, iters=1000)
+    K = exp.(.-C .* λ)
+    K̃ = Diagonal(a) \ K
+    u = one.(b)./length(b)
+    uo = copy(u)
+    for iter = 1:iters
+        u .= 1 ./(K̃*(b./(K'uo)))
+        # @show sum(abs2, u-uo)
+        if sum(abs2, u-uo) < 1e-10
+            # @info "Done at iteration $iter"
+            break
+        end
+        copyto!(uo,u)
+    end
+    @assert all(!isnan, u) "Got nan entries in u"
+    u .= max.(u, 1e-20)
+    @assert all(>(0), u) "Got non-positive entries in u"
+    v = b ./ ((K' * u) .+ 1e-20)
+    if any(isnan, v)
+        @show (K' * u)
+        error("Got nan entries in v")
+    end
+    lu = log.(u)# .+ 1e-100)
+    α = -lu./λ .+ sum(lu)/(λ*length(u))
+    α .-= sum(α) # Normalize dual optimum to sum to zero
+    Diagonal(u) * K * Diagonal(v), α
+end
