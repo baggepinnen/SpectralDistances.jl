@@ -551,7 +551,7 @@ Returns a transer function with the desired poles. There will be twice as many p
 """
 function poles2model(r::AbstractVector{<:Real}, i::AbstractVector{<:Real})
     roots = [complex.(r, i); complex.(r, -i)]
-    AR(roots2poly(roots))
+    AR(Continuous(),roots2poly(roots))
 end
 
 function Base.rand(::Type{AR}, dr, di, n=2)
