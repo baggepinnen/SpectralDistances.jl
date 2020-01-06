@@ -1,5 +1,6 @@
 function barycenter(d::SinkhornRootDistance,models)
     bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p),models)
+    # bc = roots(SpectralDistances.Continuous(), models[rand(1:length(models))])
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
     X = [real(bc)'; imag(bc)']
@@ -26,7 +27,7 @@ end
 function alg1(X,Y,â,b,λ=100)
     N = length(Y)
     ã = copy(â)
-    for t = 1:1
+    for t = 1:10
         β = (t+1)/2
         â = (1-inv(β))*â + inv(β)*ã
         𝛂 = mean(1:N) do i
@@ -36,19 +37,20 @@ function alg1(X,Y,â,b,λ=100)
             α = -lu./λ .+ sum(lu)/(λ*length(u))
             α .-= sum(α) # Normalize dual optimum to sum to zero
         end
-        ã = 𝛂 # Some prox function. Replace with vanilla GD for now?
+        ã = ã .* exp.(-β.*𝛂) # Some prox function. Replace with vanilla GD for now?
+        ã ./= sum(ã)
         â = (1-inv(β))*â + inv(β)*ã
-        â ./= sum(â)
+        # â ./= sum(â)
     end
     â
 end
 
-# TODO: the problem is that some entries in a becomes negative. Maybe the prox is important. The paper gives a simple prox version
+
 
 function alg2(X,Y,a,b)
     N = length(Y)
     θ = 0.1
-    for i = 1:1
+    for i = 1:8
         a = alg1(X,Y,a,b)
         YT = mean(1:N) do i
             M = distmat_euclidean(X,Y[i])
@@ -63,6 +65,10 @@ end
 using SpectralDistances, Distributions
 models = [rand(AR, Uniform(-3,-0.1), Uniform(-5,5), 6) for _ in 1:10]
 
-barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
-barycenter(SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+X,a = barycenter(SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+
+scatter(eachrow(X)..., color=:blue)
+plot!.(roots.(SpectralDistances.Continuous(),models), color=:red)
+plot!(Xe, color=:green)
