@@ -135,3 +135,44 @@ b = [[0.2, 0.8] for _ in eachindex(Y)]
 @show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
 @test Xo ≈ [2 2] rtol=1e-2
 @test a ≈ b[1] rtol=1e-2
+
+
+
+
+
+##
+function sabi(X,i,S,k)
+    s = zero(X[1][:,1])
+    for j in eachindex(X)
+        j == i && continue
+        s .+= @views X[j][:,S[j][k]]
+    end
+    s
+end
+
+function ISA(X)
+    N = length(X)
+    @show d,k = size(X[1])
+    S = [collect(1:k) for _ in 1:N]
+    S2 = deepcopy(S)
+    swapped = true
+    while swapped
+        swapped = false
+        for i = 1:N
+            s = S[i]
+            s2 = S2[i]
+            for k1 = 1:k-1, k2 = k1+1:k
+                if dot(X[i][s[k1]], sabi(X,i,S,k1)) + dot(X[i][s[k2]], sabi(X,i,S,k2)) < dot(X[i][s[k2]], sabi(X,i,S,k1)) + dot(X[i][s[k1]], sabi(X,i,S,k2))
+                    s2[k1],s2[k2] = s[k2],s[k1]
+                    @show swapped = true
+                end
+            end
+        end
+        S = deepcopy(S2)
+    end
+    S
+end
+X = [[1. 1], [2. 2], [3. 3]]
+Y = repeat(X,100)
+ISA(Y)
+@btime ISA($Y)
