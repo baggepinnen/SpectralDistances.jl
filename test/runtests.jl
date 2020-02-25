@@ -276,6 +276,10 @@ Random.seed!(1)
         m = fm(y)
         @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
 
+        fm = IRLS(na=2)
+        m = fm(y)
+        @test_broken imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
+
         y = sin.(0:0.1:1000) .+ 0.01 .*randn.()
         fm = PLR(na=2, nc=1)
         m = fm(y)
@@ -292,6 +296,11 @@ Random.seed!(1)
         @test_broken spectralenergy(Continuous(), m) ≈ 2π*var(y)
         @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
 
+        fm = IRLS(na=4)
+        m = fm(y)
+        @test_broken spectralenergy(Continuous(), m) ≈ 2π*var(y)
+        @test_broken imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
+
         y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.01 .*randn.()
         fm = PLR(na=4, nc=1, λ=0.0)
         m = fm(y)
@@ -303,7 +312,7 @@ Random.seed!(1)
 
 
 @testset "modeldistance" begin
-    t = 1:100
+    t = 1:300
     ϵ = 1e-7
     for fitmethod in [LS, TLS]
         @info "Testing fitmethod $(string(fitmethod))"

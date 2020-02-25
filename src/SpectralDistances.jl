@@ -36,7 +36,9 @@ AR,
 ARMA,
 PLR,
 LS,
-TLS
+TLS,
+IRLS
+
 
 export TimeDomain,
 Continuous,

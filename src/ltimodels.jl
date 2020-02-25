@@ -296,6 +296,28 @@ function fitmodel(fm::TLS,X::AbstractArray,diff::Bool)
 end
 
 """
+    IRLS <: FitMethod
+
+Total least squares
+
+# Arguments:
+- `na::Int`: number of roots (order of the system)
+"""
+IRLS
+@kwdef struct IRLS <: FitMethod
+    na::Int
+end
+
+"""
+    fitmodel(fm::IRLS, X::AbstractArray)
+"""
+function fitmodel(fm::IRLS,X::AbstractArray)
+    y,A = getARregressor(X, fm.na)
+    a = irls(A,y) |> vec |> rev |> polyvec
+    AR(a, var(X))
+end
+
+"""
     PLR <: FitMethod
 
 Pseudo linear regression. Estimates the noise components by performing an initial fit of higher order.
@@ -337,12 +359,13 @@ function plr(y,na,nc,initial; λ = 1e-2)
     na >= 1 || throw(ArgumentError("na must be positive"))
     y_train,A = getARregressor(y,initial.na)
     w1 = initial isa TLS ? tls(A,y_train) : ls(A,y_train,initial.λ)
-    yhat = A*w1
-    ehat = yhat - y_train
+    yhat = A*vec(w1)
+    ehat = y_train - yhat
     ΔN = length(y)-length(ehat)
-    y_train,A = getARXregressor(y[ΔN+1:end-1],ehat[1:end-1],na,nc)
+    y_train,A = getARXregressor(y[ΔN:end-1],ehat,na,nc)
     w = tls(A,y_train)
     a,c = params2poly(w,na,nc)
+    c[1] = 1
     # TODO: scalefactor for PLR
     ARMA(c,a)
 end
