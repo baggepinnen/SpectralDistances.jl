@@ -49,6 +49,8 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
+export barycenter
+
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
 include("losses.jl")

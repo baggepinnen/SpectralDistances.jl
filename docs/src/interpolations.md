@@ -9,7 +9,7 @@ Order   = [:type, :function, :macro, :constant]
 ```@autodocs
 Modules = [SpectralDistances]
 Private = false
-Pages   = ["interpolations.jl"]
+Pages   = ["interpolations.jl", "barycenter.jl"]
 ```
 
 Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter $t \in (0,1)$

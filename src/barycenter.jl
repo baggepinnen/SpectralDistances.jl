@@ -1,4 +1,15 @@
 using SpectralDistances
+
+"""
+    barycenter(d::SinkhornRootDistance, models; normalize = true, kwargs...)
+
+**Approximately** calculate the barycenter supported on the same number of atoms as the number of poles in the models.
+
+#Arguments:
+- `models`: vector of AR models
+- `normalize`: make sure weights sum to 1
+- `kwargs`: are sent to [`ISA`](@ref)
+"""
 function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     # bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
     # X0 = [real(bc)'; imag(bc)']
@@ -116,7 +127,7 @@ end
 
 
 ##
-"Sum over j≠i"
+"Sum over j≠i. Internal function."
 function ∑jni(X,i,S,k)
     s = zero(X[1][:,1])
     @inbounds for j in eachindex(X)
@@ -126,6 +137,18 @@ function ∑jni(X,i,S,k)
     s
 end
 
+
+"""
+    ISA(X, w = nothing; iters = 100, printerval = typemax(Int))
+
+Iterative swapping algorithm from "On the Computation of Wasserstein barycenters", Giovanni Puccetti1 et al.
+
+#Arguments:
+- `X`: vector of d×k matrices where d is dimension and k number of atoms
+- `w`: weights. See the files `test_barycenter.jl` for different uses.
+- `iters`: maximum number of iterations
+- `printerval`: print this often
+"""
 function ISA(X, w=nothing; iters=100, printerval = typemax(Int))
     n = length(X)
     d,k = size(X[1])
