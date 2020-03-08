@@ -82,7 +82,7 @@ EuclideanRootDistance
     domain::D
     assignment::A = SortAssignement(imag)
     transform::F1 = identity
-    weight::F2 = e->ones(length(e))
+    weight::F2 = unitweight
     p::Int = 2
 end
 
