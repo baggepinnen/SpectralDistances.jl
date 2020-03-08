@@ -521,7 +521,7 @@ end
     s
 end
 
-polyval(b::Number,_) = b
+@inline polyval(b::Number,_) = b
 
 function rev(x)
     if isderiving()
@@ -535,6 +535,9 @@ end
     residues(a::AbstractVector, b, r=roots(reverse(a)))
 
 Returns a vector of residues for the system represented by denominator polynomial `a`
+
+Ref: slide 21 https://stanford.edu/~boyd/ee102/rational.pdf
+Tihs methid is numerically sensitive. Note that if two poles are on top of each other, the residue is infinite.
 """
 function residues(a::AbstractVector, b, r = roots(rev(a)))
     # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that

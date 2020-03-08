@@ -49,6 +49,8 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
+export barycenter, ISA
+
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
 include("losses.jl")
@@ -56,7 +58,7 @@ include("interpolations.jl")
 include("utils.jl")
 include("plotting.jl")
 include("sinkhorn.jl")
-
+include("barycenter.jl")
 include("adjoints.jl")
 
 import Requires
