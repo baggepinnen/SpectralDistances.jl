@@ -110,10 +110,10 @@ function ISA(X; iters=100, printerval = 10)
         swaps = 0
         for i = 1:N
             σᵢ = σ[i]
-            σᵢ2 = σ′[i]
+            σᵢ′ = σ′[i]
             for k₁ = 1:k-1, k₂ = k₁+1:k
                 if dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₂)) < dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₂))
-                    σᵢ2[k₁],σᵢ2[k₂] = σᵢ[k₂],σᵢ[k₁] # This line can cause σᵢ2 to not contain all indices 1:k
+                    σᵢ′[k₁],σᵢ′[k₂] = σᵢ[k₂],σᵢ[k₁] # This line can cause σᵢ′ to not contain all indices 1:k
                     swaps += 1
                 end
             end
