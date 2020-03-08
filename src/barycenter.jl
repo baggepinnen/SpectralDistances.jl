@@ -1,6 +1,7 @@
 using SpectralDistances
 function barycenter(d::SinkhornRootDistance,models,λ=100)
-    bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p),models)
+    bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
+
     # bc = roots(SpectralDistances.Continuous(), models[rand(1:length(models))])
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
@@ -14,13 +15,13 @@ function barycenter(d::SinkhornRootDistance,models,λ=100)
 end
 
 
-function barycenter(d::EuclideanRootDistance,models::AbstractVector{MT}) where MT
+function barycenter(d::EuclideanRootDistance,models::AbstractVector)
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
     bc = map(1:length(r[1])) do pi
         sum(w[pi]*r[pi] for (w,r) in zip(w,r))/sum(w[pi] for w in w)
     end
-    MT(ContinuousRoots(bc))
+    AR(ContinuousRoots(bc))
 end
 
 function distmat_euclidean(X,Y)
@@ -90,41 +91,47 @@ end
 
 
 ##
-function sabi(X,i,S,k)
+"Sum over j≠i"
+function ∑jni(X,i,S,k)
     s = zero(X[1][:,1])
-    for j in eachindex(X)
+    @inbounds for j in eachindex(X)
         j == i && continue
         s .+= @views X[j][:,S[j][k]]
     end
     s
 end
 
-function ISA(X)
+function ISA(X; iters=100, printerval = 10)
     N = length(X)
     d,k = size(X[1])
-    S = [collect(1:k) for _ in 1:N]
-    S2 = deepcopy(S)
-    swapped = true
-    for iter = 1:110
-        swapped = false
+    σ = [collect(1:k) for _ in 1:N] # let σᵢ = Id, 1 ≤ i ≤ n.
+    σ′ = deepcopy(σ)
+    for iter = 1:iters
+        swaps = 0
         for i = 1:N
-            s = S[i]
-            s2 = S2[i]
-            for k1 = 1:k-1, k2 = k1+1:k
-                # println(dot(X[i][s[k1]], sabi(X,i,S,k1)) + dot(X[i][s[k2]], sabi(X,i,S,k2)) , " ", dot(X[i][s[k2]], sabi(X,i,S,k1)) + dot(X[i][s[k1]], sabi(X,i,S,k2)))
-                if dot(X[i][s[k1]], sabi(X,i,S,k1)) + dot(X[i][s[k2]], sabi(X,i,S,k2)) < dot(X[i][s[k2]], sabi(X,i,S,k1)) + dot(X[i][s[k1]], sabi(X,i,S,k2))
-                    s2[k1],s2[k2] = s[k2],s[k1]
-                    swapped = true
+            σᵢ = σ[i]
+            σᵢ2 = σ′[i]
+            for k₁ = 1:k-1, k₂ = k₁+1:k
+                if dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₂)) < dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₂))
+                    σᵢ2[k₁],σᵢ2[k₂] = σᵢ[k₂],σᵢ[k₁] # This line can cause σᵢ2 to not contain all indices 1:k
+                    swaps += 1
                 end
             end
         end
-        swapped || (return S)
-        S = deepcopy(S2)
-        @show iter
+        σ = deepcopy(σ′) # Update assignment
+        iter % printerval == 0 && @show iter, swaps
+        swaps == 0 && (return σ)
     end
-    S
+    σ
 end
-X = [[2. 1], [1. 2], [3. 3]]
-Y = repeat(X,10)
-@time S = ISA(Y)
+
+s1(x) = x ./ sum(x) # Normalize a vector to sum to 1
+k = 3
+X = s1.([rand(1,k) for i = 1:5])
+S = ISA(X, iters=1000, printerval=1)
+
+@test all(all(1:k .∈ Ref(S[i])) for i in eachindex(S)) # test that each assignment vector contains all indices 1:k
+
+# X = s1.([[2. 1], [1. 2], [3. 3]])
+# Y = repeat(X,9)
 @btime ISA($Y)
