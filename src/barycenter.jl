@@ -102,17 +102,17 @@ function ∑jni(X,i,S,k)
 end
 
 function ISA(X; iters=100, printerval = 10)
-    N = length(X)
+    n = length(X)
     d,k = size(X[1])
-    σ = [collect(1:k) for _ in 1:N] # let σᵢ = Id, 1 ≤ i ≤ n.
+    σ = [collect(1:k) for _ in 1:n] # let σᵢ = Id, 1 ≤ i ≤ n.
     σ′ = deepcopy(σ)
     for iter = 1:iters
         swaps = 0
-        for i = 1:N
+        for i = 1:n
             σᵢ = σ[i]
             σᵢ′ = σ′[i]
             for k₁ = 1:k-1, k₂ = k₁+1:k
-                if dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₂)) < dot(X[i][σᵢ[k₂]], ∑jni(X,i,σ,k₁)) + dot(X[i][σᵢ[k₁]], ∑jni(X,i,σ,k₂))
+                if dot(X[i][:,σᵢ[k₁]], ∑jni(X,i,σ,k₁)) + dot(X[i][:,σᵢ[k₂]], ∑jni(X,i,σ,k₂)) < dot(X[i][:,σᵢ[k₂]], ∑jni(X,i,σ,k₁)) + dot(X[i][:,σᵢ[k₁]], ∑jni(X,i,σ,k₂))
                     σᵢ′[k₁],σᵢ′[k₂] = σᵢ[k₂],σᵢ[k₁] # This line can cause σᵢ′ to not contain all indices 1:k
                     swaps += 1
                 end
@@ -125,13 +125,9 @@ function ISA(X; iters=100, printerval = 10)
     σ
 end
 
-s1(x) = x ./ sum(x) # Normalize a vector to sum to 1
+d = 2
 k = 3
-X = s1.([rand(1,k) for i = 1:5])
+X = [rand(d,k) for i = 1:5]
 S = ISA(X, iters=1000, printerval=1)
 
 @test all(all(1:k .∈ Ref(S[i])) for i in eachindex(S)) # test that each assignment vector contains all indices 1:k
-
-# X = s1.([[2. 1], [1. 2], [3. 3]])
-# Y = repeat(X,9)
-@btime ISA($Y)
