@@ -653,6 +653,10 @@ end
         Φ = interp(w,t)
     end
 
+@testset "barycenter" begin
+    @info "Testing barycenter"
+    include("test_barycenter.jl")
+end
 
 @testset "Slerp" begin
     a = n1(randn(3))

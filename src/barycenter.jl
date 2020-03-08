@@ -14,13 +14,13 @@ function barycenter(d::SinkhornRootDistance,models,λ=100)
 end
 
 
-function barycenter(d::EuclideanRootDistance,models)
+function barycenter(d::EuclideanRootDistance,models::AbstractVector{MT}) where MT
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
     bc = map(1:length(r[1])) do pi
         sum(w[pi]*r[pi] for (w,r) in zip(w,r))/sum(w[pi] for w in w)
     end
-    ContinuousRoots(bc)
+    MT(ContinuousRoots(bc))
 end
 
 function distmat_euclidean(X,Y)
@@ -87,57 +87,6 @@ function alg2(X,Y,a,b;λ = 100,θ = 0.5)
     X,a
 end
 
-using SpectralDistances, Distributions
-models = [rand(AR, Uniform(-0.11,-0.1), Uniform(-5,5), 4) for _ in 1:2]
-
-##
-Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
-
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)
-X,a = barycenter(d, models, 10)
-
-scatter(eachrow(X)..., color=:blue)
-plot!.(roots.(SpectralDistances.Continuous(),models))#, color=:red)
-plot!(Xe, color=:green, m=:cross)
-
-
-
-##
-using Test
-Y = [[1. 1], [2. 2], [3. 3]]
-X = [1.1 1.1]
-a = ones(2) ./ 2
-b = [ones(2) ./2 for _ in eachindex(Y)]
-@test alg1(X,Y,a,b;λ=0.1) ≈ a
-@show Xo,ao = alg2(X,Y,a,b;λ=0.1, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-X = [0. 0.]
-@show Xo,ao = alg2(X,Y,a,b;λ=0.1,θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-X = [1. 3.]
-@show Xo,ao = alg2(X,Y,a,b;λ=10, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-
-X = [0. 4.]
-@show Xo,ao = alg2(X,Y,a,b;λ=2, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-
-
-Y = [[1. 1], [2. 2], [3. 3]]
-X = [1.1 1.1]
-a = ones(2) ./ 2
-b = [[0.2, 0.8] for _ in eachindex(Y)]
-@show alg1(X,Y,a,b;λ=10)
-@show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-@test a ≈ b[1] rtol=1e-2
-
-
-
 
 
 ##
@@ -152,27 +101,30 @@ end
 
 function ISA(X)
     N = length(X)
-    @show d,k = size(X[1])
+    d,k = size(X[1])
     S = [collect(1:k) for _ in 1:N]
     S2 = deepcopy(S)
     swapped = true
-    while swapped
+    for iter = 1:110
         swapped = false
         for i = 1:N
             s = S[i]
             s2 = S2[i]
             for k1 = 1:k-1, k2 = k1+1:k
+                # println(dot(X[i][s[k1]], sabi(X,i,S,k1)) + dot(X[i][s[k2]], sabi(X,i,S,k2)) , " ", dot(X[i][s[k2]], sabi(X,i,S,k1)) + dot(X[i][s[k1]], sabi(X,i,S,k2)))
                 if dot(X[i][s[k1]], sabi(X,i,S,k1)) + dot(X[i][s[k2]], sabi(X,i,S,k2)) < dot(X[i][s[k2]], sabi(X,i,S,k1)) + dot(X[i][s[k1]], sabi(X,i,S,k2))
                     s2[k1],s2[k2] = s[k2],s[k1]
-                    @show swapped = true
+                    swapped = true
                 end
             end
         end
+        swapped || (return S)
         S = deepcopy(S2)
+        @show iter
     end
     S
 end
-X = [[1. 1], [2. 2], [3. 3]]
-Y = repeat(X,100)
-ISA(Y)
+X = [[2. 1], [1. 2], [3. 3]]
+Y = repeat(X,10)
+@time S = ISA(Y)
 @btime ISA($Y)
