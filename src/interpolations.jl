@@ -46,7 +46,7 @@ function centraldiff(v::AbstractVector)
 end
 
 """
-    interpolator(d::RationalOptimalTransportDistance, A1, A2)
+    $(SIGNATURES)
 
 Perform displacement interpolation between two models.
 """

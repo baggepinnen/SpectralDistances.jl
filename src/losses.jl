@@ -252,6 +252,7 @@ end
 
 """
     domain(d::AbstractDistance)
+    $(TYPEDSIGNATURES)
 
 Return the domain of the distance
 """
@@ -275,14 +276,18 @@ distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transp
 
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
+"""
+    $(TYPEDSIGNATURES)
+"""
 function distmat(dist,e::AbstractVector)
     n = length(e)
     T = typeof(dist(e[1],e[1]))
     D = zeros(T,n,n)
     for i = 1:n
-        Threads.@threads for j=i:n
+        D[i,i] = dist(e[i],e[i]) # Note we do calc this ditance since it's nonzero for regularized distances.
+        Threads.@threads for j=i+1:n
             D[i,j] = dist(e[i],e[j])
-            i != j && (D[j,i] = D[i,j])
+            (D[j,i] = D[i,j])
         end
     end
     Symmetric(D)
@@ -300,6 +305,7 @@ function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
     e = roots(domain(d), m)
     preprocess_roots(d, e)
 end
+
 function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
     evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2))
 end
@@ -308,7 +314,6 @@ function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
     d2 = evaluate(d, preprocess_roots(d,tzero(domain(d),w1)), preprocess_roots(d,tzero(domain(d),w2)))
     d1 + d2
 end
-
 
 function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
     e1,e2 = toreim(e1), toreim(e2)

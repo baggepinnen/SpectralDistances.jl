@@ -2,16 +2,6 @@
 
 Whenever you define a distance, that distance implies the existence of a shortest path, a *geodesic*. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models.
 
-```@index
-Pages = ["interpolations.md"]
-Order   = [:type, :function, :macro, :constant]
-```
-```@autodocs
-Modules = [SpectralDistances]
-Private = false
-Pages   = ["interpolations.jl", "barycenter.jl"]
-```
-
 Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter $t \in (0,1)$
 
 ```@example
@@ -65,3 +55,14 @@ savefig("interpolation.svg"); nothing # hide
 ```
 
 ![](interpolation.svg)
+
+
+```@index
+Pages = ["interpolations.md"]
+Order   = [:type, :function, :macro, :constant]
+```
+```@autodocs
+Modules = [SpectralDistances]
+Private = false
+Pages   = ["interpolations.jl", "barycenter.jl"]
+```

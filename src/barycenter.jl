@@ -1,7 +1,6 @@
-using SpectralDistances
-
 """
     barycenter(d::SinkhornRootDistance, models; normalize = true, kwargs...)
+    $(SIGNATURES)
 
 **Approximately** calculate the barycenter supported on the same number of atoms as the number of poles in the models.
 

@@ -1,7 +1,13 @@
+"""
+$(README)
+
+# Exports
+$(EXPORTS)
+"""
 module SpectralDistances
 
 using LinearAlgebra, Statistics
-using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares
+using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions
 
 import Base.@kwdef
 
@@ -49,7 +55,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export barycenter, ISA
+export interpolator, barycenter, ISA
 
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
