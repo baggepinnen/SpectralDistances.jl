@@ -1,6 +1,54 @@
 using Test, SpectralDistances, Distributions
 const Continuous = SpectralDistances.Continuous
 
+
+
+
+@testset "ISA" begin
+    @info "Testing ISA"
+
+    ## Extreme case 1- each measure is like a point, the bc should be close to the Euclidean mean of the center of each measure
+    d = 2
+    k = 4
+    X0 = [1 1 2 2; 1 2 1 2]
+    X = [X0 .+ 110rand(d) for _ in 1:4]
+    S = ISA(X, iters=100, printerval=10)
+    X̂ = [X[i][:,S[i]] for i in eachindex(X)]
+    bc = mean(X̂)
+    @test mean(bc) ≈ mean(mean, X)
+    @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2))
+    # scatter(eachrow(reduce(hcat,X))...)
+    # scatter!(eachrow(bc)...)
+
+    ## Extreme case 2- variability between measures is small in comparison to the intra-measure variability. The bc should be close to the coordinate-wise Euclidean mean
+    d = 2
+    k = 4
+    X0 = [1 1 2 2; 1 2 1 2]
+    X = [X0 .+ 0.1rand(d) for _ in 1:4]
+    S = ISA(X, iters=100, printerval=10)
+    X̂ = [X[i][:,S[i]] for i in eachindex(X)]
+    bc = mean(X̂)
+    @test mean(bc) ≈ mean(mean, X)
+    @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2))
+    # scatter(eachrow(reduce(hcat,X))...)
+    # scatter!(eachrow(bc)...)
+
+    # Extreme case 3, with weights where one weight is extremely large
+    d = 2
+    k = 4
+    X0 = [1 1 2 2; 1 2 1 2]
+    X = [X0 .+ 110rand(d) for _ in 1:4]
+    w = s1([10000;ones(length(X)-1)])
+    S = ISA(X, w, iters=100, printerval=10)
+    X̂ = [w[i]*X[i][:,S[i]] for i in eachindex(X)]
+    # bc = mean(X̂ .* w)
+    bc = sum(X̂)
+    @test mean(bc) ≈ mean(X[1]) rtol=0.1
+    # scatter(eachrow(reduce(hcat,X))...)
+    # scatter!(eachrow(bc)...)
+
+end
+
 d = EuclideanRootDistance(domain=Continuous(), weight=unitweight)
 models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
 bc = barycenter(d,models)

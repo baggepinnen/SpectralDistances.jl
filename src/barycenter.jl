@@ -101,9 +101,18 @@ function ∑jni(X,i,S,k)
     s
 end
 
-function ISA(X; iters=100, printerval = 10)
+function ISA(X, w=nothing; iters=100, printerval = 10)
     n = length(X)
     d,k = size(X[1])
+
+    if w !== nothing
+        X = deepcopy(X)
+        for i in eachindex(X)
+            X[i] .*= w[i]
+        end
+    end
+
+
     σ = [collect(1:k) for _ in 1:n] # let σᵢ = Id, 1 ≤ i ≤ n.
     σ′ = deepcopy(σ)
     for iter = 1:iters
@@ -124,10 +133,3 @@ function ISA(X; iters=100, printerval = 10)
     end
     σ
 end
-
-d = 2
-k = 3
-X = [rand(d,k) for i = 1:5]
-S = ISA(X, iters=1000, printerval=1)
-
-@test all(all(1:k .∈ Ref(S[i])) for i in eachindex(S)) # test that each assignment vector contains all indices 1:k
