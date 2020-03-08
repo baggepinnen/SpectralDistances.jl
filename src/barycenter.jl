@@ -17,13 +17,13 @@ function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     # TODO: would be faster to only run on half of the poles and then duplicate them in the end. Would also enforce conjugacy. Special fix needed for systems with real poles.
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
-    realpoles = any(iszero ∘ real, r)
+    realpoles = any(any(iszero ∘ imag, r) for r in r)
 
     if !realpoles
         r = [r[1:end÷2] for r in r]
         w = [2w[1:end÷2] for w in w]
-        X = [[real(r)'; imag(r)'] for r in r]
     end
+    X = [[real(r)'; imag(r)'] for r in r]
     if !all(sum.(w) .≈ 1)
         if normalize
             w = s1.(w)
@@ -44,6 +44,7 @@ function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     if realpoles
         bcr = ContinuousRoots(r1)
     else
+        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
         bcr = ContinuousRoots([r1; conj.(r1)])
     end
 
@@ -130,13 +131,15 @@ end
 "Sum over j≠i. Internal function."
 function ∑jni(X,i,S,k)
     s = zero(X[1][:,1])
+    d = size(X[1],1)
     @inbounds for j in eachindex(X)
         j == i && continue
-        s .+= @views X[j][:,S[j][k]]
+        for l in 1:d
+            s[l] += X[j][l,S[j][k]]
+        end
     end
     s
 end
-
 
 """
     ISA(X, w = nothing; iters = 100, printerval = typemax(Int))
@@ -169,7 +172,9 @@ function ISA(X, w=nothing; iters=100, printerval = typemax(Int))
             σᵢ = σ[i]
             σᵢ′ = σ′[i]
             for k₁ = 1:k-1, k₂ = k₁+1:k
-                if dot(X[i][:,σᵢ[k₁]], ∑jni(X,i,σ,k₁)) + dot(X[i][:,σᵢ[k₂]], ∑jni(X,i,σ,k₂)) < dot(X[i][:,σᵢ[k₂]], ∑jni(X,i,σ,k₁)) + dot(X[i][:,σᵢ[k₁]], ∑jni(X,i,σ,k₂))
+                Xik1 = @view X[i][:,σᵢ[k₁]]
+                Xik2 = @view X[i][:,σᵢ[k₂]]
+                if dot(Xik1, ∑jni(X,i,σ,k₁)) + dot(Xik2, ∑jni(X,i,σ,k₂)) < dot(Xik2, ∑jni(X,i,σ,k₁)) + dot(Xik1, ∑jni(X,i,σ,k₂))
                     σᵢ′[k₁],σᵢ′[k₂] = σᵢ[k₂],σᵢ[k₁] # This line can cause σᵢ′ to not contain all indices 1:k
                     swaps += 1
                 end
