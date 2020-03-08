@@ -1,5 +1,5 @@
 using SpectralDistances
-function barycenter(d::SinkhornRootDistance,models; kwargs...)
+function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     # bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
     # X0 = [real(bc)'; imag(bc)']
 
@@ -13,7 +13,13 @@ function barycenter(d::SinkhornRootDistance,models; kwargs...)
         w = [2w[1:end÷2] for w in w]
         X = [[real(r)'; imag(r)'] for r in r]
     end
-    @assert all(sum.(w) .≈ 1)
+    if !all(sum.(w) .≈ 1)
+        if normalize
+            w = s1.(w)
+        else
+            @warn "sum.(w) ≠ 1" sum.(w)
+        end
+    end
 
     w = transpose.(s1.(w))
     W = reduce(vcat,w)
@@ -134,7 +140,7 @@ function ISA(X, w=nothing; iters=100, printerval = typemax(Int))
 
     σ = [collect(1:k) for _ in 1:n] # let σᵢ = Id, 1 ≤ i ≤ n.
     σ′ = deepcopy(σ)
-    for iter = 1:iters
+    @inbounds for iter = 1:iters
         swaps = 0
         for i = 1:n
             σᵢ = σ[i]

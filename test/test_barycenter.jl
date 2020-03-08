@@ -1,8 +1,5 @@
 using Test, SpectralDistances
-const Continuous = SpectralDistances.Continuous
-
-
-
+# const Continuous = SpectralDistances.Continuous
 
 @testset "ISA" begin
     @info "Testing ISA"
