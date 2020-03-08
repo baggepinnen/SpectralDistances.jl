@@ -107,9 +107,9 @@ using ControlSystems
 
 d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)
 bc = barycenter(d, models)
-plot()
-pzmap!.(tf.(models), m=(:c,2))
-pzmap!(tf(bc), color=:blue, m=(:c,2))
+# plot()
+# pzmap!.(tf.(models), m=(:c,2))
+# pzmap!(tf(bc), color=:blue, m=(:c,2))
 ##
 
 # Y = [[1. 1], [2. 2], [3. 3]]

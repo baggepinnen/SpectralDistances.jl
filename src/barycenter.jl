@@ -6,7 +6,13 @@ function barycenter(d::SinkhornRootDistance,models; kwargs...)
     # TODO: would be faster to only run on half of the poles and then duplicate them in the end. Would also enforce conjugacy. Special fix needed for systems with real poles.
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
-    X = [[real(r)'; imag(r)'] for r in r]
+    realpoles = any(iszero ∘ real, r)
+
+    if !realpoles
+        r = [r[1:end÷2] for r in r]
+        w = [2w[1:end÷2] for w in w]
+        X = [[real(r)'; imag(r)'] for r in r]
+    end
     @assert all(sum.(w) .≈ 1)
 
     w = transpose.(s1.(w))
@@ -16,15 +22,15 @@ function barycenter(d::SinkhornRootDistance,models; kwargs...)
 
     S = ISA(X; kwargs...)
     X̂ = [w2[i].*X[i][:,S[i]] for i in eachindex(X)]
-    # X̂ = [X[i][:,S[i]] for i in eachindex(X)]
     bc = sum(X̂)
-    bcr = ContinuousRoots(complex.(bc[1,:],bc[2,:]))
-    AR(bcr)
+    r1 = complex.(bc[1,:],bc[2,:])
+    if realpoles
+        bcr = ContinuousRoots(r1)
+    else
+        bcr = ContinuousRoots([r1; conj.(r1)])
+    end
 
-    # a = d.weight(bc)
-    # @assert sum(a) ≈ 1
-    # b = w
-    # alg2(X0,X,a,b,λ=λ)
+    AR(bcr)
 end
 
 
