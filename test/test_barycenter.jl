@@ -1,4 +1,4 @@
-using Test, SpectralDistances, Distributions
+using Test, SpectralDistances
 const Continuous = SpectralDistances.Continuous
 
 
@@ -86,52 +86,60 @@ bc = barycenter(d,models)
 
 
 
-models = [rand(AR, Uniform(-0.11,-0.1), Uniform(-5,5), 4) for _ in 1:2]
 
 ##
+ζ = [0.1, 0.3, 0.7]
+
+models = map(1:4) do _
+    pol = [1]
+    for i = eachindex(ζ)
+        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+    end
+    AR(Continuous(),pol)
+end
+
 Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
 
 
 
+using ControlSystems
 
 d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)
-X,a = barycenter(d, models, 10)
+bc = barycenter(d, models)
+plot()
+pzmap!.(tf.(models), m=(:c,2))
+pzmap!(tf(bc), color=:blue, m=(:c,2))
+##
 
-scatter(eachrow(X)..., color=:blue)
-plot!.(roots.(SpectralDistances.Continuous(),models))#, color=:red)
-plot!(Xe, color=:green, m=:cross)
-
-
-
-Y = [[1. 1], [2. 2], [3. 3]]
-X = [1.1 1.1]
-a = ones(2) ./ 2
-b = [ones(2) ./2 for _ in eachindex(Y)]
-@test alg1(X,Y,a,b;λ=0.1) ≈ a
-@show Xo,ao = alg2(X,Y,a,b;λ=0.1, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-X = [0. 0.]
-@show Xo,ao = alg2(X,Y,a,b;λ=0.1,θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-X = [1. 3.]
-@show Xo,ao = alg2(X,Y,a,b;λ=10, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-
-X = [0. 4.]
-@show Xo,ao = alg2(X,Y,a,b;λ=2, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-
-
-
-Y = [[1. 1], [2. 2], [3. 3]]
-X = [1.1 1.1]
-a = ones(2) ./ 2
-b = [[0.2, 0.8] for _ in eachindex(Y)]
-@show alg1(X,Y,a,b;λ=10)
-@show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
-@test Xo ≈ [2 2] rtol=1e-2
-@test a ≈ b[1] rtol=1e-2
+# Y = [[1. 1], [2. 2], [3. 3]]
+# X = [1.1 1.1]
+# a = ones(2) ./ 2
+# b = [ones(2) ./2 for _ in eachindex(Y)]
+# @test alg1(X,Y,a,b;λ=0.1) ≈ a
+# @show Xo,ao = alg2(X,Y,a,b;λ=0.1, θ=0.5)
+# @test Xo ≈ [2 2] rtol=1e-2
+#
+# X = [0. 0.]
+# @show Xo,ao = alg2(X,Y,a,b;λ=0.1,θ=0.5)
+# @test Xo ≈ [2 2] rtol=1e-2
+#
+# X = [1. 3.]
+# @show Xo,ao = alg2(X,Y,a,b;λ=10, θ=0.5)
+# @test Xo ≈ [2 2] rtol=1e-2
+#
+#
+# X = [0. 4.]
+# @show Xo,ao = alg2(X,Y,a,b;λ=2, θ=0.5)
+# @test Xo ≈ [2 2] rtol=1e-2
+#
+#
+#
+# Y = [[1. 1], [2. 2], [3. 3]]
+# X = [1.1 1.1]
+# a = ones(2) ./ 2
+# b = [[0.2, 0.8] for _ in eachindex(Y)]
+# @show alg1(X,Y,a,b;λ=10)
+# @show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
+# @test Xo ≈ [2 2] rtol=1e-2
+# @test a ≈ b[1] rtol=1e-2

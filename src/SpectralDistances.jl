@@ -56,7 +56,7 @@ include("interpolations.jl")
 include("utils.jl")
 include("plotting.jl")
 include("sinkhorn.jl")
-
+include("barycenter.jl")
 include("adjoints.jl")
 
 import Requires
