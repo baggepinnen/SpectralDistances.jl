@@ -49,7 +49,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export barycenter
+export barycenter, ISA
 
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
