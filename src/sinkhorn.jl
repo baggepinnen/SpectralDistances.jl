@@ -59,34 +59,6 @@ end
 # end
 
 
-function sinkhorn2(C, a, b; λ, iters=1000)
-    K = exp.(.-C .* λ)
-    K̃ = Diagonal(a) \ K
-    u = one.(b)./length(b)
-    uo = copy(u)
-    for iter = 1:iters
-        u .= 1 ./(K̃*(b./(K'uo)))
-        # @show sum(abs2, u-uo)
-        if sum(abs2, u-uo) < 1e-10
-            # @info "Done at iteration $iter"
-            break
-        end
-        copyto!(uo,u)
-    end
-    @assert all(!isnan, u) "Got nan entries in u"
-    u .= max.(u, 1e-20)
-    @assert all(>(0), u) "Got non-positive entries in u"
-    v = b ./ ((K' * u) .+ 1e-20)
-    if any(isnan, v)
-        @show (K' * u)
-        error("Got nan entries in v")
-    end
-    lu = log.(u)# .+ 1e-100)
-    α = -lu./λ .+ sum(lu)/(λ*length(u))
-    α .-= sum(α) # Normalize dual optimum to sum to zero
-    Diagonal(u) * K * Diagonal(v), α
-end
-
 
 """
     cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ = 0.1, L = 32) where T
@@ -106,14 +78,15 @@ The difference in this algorithm compared to the paper is that they operate on h
 - `γ`: sinkhorn regularization parameter
 - `L`: number of sinkhorn iterations
 """
-function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=1e-1, L=32) where T
+function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=0.2, L=32) where T
     N,S = size(p)
+    w = zeros(T,S)
+    any(isnan, λ) && return NaN,ql,w
     @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
     @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
     @assert length(C) == S
     K = [exp.(.-C ./ γ) for C in C]
     b = [fill(1/N, N, S) for _ in 0:L+1]
-    w = zeros(T,S)
     r = zeros(T,N,S)
     φ = [Matrix{T}(undef,N,S) for _ in 1:L]
     local P
@@ -127,11 +100,15 @@ function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ
 
     # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The locatoin is then used to get a new cost matrix between q's location and the projected barycenter location.
     Pl = barycenter(pl, λ)
+    # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
     Cbc = distmat_euclidean(Pl, ql)
 
     Γ, a = sinkhorn(Cbc, P, q, β=γ, iters=2L) # We run a bit longer here to get a good value
-    a = s1(a)
-    ∇W = γ.*log.(a)
+    cost = sum(Cbc .* Γ)
+
+    la = log.(a) # a should have geometric mean 1
+    la .= la .- mean(la)
+    ∇W = γ.*la
     g = ∇W .* P
 
     for l = L:-1:1
@@ -140,7 +117,13 @@ function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ
             r[:,s] .= (-K[s]'*(K[s]*((λ[s].* g .- r[:,s]) ./ φ[l][:,s]) .* p[:,s] ./ (K[s]*b[l][:,s]).^2)) .* b[l][:,s]
         end
         g = sum(r, dims=2) |> vec
-
     end
-    sum(Cbc .* Γ), Pl,w
+    cost, Pl,w
 end
+
+
+# geomean(x) = prod(x)^(1/length(x))
+# a = rand(3)
+# la = log.(a)
+# lag = la .- mean(la)
+# geomean(exp.(lag))
