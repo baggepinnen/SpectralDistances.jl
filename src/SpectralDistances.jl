@@ -7,7 +7,7 @@ $(EXPORTS)
 module SpectralDistances
 
 using LinearAlgebra, Statistics
-using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions
+using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions, Optim
 
 import Base.@kwdef
 
@@ -35,7 +35,8 @@ discrete_grid_transportplan
 # closed_form_wass_noinverse
 
 export sinkhorn,
-IPOT
+IPOT,
+sinkhorn_diff
 
 export AbstractModel,
 AR,
@@ -55,7 +56,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export interpolator, barycenter, ISA
+export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting
 
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")

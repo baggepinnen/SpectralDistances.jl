@@ -10,10 +10,21 @@
 - `kwargs`: are sent to [`ISA`](@ref)
 """
 function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
-    # bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
-    # X0 = [real(bc)'; imag(bc)']
+    X, w, realpoles = barycenter_matrices(d, models, normalize)
+    S = ISA(X; kwargs...)
+    bc = barycentric_weighting(X,w,S)
 
-    # TODO: would be faster to only run on half of the poles and then duplicate them in the end. Would also enforce conjugacy. Special fix needed for systems with real poles.
+    r1 = complex.(bc[1,:],bc[2,:])
+    if realpoles
+        bcr = ContinuousRoots(r1)
+    else
+        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+        bcr = ContinuousRoots([r1; conj.(r1)])
+    end
+    AR(bcr)
+end
+
+function barycenter_matrices(d, models, normalize=true)
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
     realpoles = any(any(iszero ∘ imag, r) for r in r)
@@ -36,19 +47,46 @@ function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     W ./= sum(W,dims=1)
     w2 = [W[i,:]' for i in 1:length(X)]
 
-    S = ISA(X; kwargs...)
-    X̂ = [w2[i].*X[i][:,S[i]] for i in eachindex(X)]
-    bc = sum(X̂)
-    r1 = complex.(bc[1,:],bc[2,:])
-    if realpoles
-        bcr = ContinuousRoots(r1)
-    else
-        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-        bcr = ContinuousRoots([r1; conj.(r1)])
-    end
-
-    AR(bcr)
+    X, w2, realpoles
 end
+
+
+function barycentric_coordinates(d::SinkhornRootDistance,models, q; kwargs...)
+    pl, p, realpolesp = barycenter_matrices(d, models)
+    ql, q, realpolesq = barycenter_matrices(d, [q])
+    barycentric_coordinates(pl, ql[1], p, q[1]; kwargs...)
+end
+
+
+
+
+
+# function barycenter(d::SinkhornRootDistance,models,w; kwargs...)
+#     # bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
+#     # X0 = [real(bc)'; imag(bc)']
+#
+#     # TODO: would be faster to only run on half of the poles and then duplicate them in the end. Would also enforce conjugacy. Special fix needed for systems with real poles.
+#     r = roots.(SpectralDistances.Continuous(), models)
+#     realpoles = any(any(iszero ∘ imag, r) for r in r)
+#
+#     if !realpoles
+#         r = [r[1:end÷2] for r in r]
+#     end
+#     X = [[real(r)'; imag(r)'] for r in r]
+#
+#     S = ISA(X, w; kwargs...)
+#     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
+#     bc = sum(X̂)
+#     r1 = complex.(bc[1,:],bc[2,:])
+#     if realpoles
+#         bcr = ContinuousRoots(r1)
+#     else
+#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+#         bcr = ContinuousRoots([r1; conj.(r1)])
+#     end
+#
+#     AR(bcr)
+# end
 
 
 function barycenter(d::EuclideanRootDistance,models::AbstractVector)
@@ -60,9 +98,74 @@ function barycenter(d::EuclideanRootDistance,models::AbstractVector)
     AR(ContinuousRoots(bc))
 end
 
+
 function distmat_euclidean(X,Y)
     [mean(abs2, c1-c2) for c1 in eachcol(X), c2 in eachcol(Y)]
 end
+
+
+"""
+    barycenter(X::Vector{<:AbstractArray}, λ)
+
+Calculate the weighted barycenter for point clouds in `X`.
+Each `X[i]` has the shame `n_dims × n_atoms`
+`λ` is the weight vector that should sum to 1.
+"""
+function barycenter(X::Vector{<:AbstractArray}, λ)
+    sw = ISA(X, λ, iters=100, printerval=10)
+    barycentric_weighting(X,λ,sw)
+end
+
+barycentric_weighting(X,λ,sw) = sum(λ[i].*X[i][:,sw[i]] for i in eachindex(sw))
+
+function softmax(x)
+    e = exp.(x)
+    return e./sum(e)
+end
+
+
+"""
+    bc,λ = barycentric_coordinates(pl, ql, p, q; options, kwargs...)
+
+Compute the barycentric coordinates `λ` such that
+sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
+
+#Arguments:
+- `pl`: Atoms in measures `p`, vector, length `n_measures`, of matrices of size `n_dims × n_atoms`
+- `ql`: Atoms in measure `q`
+- `p`: Measures `p`, a matrix of weight vectors, size `n_atoms × n_measures` that sums to 1
+- `q`: the veight vector for measure `q`, length is `n_atoms`
+- `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0)`
+- `kwargs`: these are sent to the [`sinkhorn`](@ref) algorithm.
+"""
+function barycentric_coordinates(pl, ql, p, q;
+    options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0),
+    kwargs...)
+
+    C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
+    # local P
+
+    function fg!(F,G,λl)
+        λ = softmax(λl) # optimization done in log domain
+        cost,P,∇ℰ = SpectralDistances.sinkhorn_diff(pl,ql,p,q,C,λ; kwargs...)
+        if G !== nothing
+            G .= ∇ℰ
+        end
+        if F !== nothing
+            return cost
+        end
+    end
+
+    S = length(pl)
+    λl = zeros(S)
+    res = Optim.optimize(Optim.only_fg!(fg!), λl, BFGS(), options)
+    λh = softmax(res.minimizer)
+
+    cost,P,∇ℰ = SpectralDistances.sinkhorn_diff(pl,ql,p,q,C,λh; kwargs...)
+    P,λh
+end
+
+
 
 # function alg1(X,Y,â,b;λ=100)
 #     N = length(Y)
@@ -156,9 +259,9 @@ function ISA(X, w=nothing; iters=100, printerval = typemax(Int))
     d,k = size(X[1])
 
     if w !== nothing
-        X = deepcopy(X)
-        for i in eachindex(X)
-            X[i] .*= w[i] # This should work for both w[i] scalar and vector
+        # X = deepcopy(X)
+        X = map(eachindex(X)) do i # This does both copy and handles weird input types
+            X[i] .* w[i] # This should work for both w[i] scalar and vector
         end
     end
 

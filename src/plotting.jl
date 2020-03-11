@@ -10,7 +10,12 @@ end
     xlabel --> "Freq"
     xscale --> :log10
     yscale --> :log10
-    s.freq .+ s.freq[2], s.power ./ (normalize*std(s.power))
+    if normalize
+        y =  s.power[2:end] ./ std(s.power)
+    else
+        y = s.power[2:end]
+    end
+    s.freq[2:end], y
 end
 
 function Base.show(io::IO, m::MIME"image/png", anim::Plots.Animation)

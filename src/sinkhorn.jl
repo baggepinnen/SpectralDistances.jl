@@ -86,3 +86,61 @@ function sinkhorn2(C, a, b; λ, iters=1000)
     α .-= sum(α) # Normalize dual optimum to sum to zero
     Diagonal(u) * K * Diagonal(v), α
 end
+
+
+"""
+    cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ = 0.1, L = 32) where T
+
+
+Returns the sinkhonr cost, the estimated barycenter and the gradient w.r.t. λ
+
+This function is called from within [`barycentric_coordinates`](@ref). See help for this function regarding the other parameters.
+
+Ref https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf
+
+The difference in this algorithm compared to the paper is that they operate on histograms where the cost matric `C` is the same for all pairs of pᵢ and q. Here, there is a unique `C` for each pair.
+
+#Arguments:
+- `C`: Vector of cost matrices
+- `λ`: barycentric coordinates
+- `γ`: sinkhorn regularization parameter
+- `L`: number of sinkhorn iterations
+"""
+function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=1e-1, L=32) where T
+    N,S = size(p)
+    @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
+    @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
+    @assert length(C) == S
+    K = [exp.(.-C ./ γ) for C in C]
+    b = [fill(1/N, N, S) for _ in 0:L+1]
+    w = zeros(T,S)
+    r = zeros(T,N,S)
+    φ = [Matrix{T}(undef,N,S) for _ in 1:L]
+    local P
+    for l = 1:L
+        for s in 1:S
+            φ[l][:,s] = K[s]'* (p[:,s] ./ (K[s] * b[l][:,s]))
+        end
+        P = prod(φ[l].^λ', dims=2) |> vec
+        b[l+1] .= P ./ φ[l]
+    end
+
+    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The locatoin is then used to get a new cost matrix between q's location and the projected barycenter location.
+    Pl = barycenter(pl, λ)
+    Cbc = distmat_euclidean(Pl, ql)
+
+    Γ, a = sinkhorn(Cbc, P, q, β=γ, iters=2L) # We run a bit longer here to get a good value
+    a = s1(a)
+    ∇W = γ.*log.(a)
+    g = ∇W .* P
+
+    for l = L:-1:1
+        w .+= log.(φ[l])'g
+        for s in 1:S
+            r[:,s] .= (-K[s]'*(K[s]*((λ[s].* g .- r[:,s]) ./ φ[l][:,s]) .* p[:,s] ./ (K[s]*b[l][:,s]).^2)) .* b[l][:,s]
+        end
+        g = sum(r, dims=2) |> vec
+
+    end
+    sum(Cbc .* Γ), Pl,w
+end

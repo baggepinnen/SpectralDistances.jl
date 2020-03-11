@@ -140,3 +140,68 @@ bc = barycenter(d, models)
 # @show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
 # @test Xo ≈ [2 2] rtol=1e-2
 # @test a ≈ b[1] rtol=1e-2
+
+
+
+##
+
+@testset "Barycentric coordinates" begin
+    @info "Testing Barycentric coordinates"
+
+d = 2
+k = 4
+S = 4
+X0 = [1 1 2 2; 1 2 1 2]
+
+res = map(1:10) do _
+    X = [X0 .+ 50rand(d) for _ in 1:S]
+    sw = ISA(X, iters=100, printerval=10)
+    X̂ = [X[i][:,sw[i]] for i in eachindex(X)]
+
+    bc = mean(X̂)
+    @test mean(bc) ≈ mean(mean, X)
+    @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2))
+
+
+    a = rand(k) |> s1
+    b = rand(k) |> s1
+
+    γ = 10.0
+
+
+    # α = exp.(α)
+    λ0 = rand(S) |> s1
+    p = repeat(ones(k) |> s1, 1, S)
+    q = rand(k) |> s1
+
+    ql = barycenter(X, λ0)
+    C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
+
+
+    bch,λh = SpectralDistances.barycentric_coordinates(X,ql,p,q, γ=γ, L=5)
+    # scatter(eachrow(reduce(hcat,X))...)
+    # scatter!(eachrow(ql)...)
+    # scatter!(eachrow(bch)..., alpha=0.5)
+
+    norm(λ0-λh), norm(bch-ql) < mean(norm(x-ql) for x in X)
+end
+
+@test median(getindex.(res,1)) < 0.2
+@test mean(getindex.(res,2)) >= 0.9
+
+
+# Now testing for models
+ζ = [0.1, 0.3, 0.7]
+models = map(1:4) do _
+    pol = [1]
+    for i = eachindex(ζ)
+        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+    end
+    AR(Continuous(),pol)
+end
+
+Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+
+
+
+end
