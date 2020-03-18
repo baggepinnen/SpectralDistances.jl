@@ -4,16 +4,44 @@
 The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
 """
 function sinkhorn(C, a, b; β=1e-1, iters=1000)
+    ϵ = eps()
     K = exp.(.-C ./ β)
     v = one.(b)
-    u = a ./ (K * v)
-    v = b ./ (K' * u)
-
+    local u
     for iter = 1:iters
-        u = a ./ (K * v)
-        v = b ./ (K' * u)
+        u = a ./ (K * v .+ ϵ)
+        v = b ./ (K' * u .+ ϵ)
     end
     u .* K .* v', u, v
+end
+
+"""
+    γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000)
+
+The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
+"""
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000)
+
+    alpha,beta = (similar(a) .= 0), (similar(b) .= 0)
+
+    ϵ = eps()
+    K = @. exp(-C / β)
+    u = similar(a) .= 1
+    local v
+
+    for iter = 1:iters
+        v = b ./ (K' * u .+ ϵ)
+        u = a ./ (K * v .+ ϵ)
+        if maximum(abs, u) > τ || maximum(abs, v) > τ
+            @. alpha += β * log(u)
+            @. beta  += β * log(v)
+            u .= one.(u)
+            v .= one.(v)
+            @. K = exp(-(C-alpha-beta') / β)
+        end
+    end
+    Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
+    Γ, u*exp.(alpha./β), v*exp.(beta./β)
 end
 
 """
@@ -26,6 +54,7 @@ Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
 function IPOT(C, μ, ν; β=1, iters=1000)
+    ϵ = eps()
     G = exp.(.- C ./ β)
     a = similar(μ)
     b = fill(eltype(ν)(1/length(ν)), length(ν))
@@ -35,9 +64,9 @@ function IPOT(C, μ, ν; β=1, iters=1000)
     for iter = 1:iters
         Q .= G .* Γ
         mul!(a, Q, b)
-        a .= μ ./ a
+        a .= μ ./ (a .+ ϵ)
         mul!(b, Q', a)
-        b .= ν ./ b
+        b .= ν ./ (b .+ ϵ)
         Γ .= a .* Q .* b'
     end
     Γ, a, b

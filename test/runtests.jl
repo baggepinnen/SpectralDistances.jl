@@ -8,7 +8,6 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv
 Random.seed!(1)
 
 
-
 # using Zygote
 # function jacobian(m,x)
 #     y  = m(x)
@@ -119,6 +118,52 @@ Random.seed!(1)
 
 
 @testset "SpectralDistances.jl" begin
+
+
+    @testset "Sinkhorn" begin
+        @info "Testing Sinkhorn"
+
+
+
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = sinkhorn(C,a,b,β=0.0001)
+        @test Γ ≈ [0 1; 0 0]
+
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = sinkhorn(C,a,b,β=0.1)
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = sinkhorn_log(C,a,b,β=0.0001)
+        @test Γ ≈ [0 1; 0 0]
+
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = sinkhorn_log(C,a,b,β=0.0001)
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = IPOT(C,a,b,β=1)
+        @test Γ ≈ [0 1; 0 0]
+
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = SpectralDistances.IPOT(C,a,b)
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+    end
+
 
     get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
 

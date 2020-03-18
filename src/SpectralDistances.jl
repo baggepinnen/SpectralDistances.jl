@@ -35,6 +35,7 @@ discrete_grid_transportplan
 # closed_form_wass_noinverse
 
 export sinkhorn,
+sinkhorn_log,
 IPOT,
 sinkhorn_diff
 

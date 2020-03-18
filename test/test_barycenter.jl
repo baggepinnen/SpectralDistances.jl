@@ -191,59 +191,57 @@ end
 
 @test median(getindex.(res,1)) < 0.2
 @test mean(getindex.(res,2)) >= 0.9
-##
-X0 = [1. 1 2 2 3 3; 1 2 3 1 2 3]
-# X0 = [X0 X0]
-d,k = size(X0)
-S = 7
-X = [X0[:,randperm(k)] .+ 0.050randn(d) .+ 0.0001 .* randn(d,k) for _ in 1:S]
-w = ones(S) |> s1
-sw = ISA(X, w, iters=100, printerval=1)
-X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
-# X̂2 = SpectralDistances.barycentric_weighting2(X,w,sw)
-scatter(eachrow(reduce(hcat,X))...)
-scatter!(eachrow(X̂)..., alpha=0.5)
-# scatter!(eachrow(X̂2)..., alpha=0.5)
-# In the plot above, the bc should have the same shape as the acnhors
+# ##
+# X0 = [1. 1 2 2 3 3; 1 2 3 1 2 3]
+# # X0 = [X0 X0]
+# d,k = size(X0)
+# S = 7
+# X = [X0[:,randperm(k)] .+ 0.050randn(d) .+ 0.0001 .* randn(d,k) for _ in 1:S]
+# w = ones(S) |> s1
+# sw = ISA(X, w, iters=100, printerval=1)
+# X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
+# # X̂2 = SpectralDistances.barycentric_weighting2(X,w,sw)
+# scatter(eachrow(reduce(hcat,X))...)
+# scatter!(eachrow(X̂)..., alpha=0.5)
+# # scatter!(eachrow(X̂2)..., alpha=0.5)
+# # In the plot above, the bc should have the same shape as the acnhors
+#
+#
+# error("keep track of the cost function noted in the paper and ensure that it decreases")
+# ##
+#
+# # Now testing for models
+# ζ = [0.1, 0.3, 0.7]
+# models = map(1:50) do _
+#     pol = [1]
+#     for i = eachindex(ζ)
+#         pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+#     end
+#     AR(Continuous(),pol)
+# end
+#
+# # λ0 = rand(length(models)) |> s1
+# # qmodel = barycenter(distance, models, λ0)
+#
+# distance = SinkhornRootDistance(domain=Continuous(),p=2, weight=unitweight)
+#
+# # We choose the point to be projected equal to one of the anchor points. In this case, the barycentric coordinates is a one-hot vector
+# qmodel = models[1]
+# q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ = 0.2, robust=true)
+# @test λ[1] ≈ 1 atol=0.2
+#
+# qmodel = models[end]
+# q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ=0.2, robust=false)
+# @test λ[end] ≈ 1 atol=0.2
+#
+#
+# qbc = barycenter(distance, models, λ) # TODO: the problem might be in this method of barycenter, not sure if it's actually any good
+#
+#
+#
+# plot()
+# pzmap!.(tf.(models), lab="")
+# pzmap!(tf(qmodel), m=:c, lab="q")
+# pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
 
-
-error("keep track of the cost function noted in the paper and ensure that it decreases")
-##
-
-# Now testing for models
-ζ = [0.1, 0.3, 0.7]
-models = map(1:50) do _
-    pol = [1]
-    for i = eachindex(ζ)
-        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
-    end
-    AR(Continuous(),pol)
 end
-
-# λ0 = rand(length(models)) |> s1
-# qmodel = barycenter(distance, models, λ0)
-
-distance = SinkhornRootDistance(domain=Continuous(),p=2, weight=unitweight)
-
-# We choose the point to be projected equal to one of the anchor points. In this case, the barycentric coordinates is a one-hot vector
-qmodel = models[1]
-q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ = 0.2, robust=true)
-@test λ[1] ≈ 1 atol=0.2
-
-qmodel = models[end]
-q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ=0.2, robust=false)
-@test λ[end] ≈ 1 atol=0.2
-
-
-qbc = barycenter(distance, models, λ) # TODO: the problem might be in this method of barycenter, not sure if it's actually any good
-
-
-
-plot()
-pzmap!.(tf.(models), lab="")
-pzmap!(tf(qmodel), m=:c, lab="q")
-pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
-
-end
-
-p

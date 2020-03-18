@@ -373,10 +373,10 @@ function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
+    C     = sinkhorn_log(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
     if any(isnan, C)
         println("Nan in SinkhornRootDistance, increasing precision")
-        C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
+        C     = sinkhorn_log(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
         any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)
     end
@@ -490,7 +490,7 @@ function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2
     if issorted(w1.freq) && issorted(w2.freq)
         C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     else
-        C = sinkhorn(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
+        C = sinkhorn_log(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
     end
     cost = sum(C .* D)
 end
