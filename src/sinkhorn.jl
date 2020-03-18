@@ -16,16 +16,16 @@ function sinkhorn(C, a, b; β=1e-1, iters=1000)
 end
 
 """
-    γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000)
+    γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000, tol=1e-8)
 
 The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
 """
-function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000)
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8)
 
     alpha,beta = (similar(a) .= 0), (similar(b) .= 0)
-
     ϵ = eps()
     K = @. exp(-C / β)
+    Γ = similar(K)
     u = similar(a) .= 1
     local v
 
@@ -39,9 +39,27 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000)
             v .= one.(v)
             @. K = exp(-(C-alpha-beta') / β)
         end
+        if any(!isfinite, u) || any(!isfinite, u)
+            error("Got NaN in sinkhorn_log")
+        end
+        if iter % 10 == 0
+            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+            if norm(vec(sum(Γ, dims=1)) - b) < tol
+                lu = alpha .+ β.*log.(u)# .+ 1e-100)
+                α = -lu .+ sum(lu)/length(u)
+                return  Γ, α, v.*exp.(beta./β)
+            end
+        end
+
     end
-    Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
-    Γ, u*exp.(alpha./β), v*exp.(beta./β)
+    @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+
+    lu = alpha .+ β.*log.(u)# .+ 1e-100)
+    α = -lu .+ sum(lu)/length(u)
+    @assert isapprox(sum(α), 0, atol=1e-15) "sum(α) should be 0 but was = $(sum(α))" # Normalize dual optimum to sum to zero
+
+
+    Γ, α, v.*exp.(beta./β)
 end
 
 """

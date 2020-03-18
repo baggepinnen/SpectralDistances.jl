@@ -53,10 +53,6 @@ function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
 end
 
 function barycenter(d::SinkhornRootDistance,models,w; kwargs...)
-    # bc = barycenter(EuclideanRootDistance(domain=domain(d), p=d.p, weight=residueweight),models).pc
-    # X0 = [real(bc)'; imag(bc)']
-
-    # TODO: would be faster to only run on half of the poles and then duplicate them in the end. Would also enforce conjugacy. Special fix needed for systems with real poles.
     r = roots.(SpectralDistances.Continuous(), models)
     realpoles = any(any(iszero ∘ imag, r) for r in r)
 
@@ -91,7 +87,8 @@ end
 
 
 function distmat_euclidean(X,Y)
-    [mean(abs2, c1-c2) for c1 in eachcol(X), c2 in eachcol(Y)]
+    C = [mean(abs2, c1-c2) for c1 in eachcol(X), c2 in eachcol(Y)]
+    # C ./ median(C)
 end
 
 
@@ -303,65 +300,77 @@ end
 
 
 ## ======================
-# function alg1(X,Y,â,b;λ=100)
-#     N = length(Y)
-#     â = copy(â)
-#     # fill!(â, 1/N)
-#     ã = copy(â)
-#     t = 0
-#     for outer t = 1:10000
-#         β = t/2
-#         â .= (1-inv(β)).*â .+ inv(β).*ã
-#         𝛂 = mean(1:N) do i
-#             M = distmat_euclidean(X,Y[i])
-#             a = SpectralDistances.sinkhorn2(M,â,b[i]; iters=500, λ=λ)[2]
-#             @assert all(!isnan, a) "Got nan in inner sinkhorn alg 1"
-#             a
-#         end
-#
-#         ã .= â .* exp.(-β.*𝛂 .* 0.001)
-#         ã ./= sum(ã)
-#         sum(abs2,â-ã)
-#         if sum(abs2,â-ã) < 1e-16
-#             @info "Done at iter $t"
-#             return â .= (1-inv(β)).*â .+ inv(β).*ã
-#         end
-#         â .= (1-inv(β)).*â .+ inv(β).*ã
-#         # â ./= sum(â)
-#     end
-#     @show t
-#     â
-# end
-#
-#
-#
-# function alg2(X,Y,a,b;λ = 100,θ = 0.5)
-#     N = length(Y)
-#     a = copy(a)
-#     ao = copy(a)
-#     X = copy(X)
-#     Xo = copy(X)
-#     fill!(ao, 1/length(ao))
-#     i = 0
-#     for outer i = 1:500
-#         a = alg1(X,Y,ao,b,λ=λ)
-#         YT = mean(1:N) do i
-#             M = distmat_euclidean(X,Y[i])
-#             T,_ = SpectralDistances.sinkhorn2(M,a,b[i]; iters=500, λ=λ)
-#             @assert all(!isnan, T) "Got nan in sinkhorn alg 2"
-#             Y[i]*T'
-#         end
-#         X .= (1-θ).*X .+ θ.*(YT / Diagonal(a))
-#         # @show mean(abs2, a-ao), mean(abs2, X-Xo)
-#         mean(abs2, a-ao) < 1e-8 && mean(abs2, X-Xo) < 1e-8 && break
-#         copyto!(ao,a)
-#         copyto!(Xo,X)
-#         ao ./= sum(ao)
-#         θ *= 0.99
-#     end
-#     @show i
-#     X,a
-# end
+function alg1(X,Y,â,b;λ=100, printerval=typemax(Int), tol=1e-5, iters=10000)
+    N = length(Y)
+    â = copy(â)
+    # fill!(â, 1/N)
+    ã = copy(â)
+    t0 = 1
+    t = 0
+    for outer t = 1:iters
+        β = (t0+t)/2
+        â .= (1-inv(β)).*â .+ inv(β).*ã
+        𝛂 = mean(1:N) do i
+            M = distmat_euclidean(X,Y[i])
+            a = sinkhorn_log(M,â,b[i]; iters=50, β=1/λ, tol=1e-3)[2]
+            if !all(isfinite, a)
+                @warn "Got nan in inner sinkhorn alg 1, increasing precision"
+                a = sinkhorn_log(M,big.(â),big.(b[i]); iters=50, β=1/λ, tol=1e-3)[2]
+                a = eltype(â).(a)
+            end
+            a
+        end
+
+        ã .= ã .* exp.(-β.*𝛂 .* t0)
+        ã ./= sum(ã)
+        aerr = sum(abs2,â-ã)
+        t % printerval == 0 && @info "Sinkhorn alg1:  iter: $t, aerr: $aerr"
+        if aerr < tol
+            t > printerval && @info "Sinkhorn alg1 done at iter $t"
+            return â .= (1-inv(β)).*â .+ inv(β).*ã
+        end
+        â .= (1-inv(β)).*â .+ inv(β).*ã
+        # â ./= sum(â)
+    end
+    t > printerval && @info "Sinkhorn alg1 maximum number of iterations reached: $iters"
+    â
+end
+
+
+
+function alg2(X,Y,a,b;λ = 2,θ = 0.5, printerval=typemax(Int), tol=1e-4, innertol=1e-3, iters=500, inneriters=50, atol=1e-16)
+    N = length(Y)
+    a = copy(a)
+    ao = copy(a)
+    X = copy(X)
+    Xo = copy(X)
+    fill!(ao, 1/length(ao))
+    for iter = 1:iters
+        a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters)
+        YT = mean(1:N) do i
+            M = distmat_euclidean(X,Y[i])
+            T,_ = SpectralDistances.sinkhorn_log(M,a,b[i]; iters=500, β=1/λ)
+            @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
+            Y[i]*T'
+        end
+        error("consider a line search here")
+        X .= (1-θ).*X .+ θ.*(YT / Diagonal(a .+ eps()))
+        # @show mean(abs2, a-ao), mean(abs2, X-Xo)
+        aerr = mean(abs2, a-ao)
+        xerr = mean(abs2, X-Xo)
+        iter % printerval == 0 && @info "Sinkhorn alg2:  iter: $iter, aerr: $aerr, xerr: $xerr"
+        if aerr < atol || xerr < tol
+            iter > printerval && @info "Sinkhorn alg2 done at iter $iter"
+            return X,(a./=sum(a))
+        end
+        copyto!(ao,a)
+        copyto!(Xo,X)
+        ao ./= sum(ao)
+        # θ *= 0.999
+    end
+    iters > printerval && @info "Sinkhorn alg2 maximum number of iterations reached: $iters"
+    X,a
+end
 #
 # function sinkhorn2(C, a, b; λ, iters=1000)
 #     K = exp.(.-C .* λ)

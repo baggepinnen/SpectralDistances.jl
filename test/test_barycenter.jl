@@ -109,37 +109,90 @@ bc = barycenter(d, models)
 # pzmap!(tf(bc), color=:blue, m=(:c,2))
 ##
 
-# Y = [[1. 1], [2. 2], [3. 3]]
-# X = [1.1 1.1]
-# a = ones(2) ./ 2
-# b = [ones(2) ./2 for _ in eachindex(Y)]
-# @test alg1(X,Y,a,b;λ=0.1) ≈ a
-# @show Xo,ao = alg2(X,Y,a,b;λ=0.1, θ=0.5)
-# @test Xo ≈ [2 2] rtol=1e-2
-#
-# X = [0. 0.]
-# @show Xo,ao = alg2(X,Y,a,b;λ=0.1,θ=0.5)
-# @test Xo ≈ [2 2] rtol=1e-2
-#
-# X = [1. 3.]
-# @show Xo,ao = alg2(X,Y,a,b;λ=10, θ=0.5)
-# @test Xo ≈ [2 2] rtol=1e-2
-#
-#
-# X = [0. 4.]
-# @show Xo,ao = alg2(X,Y,a,b;λ=2, θ=0.5)
-# @test Xo ≈ [2 2] rtol=1e-2
-#
-#
-#
-# Y = [[1. 1], [2. 2], [3. 3]]
-# X = [1.1 1.1]
-# a = ones(2) ./ 2
-# b = [[0.2, 0.8] for _ in eachindex(Y)]
-# @show alg1(X,Y,a,b;λ=10)
-# @show Xo,ao = alg2(X,Y,a,b;λ=1, θ=0.5)
-# @test Xo ≈ [2 2] rtol=1e-2
-# @test a ≈ b[1] rtol=1e-2
+
+
+Y = [[1. 1], [2. 2], [3. 3]]
+X = [1.1 1.1]
+a = ones(2) ./ 2
+b = [ones(2) ./2 for _ in eachindex(Y)]
+@test SpectralDistances.alg1(X,Y,a,b;λ=2) ≈ a
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2, θ=0.5)
+@test Xo ≈ [2 2] rtol=1e-2
+
+X = [0. 0.]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2,θ=0.5)
+@test Xo ≈ [2 2] rtol=1e-2
+
+X = [1. 3.]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=1.0, θ=0.5)
+@test Xo ≈ [2 2] rtol=1e-2
+
+
+X = [0. 4.]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=1, θ=0.5)
+@test Xo ≈ [2 2] rtol=1e-2
+
+error("worth exploring the linear program solution to this problem?")
+
+
+
+Y = [[1. 2], [2. 3], [3. 4]]
+X = [2.0 3]
+a = ones(2) |> s1
+b = [ones(2) ./2 for _ in eachindex(Y)]
+a1 = SpectralDistances.alg1(X,Y,a,b;λ=2, tol=1e-5)
+@test a1[1] == a1[2]
+
+X = [2.1 3]
+a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2, θ=0.01, printerval=1, innertol=1e-12, inneriters=100, tol=1e-12, iters=500)
+@test Xo ≈ [2 3] rtol=7e-2
+@test ao ≈ b[1] rtol=0.1
+
+
+X = [0. 0.1]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=4, θ=0.05, printerval=50, innertol=1e-7, inneriters=1000, tol=1e-7)
+@test Xo ≈ [2 3] rtol=1e-1
+
+X = [1. 3.]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.1, printerval=50, innertol=1e-4, inneriters=100, tol=1e-5)
+@test Xo ≈ [2 3] rtol=1e-1
+
+
+X = [0. 4.]
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2, θ=0.5)
+@test Xo ≈ [2 3] rtol=1e-1
+
+
+
+Y = [[1. 1], [2. 2], [3. 3]]
+X = [1.1 1.1]
+a = rand(2) |> s1
+b = [[0.2, 0.8] for _ in eachindex(Y)]
+@show SpectralDistances.alg1(X,Y,a,b;λ=2)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2, θ=0.9)
+@test Xo ≈ [2 2] rtol=1e-1
+@test ao ≈ b[1] rtol=1e-2
+
+
+##
+d = 2
+k = 4
+Y0 = 0.1*[1 1 2 2; 1 2 1 2]
+Y = [Y0 .+ 1rand(d) for _ in 1:4]
+
+X = mean(Y) .+ 0.05 .* randn.()
+a = ones(k) ./ k
+b = [ones(k) ./k for _ in eachindex(Y)]
+a1 = SpectralDistances.alg1(X,Y,a,b;λ=2.0, printerval=100)
+# @test a1 ≈ a rtol=0.01
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=20, innertol=1e-10, tol=1e-10)
+# @test Xo ≈ mean(Y) rtol=1e-1
+# @test ao ≈ a rtol = 0.1
+
+scatter(eachrow(reduce(hcat,Y))...)
+scatter!(eachrow(X)..., alpha=0.8)
+scatter!(eachrow(Xo)..., alpha=0.4)
 
 
 
