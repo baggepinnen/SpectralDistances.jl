@@ -249,7 +249,7 @@ S = 4
 X0 = [1 1 2 2; 1 2 1 2]
 
 res = map(1:10) do _
-    X = [X0[:,randperm(k)] .+ 50rand(d) for _ in 1:S]
+    X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
     sw = ISA(X, iters=100, printerval=100)
     X̂ = [X[i][:,sw[i]] for i in eachindex(X)]
     bc = mean(X̂)
@@ -273,14 +273,15 @@ res = map(1:10) do _
     q = rand(k) |> s1
 
     ql = barycenter(X, λ0)
-    ql = SpectralDistances.barycenter2(X, λ0, printerval=1, γ=0)
+    ql2 = SpectralDistances.barycenter2(X, λ0, printerval=50, γ=0.1, θ=0.005, iters=400)
     C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
 
 
     bch,λh = SpectralDistances.barycentric_coordinates(X,ql,p,q, γ=γ, L=32)
-    scatter(eachrow(reduce(hcat,X))...)
-    scatter!(eachrow(ql)...)
-    scatter!(eachrow(bch)..., alpha=0.5)
+    scatter(eachrow(reduce(hcat,X))..., lab="X")
+    scatter!(eachrow(ql)..., lab="ql")
+    scatter!(eachrow(ql2)..., lab="ql2")
+    scatter!(eachrow(bch)..., lab="bc")
 
     norm(λ0-λh), norm(bch-ql) < mean(norm(x-ql) for x in X)
 end

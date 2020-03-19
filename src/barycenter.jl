@@ -104,6 +104,15 @@ function barycenter(X::Vector{<:AbstractArray}, λ; iters=100, kwargs...)
     barycentric_weighting(X,λ,sw)
 end
 
+function barycenter2(X::Vector{<:AbstractArray}, λ; kwargs...)
+    N = length(X)
+    n = size(X[1],2)
+    w = s1(ones(n))
+    m = minimum(x->minimum(abs, x), X)
+    alg2(mean(X) .+ m .* randn.(),X,w,[w for λ in λ]; kwargs...)[1]
+end
+
+
 barycentric_weighting(X,λ,sw) = sum(λ[i].*X[i][:,sw[i]] for i in eachindex(sw))
 
 # function barycentric_weighting2(X,λ,sw)
@@ -303,33 +312,37 @@ end
 function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT)
     N = length(Y)
     â = copy(â)
+    a = copy(â)
     # fill!(â, 1/N)
     ã = copy(â)
     t0 = 1
     t = 0
+    𝛂 = similar(a, length(a), N)
     for outer t = 1:iters
         β = (t0+t)/2
-        â .= (1-inv(β)).*â .+ inv(β).*ã
-        𝛂 = mean(1:N) do i
-            M = distmat_euclidean(X,Y[i])
-            a = solver(M,â,b[i]; iters=10000, β=1/λ, tol=1e-6)[2]
-            if !all(isfinite, a)
-                @warn "Got nan in inner sinkhorn alg 1, increasing precision"
-                a = solver(M,big.(â),big.(b[i]); iters=10000, β=1/λ, tol=1e-5)[2]
-                a = eltype(â).(a)
+        a .= (1-inv(β)).*â .+ inv(β).*ã
+        @sync for i in 1:N
+            Threads.@spawn begin
+                M = distmat_euclidean(X,Y[i])
+                ai = solver(M,a,b[i]; iters=10000, β=1/λ, tol=1e-6)[2]
+                if !all(isfinite, a)
+                    @warn "Got nan in inner sinkhorn alg 1, increasing precision"
+                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=1/λ, tol=1e-5)[2]
+                    ai = eltype(â).(ai)
+                end
+                𝛂[:,i] .= ai
             end
-            a
         end
 
-        ã .= ã .* exp.(-β.*𝛂 .* t0)
+        ã .= ã .* exp.(-β.*vec(mean(𝛂, dims=1)) .* t0)
         ã ./= sum(ã)
         aerr = sum(abs2,â-ã)
         t % printerval == 0 && @info "Sinkhorn alg1:  iter: $t, aerr: $aerr"
+        â .= (1-inv(β)).*â .+ inv(β).*ã
         if aerr < tol
             t > printerval && @info "Sinkhorn alg1 done at iter $t"
-            return â .= (1-inv(β)).*â .+ inv(β).*ã
+            return â
         end
-        â .= (1-inv(β)).*â .+ inv(β).*ã
         # â ./= sum(â)
     end
     t > printerval && @info "Sinkhorn alg1 maximum number of iterations reached: $iters"
@@ -338,7 +351,8 @@ end
 
 
 
-function alg2(X,Y,a,b;λ = 10,θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT)
+
+function alg2(X,Y,a,b;λ = 10,θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
@@ -347,13 +361,16 @@ function alg2(X,Y,a,b;λ = 10,θ = 0.5, printerval=typemax(Int), tol=1e-6, inner
     fill!(ao, 1/length(ao))
     for iter = 1:iters
         a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters, solver=solver)
+        if γ > 0 && γ != 1
+            a .= softmax(γ.*log.(a))
+        end
         YT = mean(1:N) do i
             M = distmat_euclidean(X,Y[i])
             T,_ = solver(M,a,b[i]; iters=10000, β=1/λ)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
             Y[i]*T'
         end
-        # error("consider a line search here")
+
         X .= (1-θ).*X .+ θ.*(YT / Diagonal(a .+ eps()))
         aerr = mean(abs2, a-ao)
         xerr = mean(abs2, X-Xo)
