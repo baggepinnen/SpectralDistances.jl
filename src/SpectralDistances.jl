@@ -11,7 +11,7 @@ using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, L
 
 import Base.@kwdef
 
-export ls, plr, logmag, polar, polar_ang, polar_ang, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots
+export ls, plr, polar, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots
 
 export AbstractDistance,
 AbstractRationalDistance,
@@ -73,6 +73,7 @@ import Requires
 function __init__()
     Requires.@require Zygote="e88e6eb3-aa80-5325-afca-941959d7151f" begin
         @eval using BackwardsLinalg
+        @inline nograd(x) = Zygote.dropgrad(x)
     end
 end
 end # module

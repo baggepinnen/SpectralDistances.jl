@@ -84,6 +84,3 @@ function lp_filter(x, cutoff)
     filt(digitalfilter(responsetype, designmethod), x)
 end
 
-
-@inline nograd(x) = Zygote.dropgrad(x)
-# @inline nograd(x) = Flux.data(x)

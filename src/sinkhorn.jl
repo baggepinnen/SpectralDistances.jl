@@ -19,16 +19,18 @@ end
     γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000, tol=1e-8)
 
 The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
+
+https://arxiv.org/pdf/1610.06519.pdf
 """
-function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8)
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int))
 
     alpha,beta = (similar(a) .= 0), (similar(b) .= 0)
     ϵ = eps()
     K = @. exp(-C / β)
     Γ = similar(K)
     u = similar(a) .= 1
-    local v
-
+    local v, iter
+    iter = 0
     for iter = 1:iters
         v = b ./ (K' * u .+ ϵ)
         u = a ./ (K * v .+ ϵ)
@@ -42,24 +44,27 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8)
         if any(!isfinite, u) || any(!isfinite, u)
             error("Got NaN in sinkhorn_log")
         end
-        if iter % 10 == 0
+        if iter % 10 == 0 || iter % printerval == 0
             @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
-            if norm(vec(sum(Γ, dims=1)) - b) < tol
-                lu = alpha .+ β.*log.(u)# .+ 1e-100)
-                α = -lu .+ sum(lu)/length(u)
-                return  Γ, α, v.*exp.(beta./β)
+            err = norm(vec(sum(Γ, dims=1)) - b)
+            iter % printerval == 0 && @info "Iter: $iter, err: $err"
+            if err < tol
+               break
             end
         end
 
     end
     @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
 
-    lu = alpha .+ β.*log.(u)# .+ 1e-100)
-    α = -lu .+ sum(lu)/length(u)
-    @assert isapprox(sum(α), 0, atol=1e-15) "sum(α) should be 0 but was = $(sum(α))" # Normalize dual optimum to sum to zero
+    @. u = -β*log(u) - alpha
+    u .-= mean(u)
+    @. v = -β*log(v) - beta
+    v .-= mean(v)
 
+    @assert isapprox(sum(u), 0, atol=1e-15) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
 
-    Γ, α, v.*exp.(beta./β)
+    Γ, u, v
 end
 
 """
@@ -71,7 +76,7 @@ A Fast Proximal Point Method for Computing Exact Wasserstein Distance
 Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
-function IPOT(C, μ, ν; β=1, iters=1000)
+function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
     ϵ = eps()
     G = exp.(.- C ./ β)
     a = similar(μ)
@@ -86,7 +91,20 @@ function IPOT(C, μ, ν; β=1, iters=1000)
         mul!(b, Q', a)
         b .= ν ./ (b .+ ϵ)
         Γ .= a .* Q .* b'
+
+        if iter % 10 == 0 || iter % printerval == 0
+            err = norm(vec(sum(Γ, dims=2)) - μ)
+            iter % printerval == 0 && @info "Iter: $iter, err: $err"
+            if err < tol && iter > 3
+               break
+            end
+        end
+
     end
+    @. a = -β*log(a)
+    a .-= mean(a)
+    @. b = -β*log(b)
+    b .-= mean(b)
     Γ, a, b
 end
 

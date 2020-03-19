@@ -587,6 +587,7 @@ function c∫(f,a,b;kwargs...)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
     retry = false
+    local sol
     try
         sol   = solve(prob,AutoTsit5(Rosenbrock23());reltol=1e-12,abstol=1e-45,kwargs...)
     catch

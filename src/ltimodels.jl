@@ -75,7 +75,7 @@ Fit an AR model using [`TLS`](@ref) as `fitmethod`
 - `X`: a signal
 - `order`: number of roots
 """
-AR(X::AbstractArray,order::Int) = fitmodel(TLS(na=order, λ=λ), X, var(X))
+AR(X::AbstractArray,order::Int) = fitmodel(TLS(na=order), X, var(X))
 
 """
     struct ARMA{T} <: AbstractModel

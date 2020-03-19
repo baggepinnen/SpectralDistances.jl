@@ -300,7 +300,7 @@ end
 
 
 ## ======================
-function alg1(X,Y,â,b;λ=100, printerval=typemax(Int), tol=1e-5, iters=10000)
+function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT)
     N = length(Y)
     â = copy(â)
     # fill!(â, 1/N)
@@ -312,10 +312,10 @@ function alg1(X,Y,â,b;λ=100, printerval=typemax(Int), tol=1e-5, iters=10000)
         â .= (1-inv(β)).*â .+ inv(β).*ã
         𝛂 = mean(1:N) do i
             M = distmat_euclidean(X,Y[i])
-            a = sinkhorn_log(M,â,b[i]; iters=50, β=1/λ, tol=1e-3)[2]
+            a = solver(M,â,b[i]; iters=10000, β=1/λ, tol=1e-6)[2]
             if !all(isfinite, a)
                 @warn "Got nan in inner sinkhorn alg 1, increasing precision"
-                a = sinkhorn_log(M,big.(â),big.(b[i]); iters=50, β=1/λ, tol=1e-3)[2]
+                a = solver(M,big.(â),big.(b[i]); iters=10000, β=1/λ, tol=1e-5)[2]
                 a = eltype(â).(a)
             end
             a
@@ -338,7 +338,7 @@ end
 
 
 
-function alg2(X,Y,a,b;λ = 2,θ = 0.5, printerval=typemax(Int), tol=1e-4, innertol=1e-3, iters=500, inneriters=50, atol=1e-16)
+function alg2(X,Y,a,b;λ = 10,θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
@@ -346,20 +346,19 @@ function alg2(X,Y,a,b;λ = 2,θ = 0.5, printerval=typemax(Int), tol=1e-4, innert
     Xo = copy(X)
     fill!(ao, 1/length(ao))
     for iter = 1:iters
-        a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters)
+        a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters, solver=solver)
         YT = mean(1:N) do i
             M = distmat_euclidean(X,Y[i])
-            T,_ = SpectralDistances.sinkhorn_log(M,a,b[i]; iters=500, β=1/λ)
+            T,_ = solver(M,a,b[i]; iters=10000, β=1/λ)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
             Y[i]*T'
         end
-        error("consider a line search here")
+        # error("consider a line search here")
         X .= (1-θ).*X .+ θ.*(YT / Diagonal(a .+ eps()))
-        # @show mean(abs2, a-ao), mean(abs2, X-Xo)
         aerr = mean(abs2, a-ao)
         xerr = mean(abs2, X-Xo)
         iter % printerval == 0 && @info "Sinkhorn alg2:  iter: $iter, aerr: $aerr, xerr: $xerr"
-        if aerr < atol || xerr < tol
+        if xerr < tol
             iter > printerval && @info "Sinkhorn alg2 done at iter $iter"
             return X,(a./=sum(a))
         end
