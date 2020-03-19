@@ -143,7 +143,7 @@ The difference in this algorithm compared to the paper is that they operate on h
 - `γ`: sinkhorn regularization parameter
 - `L`: number of sinkhorn iterations
 """
-function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=0.2, L=32) where T
+function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=0.2, L=32, solver=IPOT) where T
     N,S = size(p)
     w = zeros(T,S)
     any(isnan, λ) && return NaN,ql,w
@@ -163,17 +163,15 @@ function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ
         b[l+1] .= P ./ φ[l]
     end
 
-    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The locatoin is then used to get a new cost matrix between q's location and the projected barycenter location.
+    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
     Pl = barycenter(pl, λ)
     # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
     Cbc = distmat_euclidean(Pl, ql)
 
-    Γ, a = sinkhorn(Cbc, P, q, β=γ, iters=2L) # We run a bit longer here to get a good value
+    Γ, a = solver(Cbc, P, q, β=γ, iters=2L) # We run a bit longer here to get a good value
     cost = sum(Cbc .* Γ)
 
-    la = log.(a) # a should have geometric mean 1
-    la .= la .- mean(la)
-    ∇W = γ.*la
+    ∇W = a
     g = ∇W .* P
 
     for l = L:-1:1

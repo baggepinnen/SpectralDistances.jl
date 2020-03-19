@@ -9,7 +9,7 @@ using Test, SpectralDistances, ControlSystems
     k = 4
     X0 = [1 1 2 2; 1 2 1 2]
     X = [X0 .+ 110rand(d) for _ in 1:4]
-    S = ISA(X, iters=100, printerval=10)
+    S = ISA(X, iters=100, printerval=100)
     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
     bc = mean(X̂)
     @test mean(bc) ≈ mean(mean, X)
@@ -22,7 +22,7 @@ using Test, SpectralDistances, ControlSystems
     k = 4
     X0 = [1 1 2 2; 1 2 1 2]
     X = [X0 .+ 0.1rand(d) for _ in 1:4]
-    S = ISA(X, iters=100, printerval=10)
+    S = ISA(X, iters=100, printerval=100)
     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
     bc = mean(X̂)
     @test mean(bc) ≈ mean(mean, X)
@@ -36,7 +36,7 @@ using Test, SpectralDistances, ControlSystems
     X0 = [1 1 2 2; 1 2 1 2]
     X = [X0 .+ 110rand(d) for _ in 1:4]
     w = s1([10000;ones(length(X)-1)])
-    S = ISA(X, w, iters=100, printerval=10)
+    S = ISA(X, w, iters=100, printerval=100)
     X̂ = [w[i]*X[i][:,S[i]] for i in eachindex(X)]
     # bc = mean(X̂ .* w)
     bc = sum(X̂)
@@ -99,40 +99,28 @@ Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
 
 
 
-
-using ControlSystems
-
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)
-bc = barycenter(d, models)
-# plot()
-# pzmap!.(tf.(models), m=(:c,2))
-# pzmap!(tf(bc), color=:blue, m=(:c,2))
-##
-
 @testset "alg1 alg2" begin
     @info "Testing alg1 alg2"
-
-
 
 
 Y = [[1. 1], [2. 2], [3. 3]]
 X = [1.1 1.01]
 a = ones(2) ./ 2
 b = [ones(2) ./2 for _ in eachindex(Y)]
-Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=10)
+Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=190, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 X = [0. 0.1]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10,θ=0.5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10,θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 X = [1. 3.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10.0, θ=0.5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10.0, θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 
 X = [0. 4.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 
@@ -146,7 +134,7 @@ a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
 X = [2.1 3]
 a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
 @test a1[1] < a1[2]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=5, iters=500, tol=1e-8)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, iters=500, tol=1e-8, γ=0.01)
 @test Xo ≈ [2 3] rtol=5e-1
 # @test ao ≈ b[1] rtol=0.1
 
@@ -154,11 +142,11 @@ a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
 
 
 X = [0. 0.1]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=5, innertol=1e-7, inneriters=1000, tol=1e-7)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, innertol=1e-7, inneriters=1000, tol=1e-7, γ=0.1)
 @test Xo ≈ [2 3] rtol=5e-1
 
 X = [1. 3.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=50, innertol=1e-4, inneriters=100, tol=1e-5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, innertol=1e-4, inneriters=100, tol=1e-5)
 @test Xo ≈ [2 3] rtol=5e-1
 
 
@@ -168,10 +156,12 @@ X = [0. 4.]
 
 Y = [[1. 1], [2. 2], [3. 3]]
 X = [1.1 1.01]
-a = rand(2) |> s1
+a = ones(2) |> s1
 b = [[0.2, 0.8] for _ in eachindex(Y)]
-@show SpectralDistances.alg1(X,Y,a,b;λ=2)
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=20)
+@test SpectralDistances.alg1(Y[2],Y,b[1],b;λ=10, printerval=1) == b[1]
+
+
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100)
 @test Xo ≈ [2 2] rtol=5e-1
 @test_broken ao ≈ b[1] rtol=1e-2
 
@@ -183,15 +173,15 @@ Y0 = 0.1*[1 1 2 2; 1 2 1 2]
 Y = [Y0[:,randperm(k)] .+ 1rand(d) for _ in 1:4]
 
 X = mean(Y) .+ 0.05 .* randn.()
-a = rand(k) |> s1
+a = ones(k) |> s1
 b = [ones(k) |> s1 for _ in eachindex(Y)]
 a1 = SpectralDistances.alg1(X,Y,a,b;λ=100.0, printerval=100)
 # @test a1 ≈ a rtol=0.01
 
 
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT)
-# @test Xo ≈ mean(Y) rtol=1e-1
-# @test ao ≈ a rtol = 0.1
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
+@test Xo ≈ mean(Y) rtol=1e-1
+@test ao ≈ a rtol = 0.1
 
 scatter(eachrow(reduce(hcat,Y))...)
 scatter!(eachrow(X)..., alpha=0.8)
@@ -224,16 +214,27 @@ ip(x,y) = x'y/norm(x)/norm(y)
 M = SpectralDistances.distmat_euclidean(X,Y[1])
 
 g1,a1,b1 = plan(M,a,b[1]) .|> r3
-g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=20) .|> r3
+g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
 g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=1) .|> r3
+@test ip(a1,a2) ≈ 1 atol=1e-2
+@test ip(a1,a3) ≈ 1 atol=1e-2
+
+@test ip(b1,b2) ≈ 1 atol=1e-2
+@test ip(b1,b3) ≈ 1 atol=1e-2
 
 
+a = ones(k) |> s1
+b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
+M = SpectralDistances.distmat_euclidean(Y[1],Y[1])
+g1,a1,b1 = plan(M,a,b[1]) .|> r3
+g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
+g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=1) .|> r3
+@test ip(a1,a2) ≈ 1 atol=1e-1
+@test ip(a1,a3) ≈ 1 atol=1e-1
 
-@test ip(a1,a2) ≈ 1 atol=1e-3
-@test ip(a1,a3) ≈ 1 atol=1e-3
+@test ip(b1,b2) ≈ 1 atol=1e-1
+@test ip(b1,b3) ≈ 1 atol=1e-1
 
-@test ip(b1,b2) ≈ 1 atol=1e-3
-@test ip(b1,b3) ≈ 1 atol=1e-3
 
 end
 
@@ -249,14 +250,14 @@ X0 = [1 1 2 2; 1 2 1 2]
 
 res = map(1:10) do _
     X = [X0[:,randperm(k)] .+ 50rand(d) for _ in 1:S]
-    sw = ISA(X, iters=100, printerval=10)
+    sw = ISA(X, iters=100, printerval=100)
     X̂ = [X[i][:,sw[i]] for i in eachindex(X)]
     bc = mean(X̂)
     @test mean(bc) ≈ mean(mean, X) rtol=0.01
     @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2)) rtol=0.01
 
     w = rand(S) |> s1
-    sw = ISA(X, w, iters=100, printerval=10)
+    sw = ISA(X, w, iters=100, printerval=100)
     X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
 
 
@@ -272,13 +273,14 @@ res = map(1:10) do _
     q = rand(k) |> s1
 
     ql = barycenter(X, λ0)
+    ql = SpectralDistances.barycenter2(X, λ0, printerval=1, γ=0)
     C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
 
 
     bch,λh = SpectralDistances.barycentric_coordinates(X,ql,p,q, γ=γ, L=32)
-    # scatter(eachrow(reduce(hcat,X))...)
-    # scatter!(eachrow(ql)...)
-    # scatter!(eachrow(bch)..., alpha=0.5)
+    scatter(eachrow(reduce(hcat,X))...)
+    scatter!(eachrow(ql)...)
+    scatter!(eachrow(bch)..., alpha=0.5)
 
     norm(λ0-λh), norm(bch-ql) < mean(norm(x-ql) for x in X)
 end
