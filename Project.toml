@@ -32,7 +32,7 @@ TotalLeastSquares = "028f657a-7ace-5159-a694-8cfd97933b0c"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
-Lazy = "0.15"
+Lazy = "0.14, 0.15"
 OrdinaryDiffEq = "5.22"
 TotalLeastSquares = "1.4"
 julia = "1.3"
