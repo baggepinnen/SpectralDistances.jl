@@ -309,6 +309,22 @@ end
 
 
 ## ======================
+"""
+    alg1(X, Y, â, b; λ = 1, printerval = typemax(Int), tol = 1.0e-5, iters = 10000, solver = IPOT)
+
+Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
+
+#Arguments:
+- `X`: Initial guess for barycenter support points
+- `Y`: Support points for measures to calc barycenter of
+- `a`: initial guess of barycenter weights
+- `b`: Weigts of measures in Y
+- `λ`: Reg param, higher is less reg
+- `printerval`: DESCRIPTION
+- `tol`: DESCRIPTION
+- `iters`: DESCRIPTION
+- `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
+"""
 function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT)
     N = length(Y)
     â = copy(â)
@@ -351,8 +367,36 @@ end
 
 
 
+"""
+    alg2(X, Y, a, b;
+            λ = 10,
+            θ = 0.5,
+            printerval = typemax(Int),
+            tol = 1.0e-6,
+            innertol = 1.0e-5,
+            iters = 500,
+            inneriters = 1000,
+            atol = 1.0e-32,
+            solver = IPOT,
+            γ = 1,
+        )
 
-function alg2(X,Y,a,b;λ = 10,θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0)
+Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
+
+#Arguments:
+- `X`: Initial guess for barycenter support points
+- `Y`: Support points for measures to calc barycenter of
+- `a`: initial guess of barycenter weights
+- `b`: Weigts of measures in Y
+- `λ`: Reg param, higher is less reg
+- `θ`: step size ∈ [0,1]
+- `printerval`: print this often
+- `tol`: outer tolerance
+- `innertol`: inner tolerance
+- `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
+- `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
+"""
+function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
