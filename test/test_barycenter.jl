@@ -1,4 +1,5 @@
 using Test, SpectralDistances, ControlSystems
+import SpectralDistances: softmax
 # const Continuous = SpectralDistances.Continuous
 
 @testset "ISA" begin
@@ -107,20 +108,20 @@ Y = [[1. 1], [2. 2], [3. 3]]
 X = [1.1 1.01]
 a = ones(2) ./ 2
 b = [ones(2) ./2 for _ in eachindex(Y)]
-Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=190, γ=0.01)
+Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=190, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 X = [0. 0.1]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10,θ=0.5, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10,θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 X = [1. 3.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10.0, θ=0.5, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 
 X = [0. 4.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, γ=0.01)
 @test Xo ≈ [2 2] rtol=1e-2
 
 
@@ -128,13 +129,13 @@ Y = [[1. 2], [2. 3], [3. 4]]
 X = [2.0 3]
 a = ones(2) |> s1
 b = [ones(2) ./2 for _ in eachindex(Y)]
-a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
+a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
 @test a1[1] == a1[2]
 
 X = [2.1 3]
-a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
+a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
 @test a1[1] < a1[2]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, iters=500, tol=1e-8, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, iters=500, tol=1e-8, γ=0.01)
 @test Xo ≈ [2 3] rtol=5e-1
 # @test ao ≈ b[1] rtol=0.1
 
@@ -142,26 +143,26 @@ a1 = SpectralDistances.alg1(X,Y,a,b;λ=10, tol=1e-5)
 
 
 X = [0. 0.1]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, innertol=1e-7, inneriters=1000, tol=1e-7, γ=0.1)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-7, inneriters=1000, tol=1e-7, γ=0.1)
 @test Xo ≈ [2 3] rtol=5e-1
 
 X = [1. 3.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100, innertol=1e-4, inneriters=100, tol=1e-5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-4, inneriters=100, tol=1e-5)
 @test Xo ≈ [2 3] rtol=5e-1
 
 
 X = [0. 4.]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=2, θ=0.5)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/2, θ=0.5)
 @test Xo ≈ [2 3] rtol=5e-1
 
 Y = [[1. 1], [2. 2], [3. 3]]
 X = [1.1 1.01]
 a = ones(2) |> s1
 b = [[0.2, 0.8] for _ in eachindex(Y)]
-@test SpectralDistances.alg1(Y[2],Y,b[1],b;λ=10, printerval=1) == b[1]
+@test SpectralDistances.alg1(Y[2],Y,b[1],b;β=1/10, printerval=1) == b[1]
 
 
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, θ=0.5, printerval=100)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100)
 @test Xo ≈ [2 2] rtol=5e-1
 @test_broken ao ≈ b[1] rtol=1e-2
 
@@ -175,11 +176,11 @@ Y = [Y0[:,randperm(k)] .+ 1rand(d) for _ in 1:4]
 X = mean(Y) .+ 0.05 .* randn.()
 a = ones(k) |> s1
 b = [ones(k) |> s1 for _ in eachindex(Y)]
-a1 = SpectralDistances.alg1(X,Y,a,b;λ=100.0, printerval=100)
+a1 = SpectralDistances.alg1(X,Y,a,b;β=1/100.0, printerval=100)
 # @test a1 ≈ a rtol=0.01
 
 
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;λ=10, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
 @test Xo ≈ mean(Y) rtol=1e-1
 @test ao ≈ a rtol = 0.1
 
@@ -235,44 +236,57 @@ X0 = [1 1 2 2; 1 2 1 2]
 
 res = map(1:10) do _
     X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
-    sw = ISA(X, iters=100, printerval=100)
-    X̂ = [X[i][:,sw[i]] for i in eachindex(X)]
-    bc = mean(X̂)
-    @test mean(bc) ≈ mean(mean, X) rtol=0.01
-    @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2)) rtol=0.01
-
-    w = rand(S) |> s1
-    sw = ISA(X, w, iters=100, printerval=100)
-    X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
-
-
-    a = rand(k) |> s1
-    b = rand(k) |> s1
-
-    γ = 10.0
-
-
-    # α = exp.(α)
-    λ0 = rand(S) |> s1
-    p = repeat(ones(k) |> s1, 1, S)
-    q = rand(k) |> s1
+    λ0 = randn(S) |> SpectralDistances.softmax
+    p = [ones(k) |> s1 for _ in 1:S]
+    q = ones(k) |> s1
 
     ql = barycenter(X, λ0)
-    ql2 = SpectralDistances.barycenter2(X, λ0, printerval=50, γ=0.1, θ=0.05, iters=400)
-    C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
+
+    β = 1/10.0
+    λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=sinkhorn_log, robust=true)
+    # scatter(eachrow(reduce(hcat,X))..., lab="X")
+    # scatter!(eachrow(ql)..., lab="initial bc")
+    # scatter!(eachrow(bch)..., lab="reconstructed bc")
+
+    @show norm(λ0-λh)
+end
+@test median(res) < 0.1
+# mean(norm(s1(rand(4)) - s1(rand(4))) for _ in 1:10000)
 
 
-    bch,λh = SpectralDistances.barycentric_coordinates(X,ql,p,q, γ=γ, L=32)
+
+res = map(1:5) do _
+    X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
+    p = [randn(k) |> softmax for _ in 1:S]
+
+    ql = X[1] .+ 0.01 .* randn.()
+    q = p[1]
+    λ0 = [1,0,0,0]
+
+    β = 1/5.0
+    λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=IPOT, robust=true)
     scatter(eachrow(reduce(hcat,X))..., lab="X")
     scatter!(eachrow(ql)..., lab="ql")
-    scatter!(eachrow(ql2)..., lab="ql2")
-    scatter!(eachrow(bch)..., lab="bc")
 
-    norm(λ0-λh), norm(bch-ql) < mean(norm(x-ql) for x in X)
+    @show norm(λ0-λh)
 end
+@test median(res) < 0.1
 
-@test median(getindex.(res,1)) < 0.2
-@test mean(getindex.(res,2)) >= 0.9
+
+## Tests for sinkhorn_diff, it does not seem to produce the correct gradient ==============
+# C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
+# λl = SpectralDistances.softmax(1e-3randn(S))
+#
+# c,Pl,w = sinkhorn_diff(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log)
+# display(w)
+#
+# using ForwardDiff
+# g = ForwardDiff.gradient(λl->SpectralDistances.sinkhorn_cost(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log), λl)
+# display(g)
+# @test w ≈ g
+## =================================================
+
+# @test mean(getindex.(res,2)) >= 0.9
 # ##
 # X0 = [1. 1 2 2 3 3; 1 2 3 1 2 3]
 # # X0 = [X0 X0]

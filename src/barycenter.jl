@@ -109,7 +109,7 @@ Calculate the weighted barycenter for point clouds in `X`.
 Each `X[i]` has the shame `n_dims × n_atoms`
 `λ` is the weight vector that should sum to 1.
 """
-function barycenter2(X::Vector{<:AbstractArray}, λ; solver=sinkhorn_log, kwargs...)
+function barycenter(X::Vector{<:AbstractArray}, λ; uniform=true, solver=sinkhorn_log, kwargs...)
     N = length(X)
     n = size(X[1],2)
     w = s1(ones(n))
@@ -117,7 +117,18 @@ function barycenter2(X::Vector{<:AbstractArray}, λ; solver=sinkhorn_log, kwargs
     # X0 = mean(X)
     X0 = X[1] .- mean(X[1],dims=2) .+ mean(mean.(X, dims=2))
     X0 .+= m .* randn.()
-    bc = alg2(X0,X,w,fill(w,N); solver=solver, weights=λ, uniform=true, kwargs...)[1]
+    bc = alg2(X0,X,w,fill(w,N); solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
+end
+
+function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sinkhorn_log, kwargs...)
+    N = length(X)
+    n = size(X[1],2)
+    w = s1(ones(n))
+    m = 0.1minimum(x->std(x), X)
+    # X0 = mean(X)
+    X0 = X[1] .- mean(X[1],dims=2) .+ mean(mean.(X, dims=2))
+    X0 .+= m .* randn.()
+    bc = alg2(X0,X,w,p; solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
 end
 
 # the method below does not work very well due to likely bug in ISA
@@ -152,52 +163,66 @@ sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 - `ql`: Atoms in measure `q`
 - `p`: Measures `p`, a matrix of weight vectors, size `n_atoms × n_measures` that sums to 1
 - `q`: the veight vector for measure `q`, length is `n_atoms`
-- `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0)`
+- `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
 - `kwargs`: these are sent to the [`sinkhorn`](@ref) algorithm.
 """
 function barycentric_coordinates(pl, ql, p, q, method=BFGS();
+    L = 32,
     options = Optim.Options(store_trace       = false,
                             show_trace        = false,
                             show_every        = 1,
                             iterations        = 20,
                             allow_f_increases = true,
                             time_limit        = 100,
-                            x_tol             = 0,
+                            x_tol             = 1e-5,
                             f_tol             = 1e-6,
-                            g_tol             = 1e-8,
+                            g_tol             = 1e-6,
                             f_calls_limit     = 0,
                             g_calls_limit     = 0),
     robust=true,
     kwargs...)
 
     C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
-    # local P
-
-    function fg!(F,G,λl)
-        λ = softmax(λl) # optimization done in log domain
-        cost,P,∇ℰ = SpectralDistances.sinkhorn_diff(pl,ql,p,q,C,λ; kwargs...)
-        if G !== nothing
-            G .= ∇ℰ
-        end
-        if F !== nothing
-            return cost
-        end
-    end
 
     S = length(pl)
-    λl = zeros(S)
-    # λl = [0.0, 10]#zeros(S)
-    # @warn "above for debugging purposes"
+    λl = 1e-8randn(S)
+
+
+    # function fg!(F,G,λl)
+    #     λ = softmax(λl) # optimization done in log domain
+    #     local cost = 0.0
+    #     if G !== nothing
+    #         cost,P,∇ℰ = sinkhorn_diff(pl,ql,p,q,C,λ; L=L, kwargs...)
+    #         G .= ∇ℰ
+    #     end
+    #     if F !== nothing
+    #         if G === nothing
+    #             cost = sinkhorn_cost(pl,ql,p,q,C,λ; L=L, kwargs...)
+    #         end
+    #         return cost
+    #     end
+    # end
+    # if robust
+    #     res = Optim.optimize(Optim.only_fg!(fg!), λl, NelderMead(), Optim.Options(iterations=60, store_trace=false))
+    #     λl = res.minimizer
+    # end
+    # res = Optim.optimize(Optim.only_fg!(fg!), λl, method, options)
+
+    costfun = λ -> sinkhorn_cost(pl,ql,p,q,C,softmax(λ); L=L, kwargs...)
     if robust
-        res = Optim.optimize(Optim.only_fg!(fg!), λl, NelderMead(), Optim.Options(iterations=10, store_trace=false))
+        res = Optim.optimize(costfun, λl, NelderMead(), Optim.Options(iterations=60, store_trace=false))
         λl = res.minimizer
     end
-    res = Optim.optimize(Optim.only_fg!(fg!), λl, method, options)
-    λh = softmax(res.minimizer)
+    local λh
+    try
+        res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
+        λh = softmax(res.minimizer)
+    catch
+        λh = softmax(λl)
+    end
 
-    cost,P,∇ℰ = SpectralDistances.sinkhorn_diff(pl,ql,p,q,C,λh; kwargs...)
-    # iperm = sortperm(perm)
-    P,λh
+    # cost,P,∇ℰ = sinkhorn_diff(pl,ql,p,q,C,λh; kwargs...)
+    λh
 end
 
 function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=BFGS(); kwargs...)
@@ -216,18 +241,19 @@ function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=
     @assert sum(q) ≈ 1
     @assert all(sum(p) ≈ 1 for p in p)
 
-    q_proj, λ = barycentric_coordinates(pl, ql[1], reduce(vcat,p)', vec(q), method; kwargs...)
+    λ = barycentric_coordinates(pl, ql[1], reduce(vcat,p)', vec(q), method; kwargs...)
+    return λ
 
-
-    r1 = complex.(q_proj[1,:],q_proj[2,:])
-    if realpolesp
-        bcr = ContinuousRoots(r1)
-    else
-        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-        bcr = ContinuousRoots([r1; conj.(r1)])
-    end
-    AR(bcr), λ
-
+    # q_proj = alg2(ql,pl,q,p;weights=λ, kwargs...)[1]
+    #
+    # r1 = complex.(q_proj[1,:],q_proj[2,:])
+    # if realpolesp
+    #     bcr = ContinuousRoots(r1)
+    # else
+    #     @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+    #     bcr = ContinuousRoots([r1; conj.(r1)])
+    # end
+    # AR(bcr), λ
 end
 
 ##
@@ -323,7 +349,7 @@ end
 
 ## ======================
 """
-    alg1(X, Y, â, b; λ = 1, printerval = typemax(Int), tol = 1.0e-5, iters = 10000, solver = IPOT)
+    alg1(X, Y, â, b; β = 1, printerval = typemax(Int), tol = 1.0e-5, iters = 10000, solver = IPOT)
 
 Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
 
@@ -332,13 +358,13 @@ Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `Y`: Support points for measures to calc barycenter of
 - `a`: initial guess of barycenter weights
 - `b`: Weigts of measures in Y
-- `λ`: Reg param, higher is less reg
+- `β`: Reg param, higher is more reg (inverse of λ in paper)
 - `printerval`: DESCRIPTION
 - `tol`: DESCRIPTION
 - `iters`: DESCRIPTION
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 """
-function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT, weights=nothing)
+function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT, weights=nothing)
     N = length(Y)
     â = copy(â)
     a = copy(â)
@@ -350,29 +376,29 @@ function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
     𝛂 = similar(a, length(a), N)
     Mth = [distmat_euclidean(X,Y[1]) for i in 1:Threads.nthreads()]
     for outer t = 1:iters
-        β = (t0+t)/2
-        a .= (1-inv(β)).*â .+ inv(β).*ã
-        @sync for i in 1:N
-            Threads.@spawn begin
+        B = (t0+t)/2
+        a .= (1-inv(B)).*â .+ inv(B).*ã
+        for i in 1:N
+            # Threads.@spawn begin
                 M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
-                ai = solver(M,a,b[i]; iters=10000, β=1/λ, tol=1e-6)[2]
+                ai = solver(M,a,b[i]; iters=10000, β=β, tol=1e-6)[2]
                 if !all(isfinite, a)
                     @warn "Got nan in inner sinkhorn alg 1, increasing precision"
-                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=1/λ, tol=1e-5)[2]
+                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=β, tol=1e-5)[2]
                     ai = eltype(â).(ai)
                 end
                 scale!(ai, i, weights)
                 𝛂[:,i] .= ai
-            end
+            # end
         end
 
         # @show round.(vec(mean(𝛂, dims=2)), sigdigits=3)
         # @show round.(vec(mean(𝛂, dims=1)), sigdigits=3)
-        ã .= ã .* exp.((-t0*β).*vec(mean(𝛂, dims=2)))
+        ã .= ã .* exp.((-t0*B).*vec(mean(𝛂, dims=2)))
         ã ./= sum(ã)
         aerr = sum(abs2,â-ã)
         t % printerval == 0 && @info "Sinkhorn alg1:  iter: $t, aerr: $aerr"
-        â .= (1-inv(β)).*â .+ inv(β).*ã
+        â .= (1-inv(B)).*â .+ inv(B).*ã
         if aerr < tol
             t > printerval && @info "Sinkhorn alg1 done at iter $t"
             return â
@@ -387,7 +413,7 @@ end
 
 """
     alg2(X, Y, a, b;
-            λ = 10,
+            β = 1/10,
             θ = 0.5,
             printerval = typemax(Int),
             tol = 1.0e-6,
@@ -406,7 +432,7 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `Y`: Support points for measures to calc barycenter of
 - `a`: initial guess of barycenter weights
 - `b`: Weigts of measures in Y
-- `λ`: Reg param, higher is less reg
+- `β`: Reg param, higher is more reg
 - `θ`: step size ∈ [0,1]
 - `printerval`: print this often
 - `tol`: outer tolerance
@@ -414,27 +440,30 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
-function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
+function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
     X = copy(X)
+    if weights !== nothing && eltype(weights) != eltype(X)
+        X = convert(Matrix{eltype(weights)}, X)
+    end
     Xo = copy(X)
     weights === nothing && (weights = fill(1/N, N))
     fill!(ao, 1/length(ao))
     for iter = 1:iters
-        uniform || (a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters, solver=solver, weights=weights))
+        uniform || (a = alg1(X,Y,ao,b,β=β, printerval=printerval, tol=innertol, iters=inneriters, solver=solver, weights=weights))
         if γ > 0 && γ != 1
             a .= softmax(γ.*log.(a))
         end
         YT = sum(1:N) do i
             M = distmat_euclidean(X,Y[i])
-            T,_ = solver(M,a,b[i]; iters=10000, β=1/λ)
+            T,_ = solver(M,a,b[i]; iters=10000, β=β)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
             scale!(Y[i]*T', i, weights)
         end
 
-        X .= (1-θ).*X .+ θ.*(YT / Diagonal(a .+ eps()))
+        X .= (1-θ).*X .+ θ.*(YT ./ (a' .+ eps()))
         aerr = mean(abs2, a-ao)
         xerr = mean(abs2, X-Xo)
         iter % printerval == 0 && @info "Sinkhorn alg2:  iter: $iter, aerr: $aerr, xerr: $xerr"
@@ -452,7 +481,8 @@ function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, inne
 end
 
 scale!(x,_,::Nothing) = x
-scale!(x,i,w::AbstractArray) = (x .*= w[i])
+scale!(x::AbstractArray{T},i,w::AbstractArray{T}) where T = (x .*= w[i])
+scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
 
 #
 # function sinkhorn2(C, a, b; λ, iters=1000)

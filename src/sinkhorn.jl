@@ -24,11 +24,12 @@ https://arxiv.org/pdf/1610.06519.pdf
 """
 function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int))
 
-    alpha,beta = (similar(a) .= 0), (similar(b) .= 0)
+    T = promote_type(eltype(a), eltype(b), eltype(C))
+    alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
     ϵ = eps()
     K = @. exp(-C / β)
-    Γ = similar(K)
-    u = similar(a) .= 1
+    Γ = zeros(T, size(K))
+    u = zeros(T, size(a)) .= 1
     local v, iter
     iter = 0
     for iter = 1:iters
@@ -77,12 +78,13 @@ Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
 function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
-    ϵ = eps()
+    T = promote_type(eltype(μ), eltype(ν), eltype(C))
+    ϵ = eps(T)
     G = exp.(.- C ./ β)
-    a = similar(μ)
-    b = fill(eltype(ν)(1/length(ν)), length(ν))
-    Γ = ones(eltype(ν), size(G)...)
-    Q = similar(G)
+    a = zeros(T, size(μ))
+    b = fill(T(1/length(ν)), length(ν))
+    Γ = ones(T, size(G)...)
+    Q = zeros(T, size(G))
     local a
     for iter = 1:iters
         Q .= G .* Γ
@@ -125,64 +127,66 @@ end
 
 
 
-"""
-    cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ = 0.1, L = 32) where T
-
-
-Returns the sinkhonr cost, the estimated barycenter and the gradient w.r.t. λ
-
-This function is called from within [`barycentric_coordinates`](@ref). See help for this function regarding the other parameters.
-
-Ref https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf
-
-The difference in this algorithm compared to the paper is that they operate on histograms where the cost matric `C` is the same for all pairs of pᵢ and q. Here, there is a unique `C` for each pair.
-
-#Arguments:
-- `C`: Vector of cost matrices
-- `λ`: barycentric coordinates
-- `γ`: sinkhorn regularization parameter
-- `L`: number of sinkhorn iterations
-"""
-function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; γ=0.2, L=32, solver=IPOT) where T
-    N,S = size(p)
-    w = zeros(T,S)
-    any(isnan, λ) && return NaN,ql,w
-    @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
-    @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
-    @assert length(C) == S
-    K = [exp.(.-C ./ γ) for C in C]
-    b = [fill(1/N, N, S) for _ in 0:L+1]
-    r = zeros(T,N,S)
-    φ = [Matrix{T}(undef,N,S) for _ in 1:L]
-    local P
-    for l = 1:L
-        for s in 1:S
-            φ[l][:,s] = K[s]'* (p[:,s] ./ (K[s] * b[l][:,s]))
-        end
-        P = prod(φ[l].^λ', dims=2) |> vec
-        b[l+1] .= P ./ φ[l]
-    end
-
-    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
-    Pl = barycenter(pl, λ)
-    # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
-    Cbc = distmat_euclidean(Pl, ql)
-
-    Γ, a = solver(Cbc, P, q, β=γ, iters=2L) # We run a bit longer here to get a good value
-    cost = sum(Cbc .* Γ)
-
-    ∇W = a
-    g = ∇W .* P
-
-    for l = L:-1:1
-        w .+= log.(φ[l])'g
-        for s in 1:S
-            r[:,s] .= (-K[s]'*(K[s]*((λ[s].* g .- r[:,s]) ./ φ[l][:,s]) .* p[:,s] ./ (K[s]*b[l][:,s]).^2)) .* b[l][:,s]
-        end
-        g = sum(r, dims=2) |> vec
-    end
-    cost, Pl,w
-end
+# """
+#     cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; β = 1, L = 32) where T
+#
+#
+# Returns the sinkhorn cost, the estimated barycenter and the gradient w.r.t. λ
+#
+# This function is called from within [`barycentric_coordinates`](@ref). See help for this function regarding the other parameters.
+#
+# Ref https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf
+#
+# The difference in this algorithm compared to the paper is that they operate on histograms where the cost matric `C` is the same for all pairs of pᵢ and q. Here, there is a unique `C` for each pair.
+#
+# #Arguments:
+# - `C`: Vector of cost matrices
+# - `λ`: barycentric coordinates
+# - `β`: sinkhorn regularization parameter
+# - `L`: number of sinkhorn iterations
+# """
+# function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; β=1, L=32, solver=IPOT) where T
+#     N = length(p)
+#     S = length(p[1])
+#     w = zeros(T,S)
+#     any(isnan, λ) && return NaN,ql,w
+#     @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
+#     @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
+#     @assert length(C) == S
+#     K = [exp.(.-C ./ β) for C in C]
+#     b = [fill(1/N, N, S) for _ in 0:L+1]
+#     r = zeros(T,N,S)
+#     φ = [Matrix{T}(undef,N,S) for _ in 1:L]
+#     local P
+#     for l = 1:L
+#         for s in 1:S
+#             φ[l][:,s] = K[s]'* (p[s] ./ (K[s] * b[l][:,s]))
+#         end
+#         P = prod(φ[l].^λ', dims=2) |> vec
+#         b[l+1] .= P ./ φ[l]
+#     end
+#
+#     # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
+#     Pl = barycenter(pl, λ)
+#     # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
+#     Cbc = distmat_euclidean(Pl, ql)
+#
+#     Γ, a, bb = solver(Cbc, P, q, β=β, iters=4L) # We run a bit longer here to get a good value
+#     cost = sum(Cbc .* Γ)
+#
+#     ∇W = a
+#     # ∇W = bb
+#     g = ∇W .* P
+#
+#     for l = L:-1:1
+#         w .+= log.(φ[l])'g
+#         for s in 1:S
+#             r[:,s] .= (-K[s]'*((K[s]*((λ[s].* g .- r[:,s]) ./ φ[l][:,s])) .* p[s] ./ (K[s]*b[l][:,s]).^2)) .* b[l][:,s]
+#         end
+#         g = sum(r, dims=2) |> vec
+#     end
+#     cost, Pl,w
+# end
 
 
 # geomean(x) = prod(x)^(1/length(x))
@@ -190,3 +194,35 @@ end
 # la = log.(a)
 # lag = la .- mean(la)
 # geomean(exp.(lag))
+
+
+
+
+function sinkhorn_cost(pl,ql, p, q::AbstractVector, C, λ::AbstractVector{T}; β=1, L=32, solver=IPOT) where T
+    N = length(p)
+    S = length(p[1])
+    any(isnan, λ) && return NaN
+    @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
+    @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
+    @assert length(C) == S
+    K = [exp.(.-C ./ β) for C in C]
+    b = fill(T(1/N), N, S)
+    r = zeros(T,N,S)
+    φ = Matrix{T}(undef,N,S)
+    local P
+    for l = 1:L
+        for s in 1:S
+            φ[:,s] .= K[s]'* (p[s] ./ (K[s] * b[:,s]))
+        end
+        P = prod(φ.^λ', dims=2) |> vec
+        b .= P ./ φ
+    end
+
+    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
+    Pl = barycenter(pl, λ)
+    # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
+    Cbc = distmat_euclidean(Pl, ql)
+
+    Γ, a = solver(Cbc, P, q, β=β, iters=4L) # We run a bit longer here to get a good value
+    cost = sum(Cbc .* Γ)
+end
