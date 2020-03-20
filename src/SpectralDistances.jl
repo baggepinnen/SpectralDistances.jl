@@ -75,5 +75,11 @@ function __init__()
         @eval using BackwardsLinalg
         @inline nograd(x) = Zygote.dropgrad(x)
     end
+
+    Requires.@require GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6" begin
+        Requires.@require JuMP = "4076af6c-e467-56ae-b986-b466b2749572" begin
+            include("jump.jl")
+        end
+    end
 end
 end # module

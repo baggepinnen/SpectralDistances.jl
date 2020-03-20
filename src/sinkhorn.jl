@@ -61,7 +61,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     @. v = -β*log(v) - beta
     v .-= mean(v)
 
-    @assert isapprox(sum(u), 0, atol=1e-15) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
     iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
 
     Γ, u, v

@@ -189,33 +189,18 @@ scatter!(eachrow(Xo)..., alpha=0.4)
 ##
 
 using JuMP, GLPK
-function plan(D, P1, P2)
-    n = length(P1)
-    model = Model(GLPK.Optimizer)
-    @variable(model, γ[1:n^2])
-    @objective(model, Min, γ'vec(D))
-    Γ = reshape(γ,n,n)
-    con1 = @constraint(model, con1,  sum(Γ, dims=1)[:] .== P2)
-    con2 = @constraint(model, con2,  sum(Γ, dims=2)[:] .== P1)
-    con3 = @constraint(model, con3,  γ .>= 0)
-    JuMP.optimize!(model)
-    if Int(termination_status(model)) != 1
-        @error Int(termination_status(model))
-    end
-    α, β = -dual.(con2)[:], -dual.(con1)[:]
-    α .-= mean(α)
-    β .-= mean(β)
-    reshape(value.(γ),n,n), α, β, -dual.(con3)[:]
-end
 
 r3(x) = round.(x, digits=3)
 ip(x,y) = x'y/norm(x)/norm(y)
 
 M = SpectralDistances.distmat_euclidean(X,Y[1])
+M2 = similar(M)
+SpectralDistances.distmat_euclidean!(M2,X,Y[1])
+@test M == M2
 
-g1,a1,b1 = plan(M,a,b[1]) .|> r3
+g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
 g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
-g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=1) .|> r3
+g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=100) .|> r3
 @test ip(a1,a2) ≈ 1 atol=1e-2
 @test ip(a1,a3) ≈ 1 atol=1e-2
 
@@ -226,9 +211,9 @@ g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=1) .|> r3
 a = ones(k) |> s1
 b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
 M = SpectralDistances.distmat_euclidean(Y[1],Y[1])
-g1,a1,b1 = plan(M,a,b[1]) .|> r3
+g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
 g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
-g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=1) .|> r3
+g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=100) .|> r3
 @test ip(a1,a2) ≈ 1 atol=1e-1
 @test ip(a1,a3) ≈ 1 atol=1e-1
 
@@ -273,7 +258,7 @@ res = map(1:10) do _
     q = rand(k) |> s1
 
     ql = barycenter(X, λ0)
-    ql2 = SpectralDistances.barycenter2(X, λ0, printerval=50, γ=0.1, θ=0.005, iters=400)
+    ql2 = SpectralDistances.barycenter2(X, λ0, printerval=50, γ=0.1, θ=0.05, iters=400)
     C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
 
 
@@ -342,3 +327,24 @@ end
 # pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
 
 end
+
+
+
+d = 2
+k = 4
+S = 4
+X0 = [1 1 2 2; 1 2 1 2]
+
+using JuMP, GLPK
+##
+X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
+
+λ0 = [0.9; 0.1ones(S-1)] |> s1
+ql = barycenter(X, λ0)
+
+ql2 = SpectralDistances.barycenter2(copy(X), λ0, printerval=10, γ=1, θ=0.5, iters=400, tol=1e-6, solver=SpectralDistances.sinkhorn_log)
+
+scatter(eachrow(reduce(hcat,X[2:end]))..., lab="X")
+scatter!(eachrow(X[1])..., lab="X1")
+# scatter!(eachrow(ql)..., lab="ql")
+scatter!(eachrow(ql2)..., lab="ql2")

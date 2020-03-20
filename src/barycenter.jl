@@ -91,6 +91,16 @@ function distmat_euclidean(X,Y)
     # C ./ median(C)
 end
 
+function distmat_euclidean!(C,X,Y)
+    for (j,c2) in enumerate(eachcol(Y))
+        for (i,c1) in enumerate(eachcol(X))
+            C[i,j] = mean(((c1,c2),) -> abs2(c1-c2), zip(c1,c2))
+        end
+    end
+    C
+    # C ./ median(C)
+end
+
 
 """
     barycenter(X::Vector{<:AbstractArray}, λ)
@@ -99,19 +109,22 @@ Calculate the weighted barycenter for point clouds in `X`.
 Each `X[i]` has the shame `n_dims × n_atoms`
 `λ` is the weight vector that should sum to 1.
 """
-function barycenter(X::Vector{<:AbstractArray}, λ; iters=100, kwargs...)
-    sw = ISA(X, λ; iters=iters, kwargs...)
-    barycentric_weighting(X,λ,sw)
-end
-
-function barycenter2(X::Vector{<:AbstractArray}, λ; kwargs...)
+function barycenter2(X::Vector{<:AbstractArray}, λ; solver=sinkhorn_log, kwargs...)
     N = length(X)
     n = size(X[1],2)
     w = s1(ones(n))
-    m = minimum(x->minimum(abs, x), X)
-    alg2(mean(X) .+ m .* randn.(),X,w,[w for λ in λ]; kwargs...)[1]
+    m = 0.1minimum(x->std(x), X)
+    # X0 = mean(X)
+    X0 = X[1] .- mean(X[1],dims=2) .+ mean(mean.(X, dims=2))
+    X0 .+= m .* randn.()
+    bc = alg2(X0,X,w,fill(w,N); solver=solver, weights=λ, uniform=true, kwargs...)[1]
 end
 
+# the method below does not work very well due to likely bug in ISA
+# function barycenter(X::Vector{<:AbstractArray}, λ; iters=100, kwargs...)
+#     sw = ISA(X, λ; iters=iters, kwargs...)
+#     barycentric_weighting(X,λ,sw)
+# end
 
 barycentric_weighting(X,λ,sw) = sum(λ[i].*X[i][:,sw[i]] for i in eachindex(sw))
 
@@ -325,7 +338,7 @@ Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `iters`: DESCRIPTION
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 """
-function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT)
+function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT, weights=nothing)
     N = length(Y)
     â = copy(â)
     a = copy(â)
@@ -333,24 +346,29 @@ function alg1(X,Y,â,b;λ=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
     ã = copy(â)
     t0 = 1
     t = 0
+    # weights = nothing
     𝛂 = similar(a, length(a), N)
+    Mth = [distmat_euclidean(X,Y[1]) for i in 1:Threads.nthreads()]
     for outer t = 1:iters
         β = (t0+t)/2
         a .= (1-inv(β)).*â .+ inv(β).*ã
         @sync for i in 1:N
             Threads.@spawn begin
-                M = distmat_euclidean(X,Y[i])
+                M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
                 ai = solver(M,a,b[i]; iters=10000, β=1/λ, tol=1e-6)[2]
                 if !all(isfinite, a)
                     @warn "Got nan in inner sinkhorn alg 1, increasing precision"
                     ai = solver(M,big.(â),big.(b[i]); iters=10000, β=1/λ, tol=1e-5)[2]
                     ai = eltype(â).(ai)
                 end
+                scale!(ai, i, weights)
                 𝛂[:,i] .= ai
             end
         end
 
-        ã .= ã .* exp.(-β.*vec(mean(𝛂, dims=1)) .* t0)
+        # @show round.(vec(mean(𝛂, dims=2)), sigdigits=3)
+        # @show round.(vec(mean(𝛂, dims=1)), sigdigits=3)
+        ã .= ã .* exp.((-t0*β).*vec(mean(𝛂, dims=2)))
         ã ./= sum(ã)
         aerr = sum(abs2,â-ã)
         t % printerval == 0 && @info "Sinkhorn alg1:  iter: $t, aerr: $aerr"
@@ -396,23 +414,24 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
-function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0)
+function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
     X = copy(X)
     Xo = copy(X)
+    weights === nothing && (weights = fill(1/N, N))
     fill!(ao, 1/length(ao))
     for iter = 1:iters
-        a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters, solver=solver)
+        uniform || (a = alg1(X,Y,ao,b,λ=λ, printerval=printerval, tol=innertol, iters=inneriters, solver=solver, weights=weights))
         if γ > 0 && γ != 1
             a .= softmax(γ.*log.(a))
         end
-        YT = mean(1:N) do i
+        YT = sum(1:N) do i
             M = distmat_euclidean(X,Y[i])
             T,_ = solver(M,a,b[i]; iters=10000, β=1/λ)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
-            Y[i]*T'
+            scale!(Y[i]*T', i, weights)
         end
 
         X .= (1-θ).*X .+ θ.*(YT / Diagonal(a .+ eps()))
@@ -431,6 +450,10 @@ function alg2(X,Y,a,b;λ = 10, θ = 0.5, printerval=typemax(Int), tol=1e-6, inne
     iters > printerval && @info "Sinkhorn alg2 maximum number of iterations reached: $iters"
     X,a
 end
+
+scale!(x,_,::Nothing) = x
+scale!(x,i,w::AbstractArray) = (x .*= w[i])
+
 #
 # function sinkhorn2(C, a, b; λ, iters=1000)
 #     K = exp.(.-C .* λ)
