@@ -104,7 +104,7 @@ plot()
 pzmap!.(G)
 pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
 ##
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight)
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)#, weight=unitweight)
 Xe = barycenter(d, models, solver=IPOT)
 
 G = tf.(models)
@@ -114,10 +114,10 @@ pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
 
 ##
 
-options = Optim.Options(store_trace       = true,
+options = Optim.Options(store_trace    = true,
                      show_trace        = true,
                      show_every        = 1,
-                     iterations        = 200,
+                     iterations        = 50,
                      allow_f_increases = true,
                      time_limit        = 100,
                      x_tol             = 1e-7,
@@ -127,10 +127,10 @@ options = Optim.Options(store_trace       = true,
                      g_calls_limit     = 0)
 
 
-
-method = BFGS()
+using Optim
+method = LBFGS()
 # method=ParticleSwarm()
-λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, β=0.01, robust=false, uniform=true)
+λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=false, uniform=false)
 bar(λ)
 
 G = tf.(models)
@@ -215,6 +215,8 @@ d = 2
 k = 4
 Y0 = 0.1*[1 1 2 2; 1 2 1 2]
 Y = [Y0[:,randperm(k)] .+ 1rand(d) for _ in 1:4]
+
+
 
 X = mean(Y) .+ 0.05 .* randn.()
 a = ones(k) |> s1
@@ -405,3 +407,28 @@ end
 # scatter!(eachrow(X[1])..., lab="X1")
 # # scatter!(eachrow(ql)..., lab="ql")
 # scatter!(eachrow(ql2)..., lab="ql2")
+
+
+
+
+##
+d = 2
+k = 4
+X0 = 0.1*[1 1 2 2; 1 2 1 2]
+X1 = 0.1*[1 2 3 4; 1 2 1 2]
+X00 = [X0[:,randperm(k)] .+ 0.01 .*randn.() .+ 1rand(d) for _ in 1:4]
+X11 = [X1[:,randperm(k)] .+ 0.01 .*randn.() .+ 1rand(d) .+ 2 for _ in 1:4]
+X = [X00; X11]
+
+p = [ones(k) |> s1 for _ in eachindex(X)]
+
+Q = SpectralDistances.kwasserstein(X,p,2, iters=10, solver=IPOT, uniform=false)
+
+ # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
+ # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
+
+scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
+scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
+
+
+# SpectralDistances.distmat_euclidean(X[1],X[2])

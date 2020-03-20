@@ -229,7 +229,8 @@ end
 
 
 function sinkhorn_cost(C, p, q::AbstractVector, λ::AbstractVector{T}; β=1, solver=IPOT, kwargs...) where T
-   sum(eachindex(λ)) do i
+   c = sum(eachindex(λ)) do i
        λ[i] * sum(solver(C[i], p[i], q, β=β)[1] .* C[i])^2
    end
+   sqrt(c)
 end

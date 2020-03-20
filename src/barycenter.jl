@@ -41,9 +41,9 @@ function barycenter(d::SinkhornRootDistance,models, λ=s1(ones(length(models)));
     d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)
     if uniform
-        bc = barycenter(X, λ; uniform=uniform, solver=solver, kwargs...)
+        bc = barycenter(X, λ; uniform=uniform, solver=solver, β=d.β, kwargs...)
     else
-        bc = barycenter(X,w, λ; uniform=uniform, solver=solver, kwargs...)
+        bc = barycenter(X,w, λ; uniform=uniform, solver=solver, β=d.β, kwargs...)
     end
 
     r1 = complex.(bc[1,:],bc[2,:])
@@ -187,7 +187,6 @@ sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 - `kwargs`: these are sent to the [`sinkhorn`](@ref) algorithm.
 """
 function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
-    L = 32,
     options = Optim.Options(store_trace       = false,
                             show_trace        = false,
                             show_every        = 1,
@@ -233,9 +232,9 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
 
 
 
-    costfun = λ -> sinkhorn_cost(C,p,q,softmax(λ); L=L, kwargs...)
+    costfun = λ -> sinkhorn_cost(C,p,q,softmax(λ); kwargs...)
     if robust
-        res = Optim.optimize(costfun, λl, NelderMead(), Optim.Options(iterations=60, store_trace=false))
+        res = Optim.optimize(costfun, λl, ParticleSwarm(), Optim.Options(iterations=100, store_trace=false))
         λl = res.minimizer
     end
     local λh
@@ -517,31 +516,78 @@ scale!(x,_,::Nothing) = x
 scale!(x::AbstractArray{T},i,w::AbstractArray{T}) where T = (x .*= w[i])
 scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
 
-#
-# function sinkhorn2(C, a, b; λ, iters=1000)
-#     K = exp.(.-C .* λ)
-#     K̃ = Diagonal(a) \ K
-#     u = one.(b)./length(b)
-#     uo = copy(u)
-#     for iter = 1:iters
-#         u .= 1 ./(K̃*(b./(K'uo)))
-#         # @show sum(abs2, u-uo)
-#         if sum(abs2, u-uo) < 1e-10
-#             # @info "Done at iteration $iter"
-#             break
-#         end
-#         copyto!(uo,u)
-#     end
-#     @assert all(!isnan, u) "Got nan entries in u"
-#     u .= max.(u, 1e-20)
-#     @assert all(>(0), u) "Got non-positive entries in u"
-#     v = b ./ ((K' * u) .+ 1e-20)
-#     if any(isnan, v)
-#         @show (K' * u)
-#         error("Got nan entries in v")
-#     end
-#     lu = log.(u)# .+ 1e-100)
-#     α = -lu./λ .+ sum(lu)/(λ*length(u))
-#     α .-= sum(α) # Normalize dual optimum to sum to zero
-#     Diagonal(u) * K * Diagonal(v), α
-# end
+
+function kwasserstein(X,p,k; seed=:rand, iters=20, solver=IPOT, kwargs...)
+    N = length(X)
+    @assert length(p) == N
+    @assert k < N "number of clusters must be smaller than number of points"
+    if seed === :rand
+        Q = X[randperm(N)[1:k]]
+    else
+        throw(ArgumentError("Unknown symbol for seed: $seed"))
+    end
+    C = distmat_euclidean(Q[1],Q[1])
+    q = ones(size(X[1],2)) |> s1
+    λ = ones(N) |> s1
+    ass = assignments(C,X,Q,p,q,solver)
+    ass_old = copy(ass)
+
+    for iter = 1:iters
+        @show iter
+        Q = barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
+        @show ass = assignments(C,X,Q,p,q,solver)
+        if ass == ass_old
+            break
+        end
+        ass_old = ass
+    end
+    Q = barycenters(C,X,p,q,λ,ass,k,solver)
+end
+
+function barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
+    N = length(X)
+    change = true
+    while change
+        change = false
+        for i = 1:k
+            if i ∉ ass
+                change = true
+                ass[randperm(N)[1:2]] .= i
+            end
+        end
+    end
+    Q = map(1:k) do i
+        @show inds = findall(ass .== i)
+        if length(inds) == 0
+            inds = randperm(N)[1:2]
+        end
+        barycenter(X[inds],p[inds], s1(λ[inds]); solver=solver, kwargs...)
+    end
+end
+
+function kwcostfun(C,X,Q,p,q,solver)
+    C = distmat_euclidean2!(C, X,Q)
+    sum(solver(C, p, q, β=0.01)[1] .* C)
+end
+
+
+function assignments(C,X,Q,p,q,solver)
+    k = length(Q)
+    map(1:length(X)) do i
+        dists = map(1:k) do j
+            kwcostfun(C,X[i],Q[j], p[i],q,solver)
+        end
+        argmin(dists)
+    end
+end
+
+
+function distmat_euclidean2!(C,X,Y)
+    for (j,c2) in enumerate(eachcol(Y))
+        for (i,c1) in enumerate(eachcol(X))
+            C[i,j] = sum(((c1,c2),) -> abs2(c1-c2), zip(c1,c2))
+        end
+    end
+    C
+    # C ./ median(C)
+end
