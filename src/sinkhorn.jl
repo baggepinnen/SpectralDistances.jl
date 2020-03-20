@@ -198,31 +198,38 @@ end
 
 
 
-function sinkhorn_cost(pl,ql, p, q::AbstractVector, C, λ::AbstractVector{T}; β=1, L=32, solver=IPOT) where T
-    N = length(p)
-    S = length(p[1])
-    any(isnan, λ) && return NaN
-    @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
-    @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
-    @assert length(C) == S
-    K = [exp.(.-C ./ β) for C in C]
-    b = fill(T(1/N), N, S)
-    r = zeros(T,N,S)
-    φ = Matrix{T}(undef,N,S)
-    local P
-    for l = 1:L
-        for s in 1:S
-            φ[:,s] .= K[s]'* (p[s] ./ (K[s] * b[:,s]))
-        end
-        P = prod(φ.^λ', dims=2) |> vec
-        b .= P ./ φ
-    end
+# function sinkhorn_cost(pl,ql, p, q::AbstractVector, C, λ::AbstractVector{T}; β=1, L=32, solver=IPOT, kwargs...) where T
+#     N = length(p[1])
+#     S = length(p)
+#     any(isnan, λ) && return NaN
+#     @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
+#     @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
+#     @assert length(C) == S
+#     K = [exp.(.-C ./ β) for C in C]
+#     b = fill(T(1/N), N, S)
+#     r = zeros(T,N,S)
+#     φ = Matrix{T}(undef,N,S)
+#     local P
+#     for l = 1:L
+#         for s in 1:S
+#             φ[:,s] .= K[s]'* (p[s] ./ (K[s] * b[:,s]))
+#         end
+#         P = prod(φ.^λ', dims=2) |> vec
+#         b .= P ./ φ
+#     end
+#
+#     # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
+#     Pl = barycenter(pl, λ; kwargs...)
+#     # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
+#     Cbc = distmat_euclidean(Pl, ql)
+#
+#     Γ, a = solver(Cbc, P, q; β=β, iters=4L) # We run a bit longer here to get a good value
+#     cost = sum(Cbc .* Γ)
+# end
 
-    # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
-    Pl = barycenter(pl, λ)
-    # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
-    Cbc = distmat_euclidean(Pl, ql)
 
-    Γ, a = solver(Cbc, P, q, β=β, iters=4L) # We run a bit longer here to get a good value
-    cost = sum(Cbc .* Γ)
+function sinkhorn_cost(C, p, q::AbstractVector, λ::AbstractVector{T}; β=1, solver=IPOT, kwargs...) where T
+   sum(eachindex(λ)) do i
+       λ[i] * sum(solver(C[i], p[i], q, β=β)[1] .* C[i])^2
+   end
 end

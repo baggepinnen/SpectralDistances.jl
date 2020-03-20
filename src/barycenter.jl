@@ -9,7 +9,7 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
         r = [r[1:end÷2] for r in r]
         w = [2w[1:end÷2] for w in w]
     end
-    X = [[real(r)'; imag(r)'] for r in r]
+    X = [[Float64.(real(r)'); Float64.(imag(r)')] for r in r]
     if !all(sum.(w) .≈ 1)
         if normalize
             w = s1.(w)
@@ -21,7 +21,7 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
     w = transpose.(s1.(w))
     W = reduce(vcat,w)
     W ./= sum(W,dims=1)
-    w2 = [W[i,:]' for i in 1:length(X)]
+    w2 = [Float64.(W[i,:]) for i in 1:length(X)]
 
     X, w2, realpoles
 end
@@ -37,10 +37,14 @@ end
 - `normalize`: make sure weights sum to 1
 - `kwargs`: are sent to [`ISA`](@ref)
 """
-function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
+function barycenter(d::SinkhornRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=IPOT, kwargs...)
+    d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)
-    S = ISA(X; kwargs...)
-    bc = barycentric_weighting(X,w,S)
+    if uniform
+        bc = barycenter(X, λ; uniform=uniform, solver=solver, kwargs...)
+    else
+        bc = barycenter(X,w, λ; uniform=uniform, solver=solver, kwargs...)
+    end
 
     r1 = complex.(bc[1,:],bc[2,:])
     if realpoles
@@ -51,29 +55,43 @@ function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
     end
     AR(bcr)
 end
+# function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
+#     X, w, realpoles = barycenter_matrices(d, models, normalize)
+#     S = ISA(X; kwargs...)
+#     bc = barycentric_weighting(X,w,S)
+#
+#     r1 = complex.(bc[1,:],bc[2,:])
+#     if realpoles
+#         bcr = ContinuousRoots(r1)
+#     else
+#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+#         bcr = ContinuousRoots([r1; conj.(r1)])
+#     end
+#     AR(bcr)
+# end
 
-function barycenter(d::SinkhornRootDistance,models,w; kwargs...)
-    r = roots.(SpectralDistances.Continuous(), models)
-    realpoles = any(any(iszero ∘ imag, r) for r in r)
-
-    if !realpoles
-        r = [r[1:end÷2] for r in r]
-    end
-    X = [[real(r)'; imag(r)'] for r in r]
-
-    S = ISA(X, w; kwargs...)
-    X̂ = [X[i][:,S[i]] for i in eachindex(X)]
-    bc = sum(w.*X̂)
-    r1 = complex.(bc[1,:],bc[2,:])
-    if realpoles
-        bcr = ContinuousRoots(r1)
-    else
-        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-        bcr = ContinuousRoots([r1; conj.(r1)])
-    end
-
-    AR(bcr)
-end
+# function barycenter(d::SinkhornRootDistance,models,w; kwargs...)
+#     r = roots.(SpectralDistances.Continuous(), models)
+#     realpoles = any(any(iszero ∘ imag, r) for r in r)
+#
+#     if !realpoles
+#         r = [r[1:end÷2] for r in r]
+#     end
+#     X = [[real(r)'; imag(r)'] for r in r]
+#
+#     S = ISA(X, w; kwargs...)
+#     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
+#     bc = sum(w.*X̂)
+#     r1 = complex.(bc[1,:],bc[2,:])
+#     if realpoles
+#         bcr = ContinuousRoots(r1)
+#     else
+#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+#         bcr = ContinuousRoots([r1; conj.(r1)])
+#     end
+#
+#     AR(bcr)
+# end
 
 
 function barycenter(d::EuclideanRootDistance,models::AbstractVector)
@@ -115,7 +133,8 @@ function barycenter(X::Vector{<:AbstractArray}, λ; uniform=true, solver=sinkhor
     w = s1(ones(n))
     m = 0.1minimum(x->std(x), X)
     # X0 = mean(X)
-    X0 = X[1] .- mean(X[1],dims=2) .+ mean(mean.(X, dims=2))
+    ind = rand(1:length(X))
+    X0 = X[ind] .- mean(X[ind],dims=2) .+ mean(mean.(X, dims=2))
     X0 .+= m .* randn.()
     bc = alg2(X0,X,w,fill(w,N); solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
 end
@@ -126,7 +145,8 @@ function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sink
     w = s1(ones(n))
     m = 0.1minimum(x->std(x), X)
     # X0 = mean(X)
-    X0 = X[1] .- mean(X[1],dims=2) .+ mean(mean.(X, dims=2))
+    ind = rand(1:length(X))
+    X0 = X[ind] .- mean(X[ind],dims=2) .+ mean(mean.(X, dims=2))
     X0 .+= m .* randn.()
     bc = alg2(X0,X,w,p; solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
 end
@@ -166,7 +186,7 @@ sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 - `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
 - `kwargs`: these are sent to the [`sinkhorn`](@ref) algorithm.
 """
-function barycentric_coordinates(pl, ql, p, q, method=BFGS();
+function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
     L = 32,
     options = Optim.Options(store_trace       = false,
                             show_trace        = false,
@@ -185,8 +205,11 @@ function barycentric_coordinates(pl, ql, p, q, method=BFGS();
     C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
 
     S = length(pl)
-    λl = 1e-8randn(S)
-
+    # λl = 1e-8randn(S)
+    dists = map(i->sum(C[i].*IPOT(C[i],p[i],q)[1]), eachindex(p))
+    λl = -v1(dists) # Initial guess based on distances between anchors and query point
+    λl .*= 0sqrt(length(λl)) # scale so that softmax(λ) is reasonably sparse.
+    # return softmax(λl)
 
     # function fg!(F,G,λl)
     #     λ = softmax(λl) # optimization done in log domain
@@ -208,7 +231,9 @@ function barycentric_coordinates(pl, ql, p, q, method=BFGS();
     # end
     # res = Optim.optimize(Optim.only_fg!(fg!), λl, method, options)
 
-    costfun = λ -> sinkhorn_cost(pl,ql,p,q,C,softmax(λ); L=L, kwargs...)
+
+
+    costfun = λ -> sinkhorn_cost(C,p,q,softmax(λ); L=L, kwargs...)
     if robust
         res = Optim.optimize(costfun, λl, NelderMead(), Optim.Options(iterations=60, store_trace=false))
         λl = res.minimizer
@@ -226,6 +251,8 @@ function barycentric_coordinates(pl, ql, p, q, method=BFGS();
 end
 
 function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=BFGS(); kwargs...)
+
+    d.p == 2 || throw(ArgumentError("p must be 2"))
     pl, p, realpolesp = barycenter_matrices(d, models)
     ql, q, realpolesq = barycenter_matrices(d, [qmodel])
     if realpolesp != realpolesq
@@ -233,15 +260,21 @@ function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=
         ql, q, realpolesq = barycenter_matrices(d, [qmodel], allow_shortcut=false)
     end
 
-    for p in p
-        p ./= sum(p)
+    # if uniform
+    #     for pi in p
+    #         pi .= 1
+    #     end
+    #     q[1] .= 1
+    # end
+
+    for pi in p
+        pi ./= sum(pi)
     end
     q = q[1] ./= sum(q[1])
-
     @assert sum(q) ≈ 1
     @assert all(sum(p) ≈ 1 for p in p)
 
-    λ = barycentric_coordinates(pl, ql[1], reduce(vcat,p)', vec(q), method; kwargs...)
+     λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; kwargs...)
     return λ
 
     # q_proj = alg2(ql,pl,q,p;weights=λ, kwargs...)[1]

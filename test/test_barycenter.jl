@@ -85,10 +85,11 @@ bc = barycenter(d,models)
 
 
 
-##
+## ============= Test barycentric coordinates =================================
+# The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
 ζ = [0.1, 0.3, 0.7]
 
-models = map(1:4) do _
+models = map(1:10) do _
     pol = [1]
     for i = eachindex(ζ)
         pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
@@ -98,7 +99,49 @@ end
 
 Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
+G = tf.(models)
+plot()
+pzmap!.(G)
+pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+##
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight)
+Xe = barycenter(d, models, solver=IPOT)
 
+G = tf.(models)
+plot()
+pzmap!.(G)
+pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+
+##
+
+options = Optim.Options(store_trace       = true,
+                     show_trace        = true,
+                     show_every        = 1,
+                     iterations        = 200,
+                     allow_f_increases = true,
+                     time_limit        = 100,
+                     x_tol             = 1e-7,
+                     f_tol             = 1e-7,
+                     g_tol             = 1e-7,
+                     f_calls_limit     = 0,
+                     g_calls_limit     = 0)
+
+
+
+method = BFGS()
+# method=ParticleSwarm()
+λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, β=0.01, robust=false, uniform=true)
+bar(λ)
+
+G = tf.(models)
+plot()
+pzmap!.(G, lab="")
+pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+# It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
+
+
+##
 
 @testset "alg1 alg2" begin
     @info "Testing alg1 alg2"
@@ -344,21 +387,21 @@ end
 
 
 
-d = 2
-k = 4
-S = 4
-X0 = [1 1 2 2; 1 2 1 2]
-
-using JuMP, GLPK
-##
-X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
-
-λ0 = [0.9; 0.1ones(S-1)] |> s1
-ql = barycenter(X, λ0)
-
-ql2 = SpectralDistances.barycenter2(copy(X), λ0, printerval=10, γ=1, θ=0.5, iters=400, tol=1e-6, solver=SpectralDistances.sinkhorn_log)
-
-scatter(eachrow(reduce(hcat,X[2:end]))..., lab="X")
-scatter!(eachrow(X[1])..., lab="X1")
-# scatter!(eachrow(ql)..., lab="ql")
-scatter!(eachrow(ql2)..., lab="ql2")
+# d = 2
+# k = 4
+# S = 4
+# X0 = [1 1 2 2; 1 2 1 2]
+#
+# using JuMP, GLPK
+# ##
+# X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
+#
+# λ0 = [0.9; 0.1ones(S-1)] |> s1
+# ql = barycenter(X, λ0)
+#
+# ql2 = SpectralDistances.barycenter2(copy(X), λ0, printerval=10, γ=1, θ=0.5, iters=400, tol=1e-6, solver=SpectralDistances.sinkhorn_log)
+#
+# scatter(eachrow(reduce(hcat,X[2:end]))..., lab="X")
+# scatter!(eachrow(X[1])..., lab="X1")
+# # scatter!(eachrow(ql)..., lab="ql")
+# scatter!(eachrow(ql2)..., lab="ql2")
