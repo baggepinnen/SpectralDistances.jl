@@ -3,7 +3,7 @@
 
 The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
 """
-function sinkhorn(C, a, b; β=1e-1, iters=1000)
+function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
     ϵ = eps()
     K = exp.(.-C ./ β)
     v = one.(b)
@@ -22,8 +22,10 @@ The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are ve
 
 https://arxiv.org/pdf/1610.06519.pdf
 """
-function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int))
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
 
+    @assert sum(a) ≈ 1
+    @assert sum(b) ≈ 1
     T = promote_type(eltype(a), eltype(b), eltype(C))
     alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
     ϵ = eps()
@@ -47,7 +49,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
         end
         if iter % 10 == 0 || iter % printerval == 0
             @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
-            err = norm(vec(sum(Γ, dims=1)) - b)
+            err = +(ot_error(Γ, a, b)...)
             iter % printerval == 0 && @info "Iter: $iter, err: $err"
             if err < tol
                break
@@ -65,6 +67,11 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
     iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
 
+    ea, eb = ot_error(Γ, a, b)
+    if ea > tol || eb > tol
+        @error "sinkhorn_log: Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
+    end
+
     Γ, u, v
 end
 
@@ -77,7 +84,9 @@ A Fast Proximal Point Method for Computing Exact Wasserstein Distance
 Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
-function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
+function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...)
+    @assert sum(μ) ≈ 1
+    @assert sum(ν) ≈ 1
     T = promote_type(eltype(μ), eltype(ν), eltype(C))
     ϵ = eps(T)
     G = exp.(.- C ./ β)
@@ -86,7 +95,8 @@ function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
     Γ = ones(T, size(G)...)
     Q = zeros(T, size(G))
     local a
-    for iter = 1:iters
+    iter = 0
+    for outer iter = 1:iters
         Q .= G .* Γ
         mul!(a, Q, b)
         a .= μ ./ (a .+ ϵ)
@@ -95,21 +105,29 @@ function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
         Γ .= a .* Q .* b'
 
         if iter % 10 == 0 || iter % printerval == 0
-            err = norm(vec(sum(Γ, dims=2)) - μ)
+            err = +(ot_error(Γ, μ, ν)...)
             iter % printerval == 0 && @info "Iter: $iter, err: $err"
             if err < tol && iter > 3
+                printerval < iters && @info "IPOT: iter: $iter success - $err < $tol"
                break
             end
         end
 
     end
+    printerval < iters && iter == iters && @info "IPOT: maximum number of iterations reached: $iters"
+
     @. a = -β*log(a)
     a .-= mean(a)
     @. b = -β*log(b)
     b .-= mean(b)
-    error("check constraints")
+    eμ,eν = ot_error(Γ, μ, ν)
+    if eμ > tol || eν > tol
+        @error "IPOT: iter: $iter Inaccurate solution - eμ: $eμ, eν: $eν, tol: $tol"
+    end
     Γ, a, b
 end
+
+ot_error(Γ, μ, ν) = norm(sum(Γ, dims=2) - μ)/norm(μ), norm(sum(Γ, dims=1) - ν')/norm(ν)
 
 
 # function IPOT(C, μ, ν; β=1, iters=2)

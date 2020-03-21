@@ -131,12 +131,17 @@ function barycenter(X::Vector{<:AbstractArray}, λ; uniform=true, solver=sinkhor
     N = length(X)
     n = size(X[1],2)
     w = s1(ones(n))
-    m = 0.1minimum(x->std(x), X)
+
     # X0 = mean(X)
     ind = rand(1:length(X))
     X0 = X[ind] .- mean(X[ind],dims=2) .+ mean(mean.(X, dims=2))
-    X0 .+= m .* randn.()
+    perturb!(X0,X)
     bc = alg2(X0,X,w,fill(w,N); solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
+end
+
+function perturb!(X0,X)
+    m = 0.1minimum(x->std(x), X)
+    X0 .+= m .* randn.()
 end
 
 function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sinkhorn_log, kwargs...)
@@ -413,10 +418,10 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
         for i in 1:N
             # Threads.@spawn begin
                 M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
-                ai = solver(M,a,b[i]; iters=10000, β=β, tol=1e-6)[2]
+                ai = solver(M,a,b[i]; iters=10000, β=β, tol=tol)[2]
                 if !all(isfinite, a)
                     @warn "Got nan in inner sinkhorn alg 1, increasing precision"
-                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=β, tol=1e-5)[2]
+                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=β, tol=tol)[2]
                     ai = eltype(â).(ai)
                 end
                 scale!(ai, i, weights)
@@ -431,6 +436,7 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
         aerr = sum(abs2,â-ã)
         t % printerval == 0 && @info "Sinkhorn alg1:  iter: $t, aerr: $aerr"
         â .= (1-inv(B)).*â .+ inv(B).*ã
+        â ./ sum(â)
         if aerr < tol
             t > printerval && @info "Sinkhorn alg1 done at iter $t"
             return â
@@ -472,7 +478,7 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
-function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-5, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
+function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
     N = length(Y)
     a = copy(a)
     ao = copy(a)
@@ -487,10 +493,12 @@ function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, i
         uniform || (a = alg1(X,Y,ao,b,β=β, printerval=printerval, tol=innertol, iters=inneriters, solver=solver, weights=weights))
         if γ > 0 && γ != 1
             a .= softmax(γ.*log.(a))
+        else
+            a = s1(a)
         end
         YT = sum(1:N) do i
             M = distmat_euclidean(X,Y[i])
-            T,_ = solver(M,a,b[i]; iters=10000, β=β)
+            T,_ = solver(M,a,b[i]; iters=10000, β=β, tol=innertol)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
             scale!(Y[i]*T', i, weights)
         end
@@ -516,39 +524,47 @@ scale!(x,_,::Nothing) = x
 scale!(x::AbstractArray{T},i,w::AbstractArray{T}) where T = (x .*= w[i])
 scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
 
+# Base.@kwdef struct KBOptions{T}
+#     β::T = 0.5
+#     solver::F = IPOT
+#     tol::Float64 = 1e-6
+#     iters::Int = 1000
+# end
 
-function kwasserstein(X,p,k; seed=:rand, iters=20, solver=IPOT, kwargs...)
+function kbarycenters(X,p,k; seed=:rand, iters=20, verbose=false, kwargs...)
     N = length(X)
     @assert length(p) == N
     @assert k < N "number of clusters must be smaller than number of points"
     if seed === :rand
-        Q = X[randperm(N)[1:k]]
+        Q = perturb!.(copy.(X[randperm(N)[1:k]]), Ref(X))
     elseif seed === :eq
-        Q = X[1:N÷k:end]
+        Q = perturb!.(copy.(X[1:N÷k:end]), Ref(X))
     else
         throw(ArgumentError("Unknown symbol for seed: $seed"))
     end
     C = distmat_euclidean(Q[1],Q[1])
     q = ones(size(X[1],2)) |> s1
     λ = ones(N) |> s1
-    ass = assignments(C,X,Q,p,q,solver)
+    @show ass = assignments(C,X,Q,p,q;kwargs...)
     ass_old = copy(ass)
 
     for iter = 1:iters
         # @show iter
-        Q = barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
-        ass = assignments(C,X,Q,p,q,solver)
+        Q = barycenters(C,X,p,q,λ,ass,k;kwargs...)
+        @show ass = assignments(C,X,Q,p,q;kwargs...)
         # @show ass
         if ass == ass_old
+            verbose && @info "Iter: $iter converged"
             break
         end
+        verbose && @info "Iter: $iter num changes: $(count(ass .!= ass_old))"
         ass_old = ass
     end
-    # Q = barycenters(C,X,p,q,λ,ass,k,solver)
+    # Q = barycenters(C,X,p,q,λ,ass,k;kwargs...)
     Q
 end
 
-function barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
+function barycenters(C,X,p,q,λ,ass,k;kwargs...)
     N = length(X)
     unnull!(ass,k)
     Q = map(1:k) do i
@@ -557,21 +573,21 @@ function barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
             @warn "null cluster"
             inds = randperm(N)[1:2]
         end
-        barycenter(X[inds],p[inds], s1(λ[inds]); solver=solver, kwargs...)
+        barycenter(X[inds],p[inds], s1(λ[inds]); kwargs...)
     end
 end
 
-function kwcostfun(C,X,Q,p,q,solver; kwargs...)
+function kwcostfun(C,X,Q,p,q; solver=IPOT, kwargs...)
     C = distmat_euclidean2!(C, X,Q)
     sum(solver(C, p, q; kwargs...)[1] .* C)
 end
 
 
-function assignments(C,X,Q,p,q,solver)
+function assignments(C,X,Q,p,q;kwargs...)
     k = length(Q)
     map(1:length(X)) do i
         dists = map(1:k) do j
-            kwcostfun(C,X[i],Q[j],p[i],q,solver)
+            kwcostfun(C,X[i],Q[j],p[i],q;kwargs...)
         end
         argmin(dists)
     end

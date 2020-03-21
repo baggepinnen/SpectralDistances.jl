@@ -147,7 +147,7 @@ pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
     @info "Testing alg1 alg2"
 
 
-Y = [[1. 1], [2. 2], [3. 3]]
+Y = [[1. 1], [2. 2], [3. 3]] .+ Ref([0 0.001])
 X = [1.1 1.01]
 a = ones(2) ./ 2
 b = [ones(2) ./2 for _ in eachindex(Y)]
@@ -176,9 +176,9 @@ a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
 @test a1[1] == a1[2]
 
 X = [2.1 3]
-a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
+a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-3, printerval=1)
 @test a1[1] < a1[2]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, iters=500, tol=1e-8, γ=0.01)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3)
 @test Xo ≈ [2 3] rtol=5e-1
 # @test ao ≈ b[1] rtol=0.1
 
@@ -186,7 +186,7 @@ a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
 
 
 X = [0. 0.1]
-@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-7, inneriters=1000, tol=1e-7, γ=0.1)
+@show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-3, inneriters=1000, tol=1e-3, γ=0.1)
 @test Xo ≈ [2 3] rtol=5e-1
 
 X = [1. 3.]
@@ -422,8 +422,8 @@ X = [X00; X11]
 
 p = [ones(k) |> s1 for _ in eachindex(X)]
 
-Q = SpectralDistances.kwasserstein(X,p,2, iters=7, solver=sinkhorn_log, uniform=false, seed=:eq)
-error("IPOT produces zero distance between clusters")
+##
+Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=IPOT, uniform=false, seed=:rand, tol=1e-3, innertol=1e-3, β=0.2, inneriters=5000, verbose=true)
 
  # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
  # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
@@ -431,8 +431,10 @@ error("IPOT produces zero distance between clusters")
 scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
 scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
 
+##
+
 C = SpectralDistances.distmat_euclidean(X[1], X[5])
-SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],IPOT; tol=1e-8, β=0.5, printerval=1)
-SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],sinkhorn_log)
+SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],IPOT; tol=1e-5, β=0.5, printerval=1, iters=200)
+SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],sinkhorn_log, β=0.01)
 
 # SpectralDistances.distmat_euclidean(X[1],X[2])
