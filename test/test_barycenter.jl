@@ -422,7 +422,8 @@ X = [X00; X11]
 
 p = [ones(k) |> s1 for _ in eachindex(X)]
 
-Q = SpectralDistances.kwasserstein(X,p,2, iters=10, solver=IPOT, uniform=false)
+Q = SpectralDistances.kwasserstein(X,p,2, iters=7, solver=sinkhorn_log, uniform=false, seed=:eq)
+error("IPOT produces zero distance between clusters")
 
  # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
  # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
@@ -430,5 +431,8 @@ Q = SpectralDistances.kwasserstein(X,p,2, iters=10, solver=IPOT, uniform=false)
 scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
 scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
 
+C = SpectralDistances.distmat_euclidean(X[1], X[5])
+SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],IPOT; tol=1e-8, β=0.5, printerval=1)
+SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],sinkhorn_log)
 
 # SpectralDistances.distmat_euclidean(X[1],X[2])

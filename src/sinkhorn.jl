@@ -107,6 +107,7 @@ function IPOT(C, μ, ν; β=1, iters=1000, tol=1e-8, printerval = typemax(Int))
     a .-= mean(a)
     @. b = -β*log(b)
     b .-= mean(b)
+    error("check constraints")
     Γ, a, b
 end
 

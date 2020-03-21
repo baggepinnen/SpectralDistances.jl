@@ -523,6 +523,8 @@ function kwasserstein(X,p,k; seed=:rand, iters=20, solver=IPOT, kwargs...)
     @assert k < N "number of clusters must be smaller than number of points"
     if seed === :rand
         Q = X[randperm(N)[1:k]]
+    elseif seed === :eq
+        Q = X[1:N÷k:end]
     else
         throw(ArgumentError("Unknown symbol for seed: $seed"))
     end
@@ -533,41 +535,35 @@ function kwasserstein(X,p,k; seed=:rand, iters=20, solver=IPOT, kwargs...)
     ass_old = copy(ass)
 
     for iter = 1:iters
-        @show iter
+        # @show iter
         Q = barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
-        @show ass = assignments(C,X,Q,p,q,solver)
+        ass = assignments(C,X,Q,p,q,solver)
+        # @show ass
         if ass == ass_old
             break
         end
         ass_old = ass
     end
-    Q = barycenters(C,X,p,q,λ,ass,k,solver)
+    # Q = barycenters(C,X,p,q,λ,ass,k,solver)
+    Q
 end
 
 function barycenters(C,X,p,q,λ,ass,k,solver;kwargs...)
     N = length(X)
-    change = true
-    while change
-        change = false
-        for i = 1:k
-            if i ∉ ass
-                change = true
-                ass[randperm(N)[1:2]] .= i
-            end
-        end
-    end
+    unnull!(ass,k)
     Q = map(1:k) do i
-        @show inds = findall(ass .== i)
-        if length(inds) == 0
+        inds = ass .== i
+        if count(inds) == 0
+            @warn "null cluster"
             inds = randperm(N)[1:2]
         end
         barycenter(X[inds],p[inds], s1(λ[inds]); solver=solver, kwargs...)
     end
 end
 
-function kwcostfun(C,X,Q,p,q,solver)
+function kwcostfun(C,X,Q,p,q,solver; kwargs...)
     C = distmat_euclidean2!(C, X,Q)
-    sum(solver(C, p, q, β=0.01)[1] .* C)
+    sum(solver(C, p, q; kwargs...)[1] .* C)
 end
 
 
@@ -575,7 +571,7 @@ function assignments(C,X,Q,p,q,solver)
     k = length(Q)
     map(1:length(X)) do i
         dists = map(1:k) do j
-            kwcostfun(C,X[i],Q[j], p[i],q,solver)
+            kwcostfun(C,X[i],Q[j],p[i],q,solver)
         end
         argmin(dists)
     end
@@ -590,4 +586,18 @@ function distmat_euclidean2!(C,X,Y)
     end
     C
     # C ./ median(C)
+end
+
+function unnull!(ass,k)
+    N = length(ass)
+    change = true
+    while change
+        change = false
+        for i = 1:k
+            if i ∉ ass
+                change = true
+                ass[randperm(N)[1:2]] .= i
+            end
+        end
+    end
 end
