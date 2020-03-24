@@ -278,16 +278,28 @@ distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transp
 
 """
     $(TYPEDSIGNATURES)
+
+Compute the symmetric, pairwise distance matrix using the specified distance.
+
+- `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`SinkhornRootDistance`](@ref)
 """
-function distmat(dist,e::AbstractVector)
+function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
-    T = typeof(dist(e[1],e[1]))
+    T = typeof(evaluate(dist,e[1],e[1];kwargs...))
     D = zeros(T,n,n)
     for i = 1:n
-        D[i,i] = dist(e[i],e[i]) # Note we do calc this ditance since it's nonzero for regularized distances.
+        D[i,i] = evaluate(dist,e[i],e[i];kwargs...) # Note we do calc this distance since it's nonzero for regularized distances.
         Threads.@threads for j=i+1:n
-            D[i,j] = dist(e[i],e[j])
+            D[i,j] = evaluate(dist, e[i], e[j]; kwargs...)
             (D[j,i] = D[i,j])
+        end
+    end
+    if normalize
+        d = diag(D)
+        for i = 1:size(D,1)
+            x = max(0.5d[i], 0)
+            D[:,i] .-= x
+            D[i,:] .-= x
         end
     end
     Symmetric(D)
@@ -306,8 +318,8 @@ function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
     preprocess_roots(d, e)
 end
 
-function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
-    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2))
+function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; kwargs...)
+    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)
 end
 function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
     d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
@@ -369,22 +381,22 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     real(l) # Workaround for expanding to complex for Zygote support
 end
 
-function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots; solver=sinkhorn_log!, kwargs...)
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = sinkhorn_log(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
+    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, iters=d.iters, kwargs...)[1]
     if any(isnan, C)
         println("Nan in SinkhornRootDistance, increasing precision")
-        C     = sinkhorn_log(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
+        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, iters=d.iters, kwargs...)[1]
         any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)
     end
     sum(C.*D)
 end
 
-function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real})
-    evaluate(d, AutoRoots(domain(d), hproots(rev(a1))), AutoRoots(domain(d), hproots(rev(a2))))
+function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real}; kwargs...)
+    evaluate(d, AutoRoots(domain(d), hproots(rev(a1))), AutoRoots(domain(d), hproots(rev(a2))); kwargs...)
 end
 
 # function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
@@ -418,26 +430,26 @@ function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray)
     evaluate(d.distance,w1,w2)
 end
 
-function evaluate(d::ModelDistance,X,Xh)
+function evaluate(d::ModelDistance,X,Xh; kwargs...)
     w = fitmodel(d.fitmethod, X)
     wh = fitmodel(d.fitmethod, Xh)
-    evaluate(d.distance, w, wh)
+    evaluate(d.distance, w, wh; kwargs...)
 end
 
-function batch_loss(bs::Int, loss, X, Xh)
+function batch_loss(bs::Int, loss, X, Xh; kwargs...)
     l = zero(eltype(Xh))
     lx = length(X)
     n_batches = length(X)÷bs
     inds = 1:bs
     # TODO: introduce overlap for smoother transitions  #src
     for i = 1:n_batches
-        l += loss(X[inds],Xh[inds])
+        l += loss(X[inds],Xh[inds]; kwargs...)
         inds = inds .+ bs
     end
     l *= bs
     residual_inds = inds[1]:lx
     lr = length(residual_inds)
-    lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds])*lr)
+    lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds]; kwargs...)*lr)
     l /= length(X)
     l / n_batches
 end
