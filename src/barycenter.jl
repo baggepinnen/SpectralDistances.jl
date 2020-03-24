@@ -1,6 +1,6 @@
 function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
     r = roots.(SpectralDistances.Continuous(), models)
-    w = d.weight.(r)
+    w = [Float64.(d.weight(r)) for r in r]
     realpoles = any(any(iszero ∘ imag, r) for r in r)
 
     realpoles = realpoles || !allow_shortcut # if we don't allow the shortcut it's the  same as if there are real poles.
@@ -18,12 +18,12 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
         end
     end
 
-    w = transpose.(s1.(w))
-    W = reduce(vcat,w)
-    W ./= sum(W,dims=1)
-    w2 = [Float64.(W[i,:]) for i in 1:length(X)]
+    # w = transpose.(w)
+    # W = reduce(vcat,w)
+    # W ./= sum(W,dims=1)
+    # w2 = [Float64.(W[i,:]) for i in 1:length(X)]
 
-    X, w2, realpoles
+    X, w, realpoles
 end
 
 """
@@ -45,16 +45,21 @@ function barycenter(d::SinkhornRootDistance,models, λ=s1(ones(length(models)));
     else
         bc = barycenter(X,w, λ; uniform=uniform, solver=solver, β=d.β, kwargs...)
     end
+    bc2model(bc, realpoles)
 
-    r1 = complex.(bc[1,:],bc[2,:])
-    if realpoles
-        bcr = ContinuousRoots(r1)
-    else
-        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-        bcr = ContinuousRoots([r1; conj.(r1)])
-    end
-    AR(bcr)
 end
+
+function bc2model(bc, realpoles)
+ r1 = complex.(bc[1,:],bc[2,:])
+ if realpoles
+     bcr = ContinuousRoots(r1)
+ else
+     @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+     bcr = ContinuousRoots([r1; conj.(r1)])
+ end
+ AR(bcr)
+end
+
 # function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
 #     X, w, realpoles = barycenter_matrices(d, models, normalize)
 #     S = ISA(X; kwargs...)
@@ -278,7 +283,7 @@ function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=
     @assert sum(q) ≈ 1
     @assert all(sum(p) ≈ 1 for p in p)
 
-     λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; kwargs...)
+     λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; β=d.β, kwargs...)
     return λ
 
     # q_proj = alg2(ql,pl,q,p;weights=λ, kwargs...)[1]
@@ -523,97 +528,3 @@ end
 scale!(x,_,::Nothing) = x
 scale!(x::AbstractArray{T},i,w::AbstractArray{T}) where T = (x .*= w[i])
 scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
-
-# Base.@kwdef struct KBOptions{T}
-#     β::T = 0.5
-#     solver::F = IPOT
-#     tol::Float64 = 1e-6
-#     iters::Int = 1000
-# end
-
-function kbarycenters(X,p,k; seed=:rand, iters=20, verbose=false, kwargs...)
-    N = length(X)
-    @assert length(p) == N
-    @assert k < N "number of clusters must be smaller than number of points"
-    if seed === :rand
-        Q = perturb!.(copy.(X[randperm(N)[1:k]]), Ref(X))
-    elseif seed === :eq
-        Q = perturb!.(copy.(X[1:N÷k:end]), Ref(X))
-    else
-        throw(ArgumentError("Unknown symbol for seed: $seed"))
-    end
-    C = distmat_euclidean(Q[1],Q[1])
-    q = ones(size(X[1],2)) |> s1
-    λ = ones(N) |> s1
-    @show ass = assignments(C,X,Q,p,q;kwargs...)
-    ass_old = copy(ass)
-
-    for iter = 1:iters
-        # @show iter
-        Q = barycenters(C,X,p,q,λ,ass,k;kwargs...)
-        @show ass = assignments(C,X,Q,p,q;kwargs...)
-        # @show ass
-        if ass == ass_old
-            verbose && @info "Iter: $iter converged"
-            break
-        end
-        verbose && @info "Iter: $iter num changes: $(count(ass .!= ass_old))"
-        ass_old = ass
-    end
-    # Q = barycenters(C,X,p,q,λ,ass,k;kwargs...)
-    Q
-end
-
-function barycenters(C,X,p,q,λ,ass,k;kwargs...)
-    N = length(X)
-    unnull!(ass,k)
-    Q = map(1:k) do i
-        inds = ass .== i
-        if count(inds) == 0
-            @warn "null cluster"
-            inds = randperm(N)[1:2]
-        end
-        barycenter(X[inds],p[inds], s1(λ[inds]); kwargs...)
-    end
-end
-
-function kwcostfun(C,X,Q,p,q; solver=IPOT, kwargs...)
-    C = distmat_euclidean2!(C, X,Q)
-    sum(solver(C, p, q; kwargs...)[1] .* C)
-end
-
-
-function assignments(C,X,Q,p,q;kwargs...)
-    k = length(Q)
-    map(1:length(X)) do i
-        dists = map(1:k) do j
-            kwcostfun(C,X[i],Q[j],p[i],q;kwargs...)
-        end
-        argmin(dists)
-    end
-end
-
-
-function distmat_euclidean2!(C,X,Y)
-    for (j,c2) in enumerate(eachcol(Y))
-        for (i,c1) in enumerate(eachcol(X))
-            C[i,j] = sum(((c1,c2),) -> abs2(c1-c2), zip(c1,c2))
-        end
-    end
-    C
-    # C ./ median(C)
-end
-
-function unnull!(ass,k)
-    N = length(ass)
-    change = true
-    while change
-        change = false
-        for i = 1:k
-            if i ∉ ass
-                change = true
-                ass[randperm(N)[1:2]] .= i
-            end
-        end
-    end
-end

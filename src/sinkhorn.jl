@@ -1,7 +1,7 @@
 """
     γ, u, v = sinkhorn(C, a, b; β=1e-1, iters=1000)
 
-The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
+The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref) and [`sinkhorn_log`](@ref).
 """
 function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
     ϵ = eps()
@@ -12,6 +12,11 @@ function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
         u = a ./ (K * v .+ ϵ)
         v = b ./ (K' * u .+ ϵ)
     end
+    @. u = -β*log(u) - alpha
+    u .-= mean(u)
+    @. v = -β*log(v) - beta
+    v .-= mean(v)
+
     u .* K .* v', u, v
 end
 
@@ -34,7 +39,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     u = zeros(T, size(a)) .= 1
     local v, iter
     iter = 0
-    for iter = 1:iters
+    for outer iter = 1:iters
         v = b ./ (K' * u .+ ϵ)
         u = a ./ (K * v .+ ϵ)
         if maximum(abs, u) > τ || maximum(abs, v) > τ
@@ -69,7 +74,68 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
 
     ea, eb = ot_error(Γ, a, b)
     if ea > tol || eb > tol
-        @error "sinkhorn_log: Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
+        @error "sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
+    end
+
+    Γ, u, v
+end
+
+
+"""
+Same as [`sinkhorn_log`](@ref) but operates in-place to save memory allocations. This function has higher performance than `sinkhorn_log`, but might not work as well with AD libraries.
+"""
+function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
+
+    @assert sum(a) ≈ 1
+    @assert sum(b) ≈ 1
+    T = promote_type(eltype(a), eltype(b), eltype(C))
+    alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
+    ϵ = eps()
+    K = @. exp(-C / β)
+    Γ = zeros(T, size(K))
+    u = zeros(T, size(a)) .= 1
+    v = zeros(T, size(b)) .= 1
+    local v, iter
+    iter = 0
+    for outer iter = 1:iters
+        mul!(v,K',u)
+        v .= b ./ (v .+ ϵ)
+        mul!(u,K,v)
+        u .= a ./ (u .+ ϵ)
+
+        if maximum(abs, u) > τ || maximum(abs, v) > τ
+            @. alpha += β * log(u)
+            @. beta  += β * log(v)
+            u .= 1
+            v .= 1
+            @. K = exp(-(C-alpha-beta') / β)
+        end
+        if any(!isfinite, u) || any(!isfinite, u)
+            error("Got NaN in sinkhorn_log")
+        end
+        if iter % 20 == 0 || iter % printerval == 0
+            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+            err = +(ot_error(Γ, a, b)...)
+            iter % printerval == 0 && @info "Iter: $iter, err: $err"
+            if err < tol
+               break
+            end
+        end
+
+    end
+    @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+
+    @. u = -β*log(u) - alpha
+    u .-= mean(u)
+    @. v = -β*log(v) - beta
+    v .-= mean(v)
+
+    @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
+
+    ea, eb = ot_error(Γ, a, b)
+    if ea > tol || eb > tol
+        @error "sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
     end
 
     Γ, u, v
@@ -85,8 +151,8 @@ Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
 function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...)
-    @assert sum(μ) ≈ 1
-    @assert sum(ν) ≈ 1
+    @assert sum(μ) ≈ 1 "Input measure not normalized - sum(μ) = $(sum(μ))"
+    @assert sum(ν) ≈ 1 "Input measure not normalized - sum(ν) = $(sum(ν))"
     T = promote_type(eltype(μ), eltype(ν), eltype(C))
     ϵ = eps(T)
     G = exp.(.- C ./ β)
@@ -104,7 +170,7 @@ function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int),
         b .= ν ./ (b .+ ϵ)
         Γ .= a .* Q .* b'
 
-        if iter % 10 == 0 || iter % printerval == 0
+        if iter % 20 == 0 || iter % printerval == 0
             err = +(ot_error(Γ, μ, ν)...)
             iter % printerval == 0 && @info "Iter: $iter, err: $err"
             if err < tol && iter > 3
@@ -249,7 +315,7 @@ ot_error(Γ, μ, ν) = norm(sum(Γ, dims=2) - μ)/norm(μ), norm(sum(Γ, dims=1)
 
 function sinkhorn_cost(C, p, q::AbstractVector, λ::AbstractVector{T}; β=1, solver=IPOT, kwargs...) where T
    c = sum(eachindex(λ)) do i
-       λ[i] * sum(solver(C[i], p[i], q, β=β)[1] .* C[i])^2
+       λ[i] * sqrt(sum(solver(C[i], p[i], q; β=β, kwargs...)[1] .* C[i]))
    end
    sqrt(c)
 end

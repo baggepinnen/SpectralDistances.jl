@@ -6,7 +6,7 @@ $(EXPORTS)
 """
 module SpectralDistances
 
-using LinearAlgebra, Statistics
+using LinearAlgebra, Statistics, Printf
 using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions, Optim
 
 import Base.@kwdef
@@ -80,6 +80,11 @@ function __init__()
         Requires.@require JuMP = "4076af6c-e467-56ae-b986-b466b2749572" begin
             include("jump.jl")
         end
+    end
+
+    Requires.@require Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5" begin
+        export kbarycenters
+        include("kbarycenters.jl")
     end
 end
 end # module

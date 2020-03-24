@@ -104,7 +104,7 @@ plot()
 pzmap!.(G)
 pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
 ##
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2)#, weight=unitweight)
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.01)
 Xe = barycenter(d, models, solver=IPOT)
 
 G = tf.(models)
@@ -129,8 +129,9 @@ options = Optim.Options(store_trace    = true,
 
 using Optim
 method = LBFGS()
-# method=ParticleSwarm()
-λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=false, uniform=false)
+method=ParticleSwarm()
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
+λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=true, uniform=false, tol=1e-6)
 bar(λ)
 
 G = tf.(models)
