@@ -423,10 +423,10 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
         for i in 1:N
             # Threads.@spawn begin
                 M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
-                ai = solver(M,a,b[i]; iters=10000, β=β, tol=tol)[2]
+                ai = solver(M,a,b[i]; iters=50000, β=β, tol=tol)[2]
                 if !all(isfinite, a)
                     @warn "Got nan in inner sinkhorn alg 1, increasing precision"
-                    ai = solver(M,big.(â),big.(b[i]); iters=10000, β=β, tol=tol)[2]
+                    ai = solver(M,big.(â),big.(b[i]); iters=50000, β=β, tol=tol)[2]
                     ai = eltype(â).(ai)
                 end
                 scale!(ai, i, weights)
@@ -503,7 +503,7 @@ function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, i
         end
         YT = sum(1:N) do i
             M = distmat_euclidean(X,Y[i])
-            T,_ = solver(M,a,b[i]; iters=10000, β=β, tol=innertol)
+            T,_ = solver(M,a,b[i]; iters=inneriters, β=β, tol=innertol)
             @assert !any(isnan, T) "Got nan in sinkhorn alg 2"
             scale!(Y[i]*T', i, weights)
         end

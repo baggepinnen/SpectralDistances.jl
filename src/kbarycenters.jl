@@ -104,7 +104,7 @@ function unnull!(ass,k)
         for i = 1:k
             if i ∉ ass
                 change = true
-                ass[randperm(N)[1:2]] .= i
+                ass[randperm(N)[1:1]] .= i
             end
         end
     end
