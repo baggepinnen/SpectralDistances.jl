@@ -13,7 +13,8 @@ import Base.@kwdef
 
 export ls, plr, polar, toreim, reflect, hungariansort, coefficients, batch_loss, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots
 
-export AbstractDistance,
+export evaluate,
+AbstractDistance,
 AbstractRationalDistance,
 AbstractSignalDistance,
 CoefficientDistance,
@@ -24,6 +25,7 @@ SinkhornRootDistance,
 KernelWassersteinRootDistance,
 DiscretizedRationalDistance,
 WelchOptimalTransportDistance,
+WelchLPDistance,
 RationalOptimalTransportDistance,
 OptimalTransportHistogramDistance,
 RationalCramerDistance,
@@ -36,6 +38,7 @@ discrete_grid_transportplan
 
 export sinkhorn,
 sinkhorn_log,
+sinkhorn_log!,
 IPOT,
 sinkhorn_diff
 

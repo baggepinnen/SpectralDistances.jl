@@ -10,6 +10,7 @@ abstract type AbstractSignalDistance <: AbstractDistance end
 abstract type AbstractRootDistance <: AbstractRationalDistance end
 "All subtypes of this type operates on the coefficients of rational transfer functions"
 abstract type AbstractCoefficientDistance <: AbstractRationalDistance end
+abstract type AbstractWelchDistance <: AbstractSignalDistance end
 
 Base.Broadcast.broadcastable(p::AbstractDistance) = Ref(p)
 
@@ -161,7 +162,7 @@ DiscretizedRationalDistance
 end
 
 """
-    WelchOptimalTransportDistance{DT, AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
+    WelchOptimalTransportDistance{DT, AT <: Tuple, KWT <: NamedTuple} <: AbstractWelchDistance
 
 Calculates the Wasserstein distance between two signals by estimating a Welch periodogram of each.
 
@@ -172,13 +173,22 @@ Calculates the Wasserstein distance between two signals by estimating a Welch pe
 - `p::Int = 2` : Order of the distance
 """
 WelchOptimalTransportDistance
-@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
+@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractWelchDistance
     distmat::DT = nothing
     β::Float64 = 0.01
     iters::Int = 10000
     args::AT = ()
     kwargs::KWT = NamedTuple()
     p::Int = 2
+end
+
+# WelchLPDistance
+@kwdef struct WelchLPDistance{AT <: Tuple, KWT <: NamedTuple, F} <: AbstractWelchDistance
+    args::AT = ()
+    kwargs::KWT = NamedTuple()
+    p::Int = 2
+    normalized::Bool = true
+    transform::F = identity
 end
 
 """
@@ -489,35 +499,40 @@ function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::Abstrac
     b2 .= abs2.(b2)
     # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
-    evaluate(d, b1, b2)
+    evaluate(d, b1, b2; kwargs...)
 end
 
-function evaluate(d::DiscretizedRationalDistance, b1, b2)
+function evaluate(d::DiscretizedRationalDistance, b1, b2; kwargs...)
     plan = discrete_grid_transportplan(b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
-function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
+function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     if issorted(w1.freq) && issorted(w2.freq)
         C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     else
-        C = sinkhorn_log(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
+        C = solver(D,s1(w1.power),s1(w2.power); β=d.β, iters=d.iters, kwargs...)[1]
     end
     cost = sum(C .* D)
 end
 
-function evaluate(d::WelchOptimalTransportDistance, x1, x2)
+function evaluate(d::WelchLPDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR;  kwargs...)
+    x1,x2 = d.normalized ? (s1(w1.power),s1(w2.power)) : (w1.power, w2.power)
+    mean(abs.(d.transform.(x1)-d.transform.(x2)).^d.p)
+end
+
+function evaluate(d::AbstractWelchDistance, x1, x2; kwargs...)
     evaluate(d, welch_pgram(x1, d.args...; d.kwargs...), welch_pgram(x2, d.args...; d.kwargs...))
 end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
-function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
+function evaluate(d::OptimalTransportHistogramDistance, x1, x2; solver=IPOT, kwargs...)
     p  = d.p
     h1 = fit(Histogram,x1)
     h2 = fit(Histogram,x2)
     distmat = [abs(e1-e2)^p for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
-    plan = IPOT(distmat, s1(h1.weights), s1(h2.weights))[1]
+    plan = solver(distmat, s1(h1.weights), s1(h2.weights); kwargs...)[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* distmat)
 end
