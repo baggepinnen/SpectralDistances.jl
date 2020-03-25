@@ -478,7 +478,7 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
 function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
-    uniform || @warn("This function is known to be buggy when not enforcing uniform weights")
+    uniform || @warn("This function is known to be buggy when not enforcing uniform weights", maxlog=10)
     N = length(Y)
     a = copy(a)
     ao = copy(a)

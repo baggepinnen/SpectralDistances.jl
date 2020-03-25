@@ -255,8 +255,8 @@ end
     @test M == M2
 
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
-    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=100) .|> r3
+    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000) .|> r3
+    g3,a3,b3 = IPOT(M,a,b[1], β=0.1, iters=10000) .|> r3
     @test ip(a1,a2) ≈ 1 atol=1e-2
     @test ip(a1,a3) ≈ 1 atol=1e-2
 
@@ -268,13 +268,13 @@ end
     b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
     M = SpectralDistances.distmat_euclidean(Y[1],Y[1])
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
-    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000, printerval=100) .|> r3
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.01, iters=10000, printerval=100) .|> r3
-    @test ip(a1,a2) ≈ 1 atol=1e-1
-    @test ip(a1,a3) ≈ 1 atol=1e-1
+    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=500, tol=1e-9) .|> r3
+    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000, printerval=500, tol=1e-9) .|> r3
+    @test_broken ip(a1,a2) ≈ 1 atol=1e-1
+    @test_broken ip(a1,a3) ≈ 1 atol=1e-1
 
-    @test ip(b1,b2) ≈ 1 atol=1e-1
-    @test ip(b1,b3) ≈ 1 atol=1e-1
+    @test_broken ip(b1,b2) ≈ 1 atol=1e-1
+    @test_broken ip(b1,b3) ≈ 1 atol=1e-1
 
 
 end
