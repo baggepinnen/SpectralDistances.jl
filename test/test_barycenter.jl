@@ -286,30 +286,33 @@ end
 
     d = 2
     k = 4
-    S = 4
+    S = 3
     X0 = [1 1 2 2; 1 2 1 2]
 
     res = map(1:10) do _
-        X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
+        X = [X0[:,randperm(k)] .+ 0.01.*randn.() .+ 10rand(d) for _ in 1:S]
         λ0 = randn(S) |> SpectralDistances.softmax
         p = [ones(k) |> s1 for _ in 1:S]
         q = ones(k) |> s1
 
-        ql = barycenter(X, λ0)
+        β = 0.1
+        ql = barycenter(X, λ0, inneriters=200000, tol=1e-9, innertol=1e-8, β=β, solver=sinkhorn_log!)
 
-        β = 1/10.0
-        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
+        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=false, tol=1e-10)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="initial bc")
-            scatter!(eachrow(bch)..., lab="reconstructed bc")
         end
+        costfun = λ -> SpectralDistances.sinkhorn_cost(X, ql, p, q, λ;
+            solver = sinkhorn_log!,
+            tol    = 1e-10,
+            β      = β)
+
 
         @show norm(λ0-λh)
     end
-    @test median(res) < 0.1
+    @test median(res) < 0.01
     # mean(norm(s1(rand(4)) - s1(rand(4))) for _ in 1:10000)
-
 
 
     res = map(1:5) do _
@@ -318,9 +321,9 @@ end
 
         ql = X[1] .+ 0.01 .* randn.()
         q = p[1]
-        λ0 = [1,0,0,0]
+        λ0 = [1,0,0]
 
-        β = 1/5.0
+        β = 1/10.0
         λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
@@ -329,7 +332,7 @@ end
 
         @show norm(λ0-λh)
     end
-    @test median(res) < 0.1
+    @test median(res) < 0.01
 
 
     ## Tests for sinkhorn_diff, it does not seem to produce the correct gradient ==============

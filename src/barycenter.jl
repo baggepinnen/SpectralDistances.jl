@@ -196,7 +196,7 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 - `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
 - `solver`: = [`sinkhorn_log!`](@ref) solver
 - `tol`:    = 1e-7 tolerance
-- `β`:      = 1 entropy regularization. This function works best with rather large regularization, hence the large default value.
+- `β`:      = 0.1 entropy regularization. This function works best with rather large regularization, hence the large default value.
 - `kwargs`: these are sent to the solver algorithm.
 """
 function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS();
@@ -214,7 +214,7 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     robust = true,
     solver = sinkhorn_log!,
     tol    = 1e-7,
-    β      = 1,
+    β      = 0.1,
     kwargs...) where T
 
     # C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
@@ -250,9 +250,9 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     λl = zeros(T,S)
     C = zeros(T,k,k)
     costfun = λ -> sinkhorn_cost(pl, ql, p, q, softmax(λ);
-        solver = sinkhorn_log!,
-        tol    = 1e-7,
-        β      = 1,
+        solver = solver,
+        tol    = tol,
+        β      = β,
         kwargs...)
     if robust
         res = Optim.optimize(costfun, λl, ParticleSwarm(), Optim.Options(iterations=100, store_trace=false))
@@ -477,7 +477,7 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
-function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
+function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=10000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
     uniform || @warn("This function is known to be buggy when not enforcing uniform weights", maxlog=10)
     N = length(Y)
     a = copy(a)
