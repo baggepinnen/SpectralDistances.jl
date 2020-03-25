@@ -10,6 +10,7 @@ abstract type AbstractSignalDistance <: AbstractDistance end
 abstract type AbstractRootDistance <: AbstractRationalDistance end
 "All subtypes of this type operates on the coefficients of rational transfer functions"
 abstract type AbstractCoefficientDistance <: AbstractRationalDistance end
+abstract type AbstractWelchDistance <: AbstractSignalDistance end
 
 Base.Broadcast.broadcastable(p::AbstractDistance) = Ref(p)
 
@@ -161,7 +162,7 @@ DiscretizedRationalDistance
 end
 
 """
-    WelchOptimalTransportDistance{DT, AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
+    WelchOptimalTransportDistance{DT, AT <: Tuple, KWT <: NamedTuple} <: AbstractWelchDistance
 
 Calculates the Wasserstein distance between two signals by estimating a Welch periodogram of each.
 
@@ -172,13 +173,22 @@ Calculates the Wasserstein distance between two signals by estimating a Welch pe
 - `p::Int = 2` : Order of the distance
 """
 WelchOptimalTransportDistance
-@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractSignalDistance
+@kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractWelchDistance
     distmat::DT = nothing
     β::Float64 = 0.01
     iters::Int = 10000
     args::AT = ()
     kwargs::KWT = NamedTuple()
     p::Int = 2
+end
+
+# WelchLPDistance
+@kwdef struct WelchLPDistance{AT <: Tuple, KWT <: NamedTuple, F} <: AbstractWelchDistance
+    args::AT = ()
+    kwargs::KWT = NamedTuple()
+    p::Int = 2
+    normalized::Bool = true
+    transform::F = identity
 end
 
 """
@@ -274,20 +284,34 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p
 
+distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 .- transpose(e2)).^p
+
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
 """
     $(TYPEDSIGNATURES)
+
+Compute the symmetric, pairwise distance matrix using the specified distance.
+
+- `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`SinkhornRootDistance`](@ref)
 """
-function distmat(dist,e::AbstractVector)
+function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
-    T = typeof(dist(e[1],e[1]))
+    T = typeof(evaluate(dist,e[1],e[1];kwargs...))
     D = zeros(T,n,n)
     for i = 1:n
-        D[i,i] = dist(e[i],e[i]) # Note we do calc this ditance since it's nonzero for regularized distances.
+        D[i,i] = evaluate(dist,e[i],e[i];kwargs...) # Note we do calc this distance since it's nonzero for regularized distances.
         Threads.@threads for j=i+1:n
-            D[i,j] = dist(e[i],e[j])
+            D[i,j] = evaluate(dist, e[i], e[j]; kwargs...)
             (D[j,i] = D[i,j])
+        end
+    end
+    if normalize
+        d = diag(D)
+        for i = 1:size(D,1)
+            x = max(0.5d[i], 0)
+            D[:,i] .-= x
+            D[i,:] .-= x
         end
     end
     Symmetric(D)
@@ -306,16 +330,16 @@ function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
     preprocess_roots(d, e)
 end
 
-function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel)
-    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2))
+function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; kwargs...)
+    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)
 end
-function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
+function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
     d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
     d2 = evaluate(d, preprocess_roots(d,tzero(domain(d),w1)), preprocess_roots(d,tzero(domain(d),w2)))
     d1 + d2
 end
 
-function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
+function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots; kwargs...)
     e1,e2 = toreim(e1), toreim(e2)
     n     = length(e1[1])
     dist  = d.distance
@@ -349,7 +373,7 @@ end
 #     s / length(e1)^2
 # end
 
-function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots; kwargs...)
     length(e1) == 0 && return zero(real(eltype(e1)))
     I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
@@ -369,22 +393,22 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
     real(l) # Workaround for expanding to complex for Zygote support
 end
 
-function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots; solver=sinkhorn_log!, kwargs...)
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = sinkhorn(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2),β=d.β, iters=d.iters)[1]
+    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, iters=d.iters, kwargs...)[1]
     if any(isnan, C)
         println("Nan in SinkhornRootDistance, increasing precision")
-        C     = sinkhorn(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)),β=d.β, iters=d.iters)[1]
+        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, iters=d.iters, kwargs...)[1]
         any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)
     end
     sum(C.*D)
 end
 
-function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real})
-    evaluate(d, AutoRoots(domain(d), hproots(rev(a1))), AutoRoots(domain(d), hproots(rev(a2))))
+function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real}; kwargs...)
+    evaluate(d, AutoRoots(domain(d), hproots(rev(a1))), AutoRoots(domain(d), hproots(rev(a2))); kwargs...)
 end
 
 # function eigval_dist_wass_logmag_defective(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
@@ -401,7 +425,7 @@ end
 #     dm12  = logkernelsum(e1,e2,λ)
 #     dm1 - 2dm12 + dm2
 # end
-function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots; kwargs...)
     λ     = d.λ
     # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
     # dm2   = exp.(.- λ .* distmat(d.distance, e2,e2))
@@ -412,37 +436,37 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     mean(dm1) - 2mean(dm12) + mean(dm2)
 end
 
-evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2))
+evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel; kwargs...) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2); kwargs...)
 
-function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray)
-    evaluate(d.distance,w1,w2)
+function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray; kwargs...)
+    evaluate(d.distance,w1,w2; kwargs...)
 end
 
-function evaluate(d::ModelDistance,X,Xh)
+function evaluate(d::ModelDistance,X,Xh; kwargs...)
     w = fitmodel(d.fitmethod, X)
     wh = fitmodel(d.fitmethod, Xh)
-    evaluate(d.distance, w, wh)
+    evaluate(d.distance, w, wh; kwargs...)
 end
 
-function batch_loss(bs::Int, loss, X, Xh)
+function batch_loss(bs::Int, loss, X, Xh; kwargs...)
     l = zero(eltype(Xh))
     lx = length(X)
     n_batches = length(X)÷bs
     inds = 1:bs
     # TODO: introduce overlap for smoother transitions  #src
     for i = 1:n_batches
-        l += loss(X[inds],Xh[inds])
+        l += loss(X[inds],Xh[inds]; kwargs...)
         inds = inds .+ bs
     end
     l *= bs
     residual_inds = inds[1]:lx
     lr = length(residual_inds)
-    lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds])*lr)
+    lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds]; kwargs...)*lr)
     l /= length(X)
     l / n_batches
 end
 
-evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
+evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray; kwargs...) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
 """
     precompute(d::AbstractDistance, As, threads=true)
@@ -465,7 +489,7 @@ function precompute(d::DiscretizedRationalDistance, As::AbstractArray{<:Abstract
     end
 end
 
-function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel)
+function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel; kwargs...)
     w = d.w
     m1 = tf(m1)
     b1,_,_ = bode(m1, w.*2π) .|> vec
@@ -477,35 +501,40 @@ function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::Abstrac
     b2 .= abs2.(b2)
     # b2 .-= (minimum(b2) - 1e-9)
     b2 ./= sum(b2)
-    evaluate(d, b1, b2)
+    evaluate(d, b1, b2; kwargs...)
 end
 
-function evaluate(d::DiscretizedRationalDistance, b1, b2)
+function evaluate(d::DiscretizedRationalDistance, b1, b2; kwargs...)
     plan = discrete_grid_transportplan(b1, b2)
     cost = sum(plan .* d.distmat)
 end
 
-function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR)
+function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     if issorted(w1.freq) && issorted(w2.freq)
         C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     else
-        C = sinkhorn(D,s1(w1.power),s1(w2.power),β=d.β, iters=d.iters)[1]
+        C = solver(D,s1(w1.power),s1(w2.power); β=d.β, iters=d.iters, kwargs...)[1]
     end
     cost = sum(C .* D)
 end
 
-function evaluate(d::WelchOptimalTransportDistance, x1, x2)
+function evaluate(d::WelchLPDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR;  kwargs...)
+    x1,x2 = d.normalized ? (s1(w1.power),s1(w2.power)) : (w1.power, w2.power)
+    mean(abs.(d.transform.(x1)-d.transform.(x2)).^d.p)
+end
+
+function evaluate(d::AbstractWelchDistance, x1, x2; kwargs...)
     evaluate(d, welch_pgram(x1, d.args...; d.kwargs...), welch_pgram(x2, d.args...; d.kwargs...))
 end
 
 centers(x) = 0.5*(x[1:end-1] + x[2:end])
-function evaluate(d::OptimalTransportHistogramDistance, x1, x2)
+function evaluate(d::OptimalTransportHistogramDistance, x1, x2; solver=IPOT, kwargs...)
     p  = d.p
     h1 = fit(Histogram,x1)
     h2 = fit(Histogram,x2)
     distmat = [abs(e1-e2)^p for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
-    plan = IPOT(distmat, s1(h1.weights), s1(h2.weights))[1]
+    plan = solver(distmat, s1(h1.weights), s1(h2.weights); kwargs...)[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     cost = sum(plan .* distmat)
 end
@@ -587,6 +616,7 @@ function c∫(f,a,b;kwargs...)
     tspan = (a,b)
     prob  = ODEProblem(fi,0.,tspan)
     retry = false
+    local sol
     try
         sol   = solve(prob,AutoTsit5(Rosenbrock23());reltol=1e-12,abstol=1e-45,kwargs...)
     catch
