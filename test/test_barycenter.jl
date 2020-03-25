@@ -15,8 +15,10 @@ import SpectralDistances: softmax
     bc = mean(X̂)
     @test mean(bc) ≈ mean(mean, X)
     @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2))
-    # scatter(eachrow(reduce(hcat,X))...)
-    # scatter!(eachrow(bc)...)
+    if isinteractive()
+        scatter(eachrow(reduce(hcat,X))...)
+        scatter!(eachrow(bc)...)
+    end
 
     ## Extreme case 2- variability between measures is small in comparison to the intra-measure variability. The bc should be close to the coordinate-wise Euclidean mean
     d = 2
@@ -51,106 +53,46 @@ import SpectralDistances: softmax
 
 end
 
-d = EuclideanRootDistance(domain=Continuous(), weight=unitweight)
-models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc)[1] ≈ -2
 
-models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc) ≈ [-2im,+2im]
+@testset "ERD barycenters" begin
+    @info "Testing ERD barycenters"
 
+    d = EuclideanRootDistance(domain=Continuous(), weight=unitweight)
+    models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc)[1] ≈ -2
 
-d = EuclideanRootDistance(domain=Continuous())
-models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc)[1] ≈ -2
-
-models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc) ≈ [-2im,+2im]
-
-models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+2im]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc) ≈ [-2im,+1.5im]
+    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc) ≈ [-2im,+2im]
 
 
-d = EuclideanRootDistance(domain=Continuous(), weight=residueweight)
-models = [AR(ContinuousRoots([-5-im,-1+im])), AR(ContinuousRoots([-1-im,-1+im]))]
-bc = barycenter(d,models)
-@test bc isa AR
-@test roots.(Continuous(), bc) ≈ [-1.1538-im,-1+im] rtol=0.01
+    d = EuclideanRootDistance(domain=Continuous())
+    models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc)[1] ≈ -2
+
+    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc) ≈ [-2im,+2im]
+
+    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+2im]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc) ≈ [-2im,+1.5im]
 
 
+    d = EuclideanRootDistance(domain=Continuous(), weight=residueweight)
+    models = [AR(ContinuousRoots([-5-im,-1+im])), AR(ContinuousRoots([-1-im,-1+im]))]
+    bc = barycenter(d,models)
+    @test bc isa AR
+    @test roots.(Continuous(), bc) ≈ [-1.1538-im,-1+im] rtol=0.01
 
-
-## ============= Test barycentric coordinates =================================
-# The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
-ζ = [0.1, 0.3, 0.7]
-
-models = map(1:10) do _
-    pol = [1]
-    for i = eachindex(ζ)
-        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
-    end
-    AR(Continuous(),pol)
 end
-
-Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
-
-G = tf.(models)
-if isinteractive()
-    plot()
-    pzmap!.(G)
-    pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
-end
-##
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.5)
-Xe = barycenter(d, models, solver=IPOT)
-
-G = tf.(models)
-if isinteractive()
-    plot()
-    pzmap!.(G)
-    pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
-end
-
-##
-
-options = Optim.Options(store_trace    = true,
-show_trace        = true,
-show_every        = 1,
-iterations        = 50,
-allow_f_increases = true,
-time_limit        = 100,
-x_tol             = 1e-7,
-f_tol             = 1e-7,
-g_tol             = 1e-7,
-f_calls_limit     = 0,
-g_calls_limit     = 0)
-
-
-using Optim
-method = LBFGS()
-method=ParticleSwarm()
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.5)
-λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=true, uniform=false, tol=1e-6)
-isinteractive() && bar(λ)
-
-G = tf.(models)
-if isinteractive()
-    plot()
-    pzmap!.(G, lab="")
-    pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
-    pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
-    # It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
-end
-
 
 ##
 
@@ -289,7 +231,7 @@ end
     S = 3
     X0 = [1 1 2 2; 1 2 1 2]
 
-    res = map(1:10) do _
+    res = map(1:5) do _
         X = [X0[:,randperm(k)] .+ 0.01.*randn.() .+ 10rand(d) for _ in 1:S]
         λ0 = randn(S) |> SpectralDistances.softmax
         p = [ones(k) |> s1 for _ in 1:S]
@@ -405,6 +347,69 @@ end
 end
 
 
+@testset "barycentric coordinates" begin
+    @info "Testing barycentric coordinates with models"
+    # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
+    ζ = [0.1, 0.3, 0.7]
+
+    models = map(1:10) do _
+        pol = [1]
+        for i = eachindex(ζ)
+            pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+        end
+        AR(Continuous(),pol)
+    end
+
+    Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+
+    G = tf.(models)
+    if isinteractive()
+        plot()
+        pzmap!.(G)
+        pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+    end
+    ##
+    d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+    Xe = barycenter(d, models, solver=sinkhorn_log!)
+
+    G = tf.(models)
+    if isinteractive()
+        plot()
+        pzmap!.(G)
+        pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+    end
+
+    options = Optim.Options(store_trace    = true,
+    show_trace        = false,
+    show_every        = 1,
+    iterations        = 50,
+    allow_f_increases = true,
+    time_limit        = 100,
+    x_tol             = 1e-7,
+    f_tol             = 1e-7,
+    g_tol             = 1e-7,
+    f_calls_limit     = 0,
+    g_calls_limit     = 0)
+
+
+    using Optim
+    method = LBFGS()
+    method=ParticleSwarm()
+    # d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
+    λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
+    isinteractive() && bar(λ)
+
+    @test median(λ) > 0.02
+
+    G = tf.(models)
+    if isinteractive()
+        plot()
+        pzmap!.(G, lab="")
+        pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+        pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+        # It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
+    end
+end
 
 # d = 2
 # k = 4

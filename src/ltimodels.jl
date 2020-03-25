@@ -1,5 +1,6 @@
 const AbstractTuple = Tuple #Union{Tuple, Flux.Tracker.TrackedTuple}
 
+"abstract type AbstractModel <: ControlSystems.LTISystem end"
 abstract type AbstractModel <: ControlSystems.LTISystem end
 Base.Broadcast.broadcastable(p::AbstractModel) = Ref(p)
 

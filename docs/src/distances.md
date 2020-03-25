@@ -88,7 +88,7 @@ Transport-based distances may require some tuning parameters to be set for the s
 - [`sinkhorn_log`](@ref): better numerical stability than the standard.
 - [`sinkhorn_log!`](@ref): in-place version that is faster, but some AD libraries might not like it.
 - [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
-- [`ot_jump`](@ref): exactl solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
+- [`ot_jump`](@ref): exact solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
 
 ### Providing solver and options
 ```julia

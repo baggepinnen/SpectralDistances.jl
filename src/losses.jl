@@ -194,6 +194,7 @@ Lᵖ distance between welch spectra, `mean(abs(x1-x2)^p)`.
 - `normalized::Bool = true`: Normlize spectrum to sum to 1 (recommended)
 - `transform::F = identity`: Optional function to apply to the spectrum, example `log1p` or `sqrt`. Must not produce negative values, so `log` is not a good idea. The function is applied like this: `transform.(x1)`.
 """
+WelchLPDistance
 @kwdef struct WelchLPDistance{AT <: Tuple, KWT <: NamedTuple, F} <: AbstractWelchDistance
     args::AT = ()
     kwargs::KWT = NamedTuple()

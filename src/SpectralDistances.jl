@@ -42,7 +42,8 @@ sinkhorn_log!,
 IPOT,
 sinkhorn_diff
 
-export AbstractModel,
+export FitMethod,
+AbstractModel,
 AR,
 ARMA,
 PLR,
@@ -81,6 +82,7 @@ function __init__()
 
     Requires.@require GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6" begin
         Requires.@require JuMP = "4076af6c-e467-56ae-b986-b466b2749572" begin
+            export ot_jump
             include("jump.jl")
         end
     end

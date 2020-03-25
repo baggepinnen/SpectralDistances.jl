@@ -9,9 +9,8 @@ This package supports two kind of LTI models, [`AR`](@ref) and [`ARMA`](@ref).
 [`AR`](@ref) represents a model with only poles whereas [`ARMA`](@ref) has zeros as well.
 These types are subtypes of `ControlSystems.LTISystem`, so many of the functions from the [ControlSystems.jl](https://github.com/JuliaControl/ControlSystems.jl) toolbox work on these models as well. When acting like a `ControlSystems.LTISystem`, the default is to use the continuous-time representation of the model. The discrete-time representation can be obtained by `tf(m, 1)` where `1` is the sample time.
 
-!!! note
-
-  This package makes the assumption that the sample time is 1 everywhere. When an [`AbstractModel`](@ref) is constructed, one must thus take care to rescale the frequency axis accordingly if this does not hold. If the discrete-time representation is never used, this is of no concern.
+!!! note "Note"
+    This package makes the assumption that the sample time is 1 everywhere. When an `AbstractModel` is constructed, one must thus take care to rescale the frequency axis accordingly if this does not hold. If the discrete-time representation is never used, this is of no concern.
 
 To fit a model to data, one first has to specify a [`FitMethod`](@ref), the options are
 ```@example lti
@@ -48,5 +47,5 @@ Pages   = ["ltimodels.jl","eigenvalue_manipulations.jl"]
 ```@docs
 ControlSystems.tf(m::AR, ts)
 ControlSystems.tf(m::AR)
-ControlSystems.denvec(::Discrete, m::AbstractModel)
+ControlSystems.denvec(::Discrete, m::SpectralDistances.AbstractModel)
 ```

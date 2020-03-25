@@ -2,6 +2,7 @@ using Documenter
 using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK
 # using DocumenterLaTeX
 
+@info "makedocs"
 makedocs(
     sitename = "SpectralDistances",
     # format = LaTeX(),
@@ -13,6 +14,8 @@ makedocs(
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
+@info "deploydocs"
 deploydocs(
     repo = "github.com/baggepinnen/SpectralDistances.jl"
 )
+@info "done"

@@ -25,13 +25,13 @@ function threeD(X)
 end
 
 """
-    s1(x, dims=:) = begin
+    s1(x, dims=:)
 
 normalize x sums to 1
 """
 s1(x, dims=:) = x./sum(x, dims=dims)
 """
-    n1(x) = begin
+    n1(x)
 
 normalize x norm 1
 """
@@ -83,4 +83,3 @@ function lp_filter(x, cutoff)
     designmethod = Butterworth(2)
     filt(digitalfilter(responsetype, designmethod), x)
 end
-
