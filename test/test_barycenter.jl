@@ -1,4 +1,4 @@
-using Test, SpectralDistances, ControlSystems
+using Test, SpectralDistances, ControlSystems, Optim
 import SpectralDistances: softmax
 # const Continuous = SpectralDistances.Continuous
 
@@ -100,17 +100,17 @@ end
 Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
 G = tf.(models)
-plot()
-pzmap!.(G)
-pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+# plot()
+# pzmap!.(G)
+# pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
 ##
 d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.01)
 Xe = barycenter(d, models, solver=IPOT)
 
 G = tf.(models)
-plot()
-pzmap!.(G)
-pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+# plot()
+# pzmap!.(G)
+# pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
 
 ##
 
@@ -135,10 +135,10 @@ d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitw
 bar(λ)
 
 G = tf.(models)
-plot()
-pzmap!.(G, lab="")
-pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
-pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+# plot()
+# pzmap!.(G, lab="")
+# pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+# pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
 # It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
 
 
@@ -230,9 +230,9 @@ a1 = SpectralDistances.alg1(X,Y,a,b;β=1/100.0, printerval=100)
 @test Xo ≈ mean(Y) rtol=1e-1
 @test ao ≈ a rtol = 0.1
 
-scatter(eachrow(reduce(hcat,Y))...)
-scatter!(eachrow(X)..., alpha=0.8)
-scatter!(eachrow(Xo)..., alpha=0.4)
+# scatter(eachrow(reduce(hcat,Y))...)
+# scatter!(eachrow(X)..., alpha=0.8)
+# scatter!(eachrow(Xo)..., alpha=0.4)
 ##
 
 using JuMP, GLPK
@@ -311,8 +311,8 @@ res = map(1:5) do _
 
     β = 1/5.0
     λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=IPOT, robust=true)
-    scatter(eachrow(reduce(hcat,X))..., lab="X")
-    scatter!(eachrow(ql)..., lab="ql")
+    # scatter(eachrow(reduce(hcat,X))..., lab="X")
+    # scatter!(eachrow(ql)..., lab="ql")
 
     @show norm(λ0-λh)
 end
@@ -413,6 +413,13 @@ end
 
 
 ##
+
+@testset "kbarycenters" begin
+    @info "Testing kbarycenters"
+
+using Clustering
+
+
 d = 2
 k = 4
 X0 = 0.1*[1 1 2 2; 1 2 1 2]
@@ -429,8 +436,8 @@ Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=IPOT, uniform=false, s
  # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
  # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
 
-scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
-scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
+# scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
+# scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
 
 ##
 
@@ -439,3 +446,5 @@ SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],IPOT; tol=1e-5, β=0.5, print
 SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],sinkhorn_log, β=0.01)
 
 # SpectralDistances.distmat_euclidean(X[1],X[2])
+
+end

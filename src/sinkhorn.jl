@@ -12,12 +12,13 @@ function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
         u = a ./ (K * v .+ ϵ)
         v = b ./ (K' * u .+ ϵ)
     end
-    @. u = -β*log(u) - alpha
+    Γ =  u .* K .* v'
+    @. u = -β*log(u + ϵ)
     u .-= mean(u)
-    @. v = -β*log(v) - beta
+    @. v = -β*log(v + ϵ)
     v .-= mean(v)
 
-    u .* K .* v', u, v
+    Γ, u, v
 end
 
 """
@@ -33,7 +34,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     @assert sum(b) ≈ 1 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
     T = promote_type(eltype(a), eltype(b), eltype(C))
     alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
-    ϵ = eps()
+    ϵ = eps(T)
     K = @. exp(-C / β)
     Γ = zeros(T, size(K))
     u = zeros(T, size(a)) .= 1
@@ -64,9 +65,9 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     end
     Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
 
-    u = @. -β*log(u) - alpha
+    u = @. -β*log(u + ϵ) - alpha
     u = u .- mean(u)
-    v = @. -β*log(v) - beta
+    v = @. -β*log(v + ϵ) - beta
     v = v .- mean(v)
 
     @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
@@ -125,9 +126,9 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
     end
     @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
 
-    @. u = -β*log(u) - alpha
+    @. u = -β*log(u + ϵ) - alpha
     u .-= mean(u)
-    @. v = -β*log(v) - beta
+    @. v = -β*log(v + ϵ) - beta
     v .-= mean(v)
 
     @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
@@ -182,9 +183,9 @@ function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int),
     end
     printerval < iters && iter == iters && @info "IPOT: maximum number of iterations reached: $iters"
 
-    @. a = -β*log(a)
+    @. a = -β*log(a + ϵ)
     a .-= mean(a)
-    @. b = -β*log(b)
+    @. b = -β*log(b + ϵ)
     b .-= mean(b)
     eμ,eν = ot_error(Γ, μ, ν)
     if eμ > tol || eν > tol
