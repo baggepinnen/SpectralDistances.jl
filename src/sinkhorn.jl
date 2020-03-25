@@ -1,7 +1,7 @@
 """
     γ, u, v = sinkhorn(C, a, b; β=1e-1, iters=1000)
 
-The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref) and [`sinkhorn_log`](@ref).
+The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. This function is relatively slow, see also [`sinkhorn_log!`](@ref) [`IPOT`](@ref) and [`sinkhorn_log`](@ref) for faster algorithms.
 """
 function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
     ϵ = eps()
@@ -24,7 +24,7 @@ end
 """
     γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000, tol=1e-8)
 
-The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`IPOT`](@ref).
+The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn_log!`](@ref) for a faster implementation operating in-place, and [`IPOT`](@ref) for a potentially more exact solution.
 
 https://arxiv.org/pdf/1610.06519.pdf
 """
@@ -145,7 +145,7 @@ end
 """
     γ, u, v = IPOT(C, a, b; β=1, iters=1000)
 
-The Inexact Proximal point method for exact Optimal Transport problem (IPOT) (Sinkhorn-like) algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn`](@ref). `β` does not have to go to 0 for this alg to return the optimal distance.
+The Inexact Proximal point method for exact Optimal Transport problem (IPOT) (Sinkhorn-like) algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn`](@ref). `β` does not have to go to 0 for this alg to return the optimal distance, in fact, if β is set too low, this alg will encounter numerical problems.
 
 A Fast Proximal Point Method for Computing Exact Wasserstein Distance
 Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha

@@ -79,5 +79,20 @@ Order   = [:function, :macro, :constant]
 ```@autodocs
 Modules = [SpectralDistances]
 Private = false
-Pages   = ["losses.jl", "sinkhorn.jl"]
+Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl"]
+```
+
+## Details
+Transport-based distances may require some tuning parameters to be set for the solvers. The available solvers are
+- [`sinkhorn`](@ref): not recommended due to numerical issues
+- [`sinkhorn_log`](@ref): better numerical stability
+- [`sinkhorn_log!`](@ref): in-place version that is faster, but some AD libraries might not like it
+- [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
+- [`ot_jump`](@ref): exactl solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
+
+### Providing options
+```julia
+options = (solver=sinkhorn_log!, tol=1e-6, iters=100_000)
+distance = SinkhornRootDistance(domain=Continuous(), p=1, β=0.001)
+SpectralDistances.evaluate(distance, model1, model2; options...)
 ```

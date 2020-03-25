@@ -18,6 +18,22 @@ Clustering.nclusters(R::KBResult) = length(R.barycenters)
 Clustering.counts(R::KBResult) = [count(R.assigments .== i) for i in 1:nclusters(R)]
 Clustering.assignments(R::KBResult) = R.assignments
 
+
+"""
+    kbarycenters(X, p, k; seed = :rand, kiters = 10, verbose = false, output = :best, kwargs...)
+
+Clustering using K-barycenters.
+
+# Arguments:
+- `X`: Support of input measures
+- `p`: Weights of input measures
+- `k`: number of clusters
+- `seed`: :rand or :eq
+- `kiters`: number of iterations
+- `verbose`: print stuff?
+- `output`: output lowest cost clustering or :latest?
+- `kwargs`: are sent to the inner solvers.
+"""
 function kbarycenters(X,p,k; seed=:rand, kiters=10, verbose=false, output=:best, kwargs...)
     N = length(X)
     @assert length(p) == N
@@ -110,7 +126,17 @@ function unnull!(ass,k)
     end
 end
 
+"""
+    kbarycenters(d::SinkhornRootDistance, models::Vector{<:AbstractModel}, k; normalize = true, kwargs...)
 
+DOCSTRING
+
+#Arguments:
+- `models`: A vector of models
+- `k`: number of clusters
+- `normalize`: Whether or not to normalize the weight vectors (recommended)
+- `kwargs`: are sent to inner solvers, (`solver,tol,iters`)
+"""
 function kbarycenters(d::SinkhornRootDistance, models::Vector{<:AbstractModel}, k; normalize=true, kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)

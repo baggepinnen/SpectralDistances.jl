@@ -182,7 +182,18 @@ WelchOptimalTransportDistance
     p::Int = 2
 end
 
-# WelchLPDistance
+"""
+    WelchLPDistance{AT <: Tuple, KWT <: NamedTuple, F} <: AbstractWelchDistance
+
+Lᵖ distance between welch spectra, `mean(abs(x1-x2)^p)`.
+
+#Arguments:
+- `args::AT = ()`: These are sent to `welch_pgram`
+- `kwargs::KWT = NamedTuple()`: These are sent to `welch_pgram`
+- `p::Int = 2`: Order of the distance
+- `normalized::Bool = true`: Normlize spectrum to sum to 1 (recommended)
+- `transform::F = identity`: Optional function to apply to the spectrum, example `log1p` or `sqrt`. Must not produce negative values, so `log` is not a good idea. The function is applied like this: `transform.(x1)`.
+"""
 @kwdef struct WelchLPDistance{AT <: Tuple, KWT <: NamedTuple, F} <: AbstractWelchDistance
     args::AT = ()
     kwargs::KWT = NamedTuple()
@@ -282,8 +293,18 @@ transform(d::AbstractRootDistance) = d.transform
 transform(d::AbstractRootDistance, x) = d.transform(x)
 
 
+"""
+    distmat_euclidean(e1::AbstractVector, e2::AbstractVector, p = 2)
+
+The euclidean distance matrix between two vectors of complex numbers
+"""
 distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p
 
+"""
+    distmat_euclidean!(D, e1::AbstractVector, e2::AbstractVector, p = 2) = begin
+
+In-place version
+"""
 distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 .- transpose(e2)).^p
 
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])

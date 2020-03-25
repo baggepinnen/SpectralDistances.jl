@@ -1,4 +1,4 @@
-# Interpolations
+# Interpolations and Barycenters
 
 Whenever you define a distance, that distance implies the existence of a shortest path, a *geodesic*. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models.
 
@@ -57,6 +57,51 @@ savefig("interpolation.svg"); nothing # hide
 ![](interpolation.svg)
 
 
+## K-Barycenters
+Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
+```julia
+using SpectralDistances, ControlSystems
+fitmethod = TLS(na=12)
+models = SpectralDistances.fitmodel.(fitmethod, sounds)
+G = tf.(models) # Convert to transfer functions for visualization etc.
+
+##
+using Clustering
+dist = SinkhornRootDistance(domain=Continuous(), β=0.01, weight=s1∘residueweight)
+@time clusterresult = SpectralDistances.kbarycenters(
+    dist,
+    models,
+    n_classes, # number of clusters
+    seed    = :rand,
+    solver  = sinkhorn_log!,
+    tol     = 2e-6,
+    innertol = 2e-6,
+    iters   = 100000,
+    inneriters = 100000,
+    verbose = true,
+    output  = :best,
+    uniform = true,
+    kiters  = 10
+)
+
+bc,ass = clusterresult.barycenters, clusterresult.assignments
+
+# Visualize results
+using MLBase, Plots.PlotMeasures, AudioClustering
+newass,perm = AudioClustering.associate_clusters(labels,ass)
+yt = (classinds, [label_strings[findfirst(labels .== i)] for i in classinds])
+
+@show mean(labels .== newass)
+cm = confusmat(n_classes,labels,newass)
+heatmap(cm./sum(cm,dims=2), xlabel="Cluster assignment",ylabel="Best matching class", tickfontfamily="times", tickfontsize=12, left_margin=25mm, bottom_margin=18mm,size=(1000,900),color=:viridis)
+anns = [(reverse(ci.I)..., text(val,12,:gray)) for (ci,val) in zip(CartesianIndices(cm)[:], vec(cm))]
+annotate!(anns)
+yticks!(yt)
+xticks!(yt, xrotation=45)
+current()
+```
+
+
 ```@index
 Pages = ["interpolations.md"]
 Order   = [:type, :function, :macro, :constant]
@@ -64,5 +109,5 @@ Order   = [:type, :function, :macro, :constant]
 ```@autodocs
 Modules = [SpectralDistances]
 Private = false
-Pages   = ["interpolations.jl", "barycenter.jl"]
+Pages   = ["interpolations.jl", "barycenter.jl", "kbarycenters.jl"]
 ```
