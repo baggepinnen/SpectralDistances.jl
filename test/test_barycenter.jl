@@ -140,7 +140,7 @@ method = LBFGS()
 method=ParticleSwarm()
 d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
 λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=true, uniform=false, tol=1e-6)
-bar(λ)
+isinteractive() && bar(λ)
 
 G = tf.(models)
 if isinteractive()
