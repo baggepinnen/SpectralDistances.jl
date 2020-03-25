@@ -323,11 +323,11 @@ ot_error(Γ, μ, ν) = norm(vec(sum(Γ, dims=2)) - μ)/norm(μ), norm(vec(sum(Γ
 # end
 
 
-function sinkhorn_cost(M, pl,ql, p, q::AbstractVector, λ::AbstractVector{T}; β=0.01, solver=sinkhorn_log!, kwargs...) where T
+function sinkhorn_cost(pl,ql, p, q::AbstractVector, λ::AbstractVector{T}; β=0.01, solver=sinkhorn_log!, kwargs...) where T
 
     bc,bcp = barycenter(pl,p,λ; kwargs...)
     # @show typeof(bc), typeof(ql)
-    M = distmat_euclidean!(M, bc,ql)
+    M = distmat_euclidean(bc,ql)
     Γ = solver(M,bcp,q; β=β, kwargs...)[1]
     sqrt(sum(M.*Γ))
 end

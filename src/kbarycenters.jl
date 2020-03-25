@@ -71,7 +71,7 @@ function barycenters(C,X,p,q,λ,ass,k;kwargs...)
             @warn "null cluster"
             inds = randperm(N)[1:2]
         end
-        barycenter(X[inds],p[inds], s1(λ[inds]); kwargs...)
+        barycenter(X[inds],p[inds], s1(λ[inds]); kwargs...)[1] # TODO: not considering the weights
     end
 end
 

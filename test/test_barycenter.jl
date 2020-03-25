@@ -216,9 +216,6 @@ d = 2
 k = 4
 Y0 = 0.1*[1 1 2 2; 1 2 1 2]
 Y = [Y0[:,randperm(k)] .+ 1rand(d) for _ in 1:4]
-
-
-
 X = mean(Y) .+ 0.05 .* randn.()
 a = ones(k) |> s1
 b = [ones(k) |> s1 for _ in eachindex(Y)]
@@ -289,7 +286,7 @@ res = map(1:10) do _
     ql = barycenter(X, λ0)
 
     β = 1/10.0
-    λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=sinkhorn_log, robust=true)
+    λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=sinkhorn_log!, robust=true)
     # scatter(eachrow(reduce(hcat,X))..., lab="X")
     # scatter!(eachrow(ql)..., lab="initial bc")
     # scatter!(eachrow(bch)..., lab="reconstructed bc")
@@ -310,7 +307,7 @@ res = map(1:5) do _
     λ0 = [1,0,0,0]
 
     β = 1/5.0
-    λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=IPOT, robust=true)
+    λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
     # scatter(eachrow(reduce(hcat,X))..., lab="X")
     # scatter!(eachrow(ql)..., lab="ql")
 
@@ -431,7 +428,7 @@ X = [X00; X11]
 p = [ones(k) |> s1 for _ in eachindex(X)]
 
 ##
-Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=IPOT, uniform=false, seed=:rand, tol=1e-3, innertol=1e-3, β=0.2, inneriters=5000, verbose=true)
+Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=sinkhorn_log!, uniform=true, seed=:rand, tol=1e-3, innertol=1e-3, β=0.2, inneriters=50000, verbose=true)
 
  # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
  # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
@@ -442,8 +439,9 @@ Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=IPOT, uniform=false, s
 ##
 
 C = SpectralDistances.distmat_euclidean(X[1], X[5])
-SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],IPOT; tol=1e-5, β=0.5, printerval=1, iters=200)
-SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],sinkhorn_log, β=0.01)
+c1 = SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=IPOT, tol=1e-5, β=0.5, printerval=1, iters=200)
+c2 = SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=sinkhorn_log, β=0.01)
+@test c1 ≈ c2 rtol=0.01
 
 # SpectralDistances.distmat_euclidean(X[1],X[2])
 

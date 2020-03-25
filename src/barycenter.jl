@@ -199,7 +199,7 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 - `β`:      = 1 entropy regularization. This function works best with rather large regularization, hence the large default value.
 - `kwargs`: these are sent to the solver algorithm.
 """
-function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
+function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS();
     options = Optim.Options(store_trace       = false,
                             show_trace        = false,
                             show_every        = 1,
@@ -215,7 +215,7 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
     solver = sinkhorn_log!,
     tol    = 1e-7,
     β      = 1,
-    kwargs...)
+    kwargs...) where T
 
     # C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
 
@@ -247,9 +247,9 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
     # end
     # res = Optim.optimize(Optim.only_fg!(fg!), λl, method, options)
 
-    λl = zeros(S)
-    C = zeros(k,k)
-    costfun = λ -> sinkhorn_cost(C, pl, ql, p, q, softmax(λ);
+    λl = zeros(T,S)
+    C = zeros(T,k,k)
+    costfun = λ -> sinkhorn_cost(pl, ql, p, q, softmax(λ);
         solver = sinkhorn_log!,
         tol    = 1e-7,
         β      = 1,
@@ -259,13 +259,13 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
         λl = res.minimizer
     end
     local λh
-    try
-        @show res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
+    # try
+        res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
         λh = softmax(res.minimizer)
-    catch err
-        @error("Barycentric coordinates: optimization failed: ", err)
-        λh = softmax(λl)
-    end
+    # catch err
+        # @error("Barycentric coordinates: optimization failed: ", err)
+        # λh = softmax(λl)
+    # end
 
     # cost,P,∇ℰ = sinkhorn_diff(pl,ql,p,q,C,λh; kwargs...)
     λh
