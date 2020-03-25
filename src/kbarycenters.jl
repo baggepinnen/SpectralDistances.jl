@@ -22,11 +22,11 @@ Clustering.assignments(R::KBResult) = R.assignments
 """
     kbarycenters(X, p, k; seed = :rand, kiters = 10, verbose = false, output = :best, kwargs...)
 
-Clustering using K-barycenters.
+Clustering using K-barycenters. If you want to cluster spectra, consider the method that accepts models instead.
 
 # Arguments:
-- `X`: Support of input measures
-- `p`: Weights of input measures
+- `X`: Support of input measures, Vector{Matrix} where each matrix is n_dims×n_atoms
+- `p`: Weights of input measures Vector{Vector} where each matrix is of length n_atoms and should sum to 1.
 - `k`: number of clusters
 - `seed`: :rand or :eq
 - `kiters`: number of iterations
@@ -129,9 +129,26 @@ end
 """
     kbarycenters(d::SinkhornRootDistance, models::Vector{<:AbstractModel}, k; normalize = true, kwargs...)
 
-DOCSTRING
+# Example:
+```julia
+clusterresult = kbarycenters(
+    dist,
+    models,
+    n_classes, # number of clusters
+    seed       = :rand,
+    solver     = sinkhorn_log!,
+    tol        = 2e-6,
+    innertol   = 2e-6,
+    iters      = 100000,
+    inneriters = 100000,
+    verbose    = true,
+    output     = :best,
+    uniform    = true,
+    kiters     = 10
+)
+```
 
-#Arguments:
+# Arguments:
 - `models`: A vector of models
 - `k`: number of clusters
 - `normalize`: Whether or not to normalize the weight vectors (recommended)

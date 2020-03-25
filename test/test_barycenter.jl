@@ -110,7 +110,7 @@ if isinteractive()
     pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
 end
 ##
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.01)
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.5)
 Xe = barycenter(d, models, solver=IPOT)
 
 G = tf.(models)
@@ -138,7 +138,7 @@ g_calls_limit     = 0)
 using Optim
 method = LBFGS()
 method=ParticleSwarm()
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.5)
 λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=IPOT, robust=true, uniform=false, tol=1e-6)
 isinteractive() && bar(λ)
 
@@ -233,7 +233,7 @@ end
     # @test a1 ≈ a rtol=0.01
 
 
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/2, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
     @test Xo ≈ mean(Y) rtol=1e-1
     @test ao ≈ a rtol = 0.1
 
@@ -256,7 +256,7 @@ end
 
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
     g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000) .|> r3
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.1, iters=10000) .|> r3
+    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000) .|> r3
     @test ip(a1,a2) ≈ 1 atol=1e-2
     @test ip(a1,a3) ≈ 1 atol=1e-2
 
@@ -298,7 +298,7 @@ end
         ql = barycenter(X, λ0)
 
         β = 1/10.0
-        λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=sinkhorn_log!, robust=true)
+        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="initial bc")
