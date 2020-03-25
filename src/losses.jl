@@ -284,6 +284,8 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p
 
+distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 .- transpose(e2)).^p
+
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
 """
@@ -331,13 +333,13 @@ end
 function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; kwargs...)
     evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)
 end
-function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA)
+function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
     d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
     d2 = evaluate(d, preprocess_roots(d,tzero(domain(d),w1)), preprocess_roots(d,tzero(domain(d),w2)))
     d1 + d2
 end
 
-function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots)
+function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots; kwargs...)
     e1,e2 = toreim(e1), toreim(e2)
     n     = length(e1[1])
     dist  = d.distance
@@ -371,7 +373,7 @@ end
 #     s / length(e1)^2
 # end
 
-function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots; kwargs...)
     length(e1) == 0 && return zero(real(eltype(e1)))
     I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
@@ -423,7 +425,7 @@ end
 #     dm12  = logkernelsum(e1,e2,λ)
 #     dm1 - 2dm12 + dm2
 # end
-function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots)
+function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::AbstractRoots; kwargs...)
     λ     = d.λ
     # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
     # dm2   = exp.(.- λ .* distmat(d.distance, e2,e2))
@@ -434,10 +436,10 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     mean(dm1) - 2mean(dm12) + mean(dm2)
 end
 
-evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2))
+evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel; kwargs...) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2); kwargs...)
 
-function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray)
-    evaluate(d.distance,w1,w2)
+function evaluate(d::CoefficientDistance,w1::AbstractArray,w2::AbstractArray; kwargs...)
+    evaluate(d.distance,w1,w2; kwargs...)
 end
 
 function evaluate(d::ModelDistance,X,Xh; kwargs...)
@@ -464,7 +466,7 @@ function batch_loss(bs::Int, loss, X, Xh; kwargs...)
     l / n_batches
 end
 
-evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
+evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray; kwargs...) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
 """
     precompute(d::AbstractDistance, As, threads=true)
@@ -487,7 +489,7 @@ function precompute(d::DiscretizedRationalDistance, As::AbstractArray{<:Abstract
     end
 end
 
-function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel)
+function evaluate(d::DiscretizedRationalDistance, m1::AbstractModel, m2::AbstractModel; kwargs...)
     w = d.w
     m1 = tf(m1)
     b1,_,_ = bode(m1, w.*2π) .|> vec
