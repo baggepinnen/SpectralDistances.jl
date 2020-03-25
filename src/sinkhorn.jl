@@ -43,17 +43,17 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
         v = b ./ (K' * u .+ ϵ)
         u = a ./ (K * v .+ ϵ)
         if maximum(abs, u) > τ || maximum(abs, v) > τ
-            @. alpha += β * log(u)
-            @. beta  += β * log(v)
-            u .= one.(u)
-            v .= one.(v)
-            @. K = exp(-(C-alpha-beta') / β)
+            alpha += @. β * log(u)
+            beta  += @. β * log(v)
+            u = one.(u)
+            v = one.(v)
+            K = @. exp(-(C-alpha-beta') / β)
         end
         if any(!isfinite, u) || any(!isfinite, u)
             error("Got NaN in sinkhorn_log")
         end
         if iter % 10 == 0 || iter % printerval == 0
-            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+            Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
             err = +(ot_error(Γ, a, b)...)
             iter % printerval == 0 && @info "Iter: $iter, err: $err"
             if err < tol
@@ -62,12 +62,12 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
         end
 
     end
-    @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+    Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
 
-    @. u = -β*log(u) - alpha
-    u .-= mean(u)
-    @. v = -β*log(v) - beta
-    v .-= mean(v)
+    u = @. -β*log(u) - alpha
+    u = u .- mean(u)
+    v = @. -β*log(v) - beta
+    v = v .- mean(v)
 
     @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
     iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
@@ -313,9 +313,20 @@ ot_error(Γ, μ, ν) = norm(vec(sum(Γ, dims=2)) - μ)/norm(μ), norm(vec(sum(Γ
 # end
 
 
-function sinkhorn_cost(C, p, q::AbstractVector, λ::AbstractVector{T}; β=1, solver=IPOT, kwargs...) where T
-   c = sum(eachindex(λ)) do i
-       λ[i] * sqrt(sum(solver(C[i], p[i], q; β=β, kwargs...)[1] .* C[i]))
-   end
-   sqrt(c)
+# function sinkhorn_cost(C, p, q::AbstractVector, λ::AbstractVector{T}; β=1, solver=IPOT, kwargs...) where T
+#    c = sum(eachindex(λ)) do i
+#        Ci = C[i]
+#        λ[i] * sqrt(sum(solver(Ci, p[i], q; β=β, kwargs...)[1] .* Ci))
+#    end
+#    c
+# end
+
+
+function sinkhorn_cost(M, pl,ql, p, q::AbstractVector, λ::AbstractVector{T}; β=0.01, solver=sinkhorn_log!, kwargs...) where T
+
+    bc,bcp = barycenter(pl,p,λ; kwargs...)
+    # @show typeof(bc), typeof(ql)
+    M = distmat_euclidean!(M, bc,ql)
+    Γ = solver(M,bcp,q; β=β, kwargs...)[1]
+    sqrt(sum(M.*Γ))
 end

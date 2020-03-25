@@ -109,12 +109,12 @@ function barycenter(d::EuclideanRootDistance,models::AbstractVector)
 end
 
 
-function distmat_euclidean(X,Y)
+function distmat_euclidean(X::AbstractMatrix,Y::AbstractMatrix)
     C = [mean(abs2, c1-c2) for c1 in eachcol(X), c2 in eachcol(Y)]
     # C ./ median(C)
 end
 
-function distmat_euclidean!(C,X,Y)
+function distmat_euclidean!(C,X::AbstractMatrix,Y::AbstractMatrix)
     for (j,c2) in enumerate(eachcol(Y))
         for (i,c1) in enumerate(eachcol(X))
             C[i,j] = mean(((c1,c2),) -> abs2(c1-c2), zip(c1,c2))
@@ -149,7 +149,7 @@ function perturb!(X0,X)
     X0 .+= m .* randn.()
 end
 
-function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sinkhorn_log, kwargs...)
+function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sinkhorn_log!, kwargs...)
     N = length(X)
     n = size(X[1],2)
     w = s1(ones(n))
@@ -158,7 +158,7 @@ function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sink
     ind = rand(1:length(X))
     X0 = X[ind] .- mean(X[ind],dims=2) .+ mean(mean.(X, dims=2))
     X0 .+= m .* randn.()
-    bc = alg2(X0,X,w,p; solver=solver, weights=λ, uniform=uniform, kwargs...)[1]
+    alg2(X0,X,w,p; solver=solver, weights=λ, uniform=uniform, kwargs...)
 end
 
 # the method below does not work very well due to likely bug in ISA
@@ -181,12 +181,12 @@ end
 using Random
 
 """
-    proj,λ = barycentric_coordinates(pl, ql, p, q; options, kwargs...)
+    λ = barycentric_coordinates(pl, ql, p, q; options, kwargs...)
 
 Compute the barycentric coordinates `λ` such that
 sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 
-`proj` is the resulting projection of `(ql,q)` onto the space of atoms in `(pl,p)`, with coordinates `λ`
+This function works best with the `sinkhorn_log!` solver, a large β (around 1) and small tolerance. These are set using `kwargs...`.
 
 #Arguments:
 - `pl`: Atoms in measures `p`, vector, length `n_measures`, of matrices of size `n_dims × n_atoms`
@@ -194,7 +194,10 @@ sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 - `p`: Measures `p`, a matrix of weight vectors, size `n_atoms × n_measures` that sums to 1
 - `q`: the veight vector for measure `q`, length is `n_atoms`
 - `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
-- `kwargs`: these are sent to the [`sinkhorn`](@ref) algorithm.
+- `solver`: = [`sinkhorn_log!`](@ref) solver
+- `tol`:    = 1e-7 tolerance
+- `β`:      = 1 entropy regularization. This function works best with rather large regularization, hence the large default value.
+- `kwargs`: these are sent to the solver algorithm.
 """
 function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
     options = Optim.Options(store_trace       = false,
@@ -208,18 +211,22 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
                             g_tol             = 1e-6,
                             f_calls_limit     = 0,
                             g_calls_limit     = 0),
-    robust=true,
+    robust = true,
+    solver = sinkhorn_log!,
+    tol    = 1e-7,
+    β      = 1,
     kwargs...)
 
-    C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
+    # C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
 
     S = length(pl)
+    k = length(p[1])
     # λl = 1e-8randn(S)
-    dists = map(i->sum(C[i].*IPOT(C[i],p[i],q)[1]), eachindex(p))
-    λl = -v1(dists) # Initial guess based on distances between anchors and query point
-    λl .*= 0sqrt(length(λl)) # scale so that softmax(λ) is reasonably sparse.
+    # dists = map(i->sum(C[i].*IPOT(C[i],p[i],q)[1]), eachindex(p))
+    # λl = -v1(dists) # Initial guess based on distances between anchors and query point
+    # λl .*= 0sqrt(length(λl)) # scale so that softmax(λ) is reasonably sparse.
+    # randn!(λl)
     # return softmax(λl)
-
     # function fg!(F,G,λl)
     #     λ = softmax(λl) # optimization done in log domain
     #     local cost = 0.0
@@ -240,18 +247,23 @@ function barycentric_coordinates(pl, ql, p, q, method=LBFGS();
     # end
     # res = Optim.optimize(Optim.only_fg!(fg!), λl, method, options)
 
-
-
-    costfun = λ -> sinkhorn_cost(C,p,q,softmax(λ); kwargs...)
+    λl = zeros(S)
+    C = zeros(k,k)
+    costfun = λ -> sinkhorn_cost(C, pl, ql, p, q, softmax(λ);
+        solver = sinkhorn_log!,
+        tol    = 1e-7,
+        β      = 1,
+        kwargs...)
     if robust
         res = Optim.optimize(costfun, λl, ParticleSwarm(), Optim.Options(iterations=100, store_trace=false))
         λl = res.minimizer
     end
     local λh
     try
-        res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
+        @show res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
         λh = softmax(res.minimizer)
-    catch
+    catch err
+        @error("Barycentric coordinates: optimization failed: ", err)
         λh = softmax(λl)
     end
 
@@ -269,13 +281,6 @@ function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=
         ql, q, realpolesq = barycenter_matrices(d, [qmodel], allow_shortcut=false)
     end
 
-    # if uniform
-    #     for pi in p
-    #         pi .= 1
-    #     end
-    #     q[1] .= 1
-    # end
-
     for pi in p
         pi ./= sum(pi)
     end
@@ -283,19 +288,8 @@ function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=
     @assert sum(q) ≈ 1
     @assert all(sum(p) ≈ 1 for p in p)
 
-     λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; β=d.β, kwargs...)
+    λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; β=d.β, kwargs...)
     return λ
-
-    # q_proj = alg2(ql,pl,q,p;weights=λ, kwargs...)[1]
-    #
-    # r1 = complex.(q_proj[1,:],q_proj[2,:])
-    # if realpolesp
-    #     bcr = ContinuousRoots(r1)
-    # else
-    #     @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-    #     bcr = ContinuousRoots([r1; conj.(r1)])
-    # end
-    # AR(bcr), λ
 end
 
 ##
@@ -484,6 +478,7 @@ Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org
 - `γ`: Sparsity parameter, if <1, encourage a uniform weight vector, if >1, do the opposite. Kind of like the inverse of α in the Dirichlet distribution.
 """
 function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=1000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
+    uniform || @warn("This function is known to be buggy when not enforcing uniform weights")
     N = length(Y)
     a = copy(a)
     ao = copy(a)
