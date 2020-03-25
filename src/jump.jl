@@ -5,7 +5,7 @@ import JuMP: Model, @objective, @variable, @constraint, termination_status, dual
 
 Solve the optimal transport problem using JuMP. This function is only available if `using JuMP, GLPK`.
 
-#Arguments:
+# Arguments:
 - `D`: Distance matrix
 - `P1`: Weight vector 1
 - `P2`: Weight vector 2

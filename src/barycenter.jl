@@ -32,7 +32,7 @@ end
 
 **Approximately** calculate the barycenter supported on the same number of atoms as the number of poles in the models.
 
-#Arguments:
+# Arguments:
 - `models`: vector of AR models
 - `normalize`: make sure weights sum to 1
 - `kwargs`: are sent to [`ISA`](@ref)
@@ -188,7 +188,7 @@ sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.
 
 This function works best with the `sinkhorn_log!` solver, a large β (around 1) and small tolerance. These are set using `kwargs...`.
 
-#Arguments:
+# Arguments:
 - `pl`: Atoms in measures `p`, vector, length `n_measures`, of matrices of size `n_dims × n_atoms`
 - `ql`: Atoms in measure `q`
 - `p`: Measures `p`, a matrix of weight vectors, size `n_atoms × n_measures` that sums to 1
@@ -311,7 +311,7 @@ end
 
 Iterative swapping algorithm from "On the Computation of Wasserstein barycenters", Giovanni Puccetti et al.
 
-#Arguments:
+# Arguments:
 - `X`: vector of d×k matrices where d is dimension and k number of atoms
 - `w`: weights. See the files `test_barycenter.jl` for different uses.
 - `iters`: maximum number of iterations
@@ -389,7 +389,7 @@ end
 
 Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
 
-#Arguments:
+# Arguments:
 - `X`: Initial guess for barycenter support points
 - `Y`: Support points for measures to calc barycenter of
 - `a`: initial guess of barycenter weights
@@ -464,7 +464,7 @@ end
 
 Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
 
-#Arguments:
+# Arguments:
 - `X`: Initial guess for barycenter support points
 - `Y`: Support points for measures to calc barycenter of
 - `a`: initial guess of barycenter weights
