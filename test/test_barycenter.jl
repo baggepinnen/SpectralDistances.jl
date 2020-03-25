@@ -28,8 +28,10 @@ import SpectralDistances: softmax
     bc = mean(X̂)
     @test mean(bc) ≈ mean(mean, X)
     @test mean(bc, dims=2) ≈ mean(mean.(X, dims=2))
-    # scatter(eachrow(reduce(hcat,X))...)
-    # scatter!(eachrow(bc)...)
+    if isinteractive()
+        scatter(eachrow(reduce(hcat,X))...)
+        scatter!(eachrow(bc)...)
+    end
 
     # Extreme case 3, with weights where one weight is extremely large
     d = 2
@@ -42,8 +44,10 @@ import SpectralDistances: softmax
     # bc = mean(X̂ .* w)
     bc = sum(X̂)
     @test mean(bc) ≈ mean(X[1]) rtol=0.1
-    # scatter(eachrow(reduce(hcat,X))...)
-    # scatter!(eachrow(bc)..., alpha=0.2)
+    if isinteractive()
+        scatter(eachrow(reduce(hcat,X))...)
+        scatter!(eachrow(bc)..., alpha=0.2)
+    end
 
 end
 
@@ -100,17 +104,21 @@ end
 Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
 G = tf.(models)
-# plot()
-# pzmap!.(G)
-# pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+if isinteractive()
+    plot()
+    pzmap!.(G)
+    pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+end
 ##
 d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.01)
 Xe = barycenter(d, models, solver=IPOT)
 
 G = tf.(models)
-# plot()
-# pzmap!.(G)
-# pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+if isinteractive()
+    plot()
+    pzmap!.(G)
+    pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+end
 
 ##
 
@@ -135,11 +143,13 @@ d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitw
 bar(λ)
 
 G = tf.(models)
-# plot()
-# pzmap!.(G, lab="")
-# pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
-# pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
-# It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
+if isinteractive()
+    plot()
+    pzmap!.(G, lab="")
+    pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+    pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+    # It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
+end
 
 
 ##
@@ -227,9 +237,11 @@ a1 = SpectralDistances.alg1(X,Y,a,b;β=1/100.0, printerval=100)
 @test Xo ≈ mean(Y) rtol=1e-1
 @test ao ≈ a rtol = 0.1
 
-# scatter(eachrow(reduce(hcat,Y))...)
-# scatter!(eachrow(X)..., alpha=0.8)
-# scatter!(eachrow(Xo)..., alpha=0.4)
+if isinteractive()
+scatter(eachrow(reduce(hcat,Y))...)
+scatter!(eachrow(X)..., alpha=0.8)
+scatter!(eachrow(Xo)..., alpha=0.4)
+end
 ##
 
 using JuMP, GLPK
@@ -287,9 +299,11 @@ res = map(1:10) do _
 
     β = 1/10.0
     λh = barycentric_coordinates(X,ql,p,q, β=β, L=32, solver=sinkhorn_log!, robust=true)
-    # scatter(eachrow(reduce(hcat,X))..., lab="X")
-    # scatter!(eachrow(ql)..., lab="initial bc")
-    # scatter!(eachrow(bch)..., lab="reconstructed bc")
+    if isinteractive()
+    scatter(eachrow(reduce(hcat,X))..., lab="X")
+    scatter!(eachrow(ql)..., lab="initial bc")
+    scatter!(eachrow(bch)..., lab="reconstructed bc")
+    end
 
     @show norm(λ0-λh)
 end
@@ -308,8 +322,10 @@ res = map(1:5) do _
 
     β = 1/5.0
     λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
-    # scatter(eachrow(reduce(hcat,X))..., lab="X")
-    # scatter!(eachrow(ql)..., lab="ql")
+    if isinteractive()
+    scatter(eachrow(reduce(hcat,X))..., lab="X")
+    scatter!(eachrow(ql)..., lab="ql")
+    end
 
     @show norm(λ0-λh)
 end
@@ -432,9 +448,10 @@ Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=sinkhorn_log!, uniform
 
  # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
  # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
-
-# scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
-# scatter!(eachrow(reduce(hcat,Q))..., markerstrokewidth=false, legend=false)
+ if isinteractive()
+     scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
+     scatter!(eachrow(reduce(hcat,Q.barycenters))..., markerstrokewidth=false, legend=false)
+ end
 
 ##
 
