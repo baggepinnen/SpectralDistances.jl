@@ -162,20 +162,20 @@ end
     X = [1.1 1.01]
     a = ones(2) ./ 2
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=190, γ=0.01)
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=190, γ=0.01, iters=50000, inneriters=50000)
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [0. 0.1]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10,θ=0.5, γ=0.01)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3,θ=0.5, γ=0.01, inneriters=50000)
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [1. 3.]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01, inneriters=50000)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
     X = [0. 4.]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, γ=0.01)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, γ=0.01, inneriters=50000)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
@@ -183,13 +183,13 @@ end
     X = [2.0 3]
     a = ones(2) |> s1
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-5)
+    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
     @test a1[1] == a1[2]
 
     X = [2.1 3]
-    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/10, tol=1e-3, printerval=1)
+    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
     @test a1[1] < a1[2]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3, inneriters=50000)
     @test Xo ≈ [2 3] rtol=5e-1
     # @test ao ≈ b[1] rtol=0.1
 
@@ -197,11 +197,11 @@ end
 
 
     X = [0. 0.1]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-3, inneriters=1000, tol=1e-3, γ=0.1)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, innertol=1e-3, inneriters=50000, tol=1e-3, γ=0.1)
     @test Xo ≈ [2 3] rtol=5e-1
 
     X = [1. 3.]
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100, innertol=1e-4, inneriters=100, tol=1e-5)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, innertol=1e-4, inneriters=100, tol=1e-5)
     @test Xo ≈ [2 3] rtol=5e-1
 
 
@@ -213,10 +213,10 @@ end
     X = [1.1 1.01]
     a = ones(2) |> s1
     b = [[0.2, 0.8] for _ in eachindex(Y)]
-    @test SpectralDistances.alg1(Y[2],Y,b[1],b;β=1/10, printerval=1) == b[1]
+    @test SpectralDistances.alg1(Y[2],Y,b[1],b;β=1/3, printerval=1) == b[1]
 
 
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10, θ=0.5, printerval=100)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100)
     @test Xo ≈ [2 2] rtol=5e-1
     @test_broken ao ≈ b[1] rtol=1e-2
 
@@ -233,7 +233,7 @@ end
     # @test a1 ≈ a rtol=0.01
 
 
-    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/2, innertol=1e-5, tol=1e-6, printerval=20, inneriters=1000, solver=IPOT, γ=0.01)
+    @show Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/2, innertol=1e-5, tol=1e-6, printerval=20, inneriters=50000, solver=IPOT, γ=0.01)
     @test Xo ≈ mean(Y) rtol=1e-1
     @test ao ≈ a rtol = 0.1
 
@@ -257,11 +257,11 @@ end
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
     g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.0001, iters=50000) .|> r3
     g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000) .|> r3
-    @test ip(a1,a2) ≈ 1 atol=1e-2
-    @test ip(a1,a3) ≈ 1 atol=1e-2
+    @test ip(a1,a2) ≈ 1 atol=1e-1
+    @test ip(a1,a3) ≈ 1 atol=1e-1
 
-    @test ip(b1,b2) ≈ 1 atol=1e-2
-    @test ip(b1,b3) ≈ 1 atol=1e-2
+    @test ip(b1,b2) ≈ 1 atol=1e-1
+    @test ip(b1,b3) ≈ 1 atol=1e-1
 
 
     a = ones(k) |> s1
@@ -270,11 +270,11 @@ end
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
     g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=500, tol=1e-9) .|> r3
     g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000, printerval=500, tol=1e-9) .|> r3
-    @test_broken ip(a1,a2) ≈ 1 atol=1e-1
-    @test_broken ip(a1,a3) ≈ 1 atol=1e-1
+    @test ip(a1,a2) ≈ 1 atol=1e-1
+    @test ip(a1,a3) ≈ 1 atol=1e-1
 
-    @test_broken ip(b1,b2) ≈ 1 atol=1e-1
-    @test_broken ip(b1,b3) ≈ 1 atol=1e-1
+    @test ip(b1,b2) ≈ 1 atol=1e-1
+    @test ip(b1,b3) ≈ 1 atol=1e-1
 
 
 end
