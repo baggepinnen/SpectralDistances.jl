@@ -32,10 +32,36 @@ end
 
 **Approximately** calculate the barycenter supported on the same number of atoms as the number of poles in the models.
 
+The solver can be selected by providing a keword argument, example: `solver=IPOT`.
+
+Uses the algorithms from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.org/pdf/1310.4375.pdf)
+
+# Example:
+```julia
+ζ = [0.1, 0.3, 0.7]
+
+models = map(1:10) do _
+    pol = [1]
+    for i = eachindex(ζ)
+        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+    end
+    AR(Continuous(),pol)
+end
+
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+Xe = barycenter(d, models, solver=sinkhorn_log!)
+
+G = tf.(models)
+plot()
+pzmap!.(G)
+pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+current()
+```
+
 # Arguments:
 - `models`: vector of AR models
 - `normalize`: make sure weights sum to 1
-- `kwargs`: are sent to [`ISA`](@ref)
+- `kwargs`: are sent to the solver
 """
 function barycenter(d::SinkhornRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=IPOT, kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
@@ -99,6 +125,30 @@ end
 # end
 
 
+"""
+    barycenter(d::EuclideanRootDistance, models::AbstractVector)
+
+# Example:
+```julia
+ζ = [0.1, 0.3, 0.7]
+
+models = map(1:10) do _
+    pol = [1]
+    for i = eachindex(ζ)
+        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+    end
+    AR(Continuous(),pol)
+end
+
+Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+
+G = tf.(models)
+plot()
+pzmap!.(G)
+pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
+current()
+```
+"""
 function barycenter(d::EuclideanRootDistance,models::AbstractVector)
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
@@ -198,6 +248,52 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 - `tol`:    = 1e-7 tolerance
 - `β`:      = 0.1 entropy regularization. This function works best with rather large regularization, hence the large default value.
 - `kwargs`: these are sent to the solver algorithm.
+
+# Example:
+```julia
+using SpectralDistances, ControlSystems, Optim
+ζ = [0.1, 0.3, 0.7]
+
+models = map(1:10) do _
+    pol = [1]
+    for i = eachindex(ζ)
+        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+    end
+    AR(Continuous(),pol)
+end
+
+d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+Xe = barycenter(d, models, solver=sinkhorn_log!)
+
+G = tf.(models)
+plot()
+pzmap!.(G)
+pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+
+options = Optim.Options(store_trace    = true,
+                        show_trace        = false,
+                        show_every        = 1,
+                        iterations        = 50,
+                        allow_f_increases = true,
+                        time_limit        = 100,
+                        x_tol             = 1e-7,
+                        f_tol             = 1e-7,
+                        g_tol             = 1e-7,
+                        f_calls_limit     = 0,
+                        g_calls_limit     = 0)
+
+
+method = LBFGS()
+λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
+bar(λ, title="Barycentric coorinates")
+
+G = tf.(models)
+plot()
+pzmap!.(G, lab="")
+pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+# It's okay if the last system dot does not match the barycenter exactly, there are limited models to choose from.
+pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+```
 """
 function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS();
     options = Optim.Options(store_trace       = false,
@@ -387,7 +483,7 @@ end
 """
     alg1(X, Y, â, b; β = 1, printerval = typemax(Int), tol = 1.0e-5, iters = 10000, solver = IPOT)
 
-Algorithm 1 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
+Algorithm 1 from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.org/pdf/1310.4375.pdf) Notation is the same as in the paper.
 
 # Arguments:
 - `X`: Initial guess for barycenter support points
@@ -462,7 +558,7 @@ end
             γ = 1,
         )
 
-Algorithm 2 from "Fast Computation of Wasserstein Barycenters" https://arxiv.org/pdf/1310.4375.pdf Notation is the same as in the paper.
+Algorithm 2 from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.org/pdf/1310.4375.pdf) Notation is the same as in the paper.
 
 # Arguments:
 - `X`: Initial guess for barycenter support points

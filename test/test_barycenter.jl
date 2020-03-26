@@ -347,7 +347,7 @@ end
 end
 
 
-@testset "barycentric coordinates" begin
+@testset "barycentric coordinates with models" begin
     @info "Testing barycentric coordinates with models"
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
     ζ = [0.1, 0.3, 0.7]

@@ -5,8 +5,8 @@
 The following is a reference on all the distances defined in this package. Once a distance is defined, it can be evaluated in one of two ways, defined by the  [Distances.jl](https://github.com/JuliaStats/Distances.jl) interface
 ```julia
 dist = DistanceType(options)
-d = evaluate(d, x1, x2)
-d = dist(x1, x2)
+d = evaluate(d, x1, x2; kwargs...) # keyword arguments are used to control the solvers for some transport-based distances
+d = dist(x1, x2) # A shorter syntax for calling the distance
 ```
 Before we proceed, the following distances are available
 ```@index
