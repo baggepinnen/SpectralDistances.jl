@@ -18,11 +18,6 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
         end
     end
 
-    # w = transpose.(w)
-    # W = reduce(vcat,w)
-    # W ./= sum(W,dims=1)
-    # w2 = [Float64.(W[i,:]) for i in 1:length(X)]
-
     X, w, realpoles
 end
 
@@ -63,7 +58,7 @@ current()
 - `normalize`: make sure weights sum to 1
 - `kwargs`: are sent to the solver
 """
-function barycenter(d::OptimalTransportRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=IPOT, kwargs...)
+function barycenter(d::OptimalTransportRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=sinkhorn_log!, kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)
     if uniform
@@ -76,53 +71,15 @@ function barycenter(d::OptimalTransportRootDistance,models, λ=s1(ones(length(mo
 end
 
 function bc2model(bc, realpoles)
- r1 = complex.(bc[1,:],bc[2,:])
- if realpoles
-     bcr = ContinuousRoots(r1)
- else
-     @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-     bcr = ContinuousRoots([r1; conj.(r1)])
- end
- AR(bcr)
+    r1 = complex.(bc[1,:],bc[2,:])
+    if realpoles
+        bcr = ContinuousRoots(r1)
+    else
+        @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+        bcr = ContinuousRoots([r1; conj.(r1)])
+    end
+    AR(bcr)
 end
-
-# function barycenter(d::OptimalTransportRootDistance,models; normalize=true, kwargs...)
-#     X, w, realpoles = barycenter_matrices(d, models, normalize)
-#     S = ISA(X; kwargs...)
-#     bc = barycentric_weighting(X,w,S)
-#
-#     r1 = complex.(bc[1,:],bc[2,:])
-#     if realpoles
-#         bcr = ContinuousRoots(r1)
-#     else
-#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-#         bcr = ContinuousRoots([r1; conj.(r1)])
-#     end
-#     AR(bcr)
-# end
-
-# function barycenter(d::OptimalTransportRootDistance,models,w; kwargs...)
-#     r = roots.(SpectralDistances.Continuous(), models)
-#     realpoles = any(any(iszero ∘ imag, r) for r in r)
-#
-#     if !realpoles
-#         r = [r[1:end÷2] for r in r]
-#     end
-#     X = [[real(r)'; imag(r)'] for r in r]
-#
-#     S = ISA(X, w; kwargs...)
-#     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
-#     bc = sum(w.*X̂)
-#     r1 = complex.(bc[1,:],bc[2,:])
-#     if realpoles
-#         bcr = ContinuousRoots(r1)
-#     else
-#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
-#         bcr = ContinuousRoots([r1; conj.(r1)])
-#     end
-#
-#     AR(bcr)
-# end
 
 
 """
@@ -161,7 +118,6 @@ end
 
 function distmat_euclidean(X::AbstractMatrix,Y::AbstractMatrix)
     C = [mean(abs2, c1-c2) for c1 in eachcol(X), c2 in eachcol(Y)]
-    # C ./ median(C)
 end
 
 function distmat_euclidean!(C,X::AbstractMatrix,Y::AbstractMatrix)
@@ -171,7 +127,6 @@ function distmat_euclidean!(C,X::AbstractMatrix,Y::AbstractMatrix)
         end
     end
     C
-    # C ./ median(C)
 end
 
 
@@ -211,17 +166,8 @@ function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sink
     alg2(X0,X,w,p; solver=solver, weights=λ, uniform=uniform, kwargs...)
 end
 
-# the method below does not work very well due to likely bug in ISA
-# function barycenter(X::Vector{<:AbstractArray}, λ; iters=100, kwargs...)
-#     sw = ISA(X, λ; iters=iters, kwargs...)
-#     barycentric_weighting(X,λ,sw)
-# end
 
 barycentric_weighting(X,λ,sw) = sum(λ[i].*X[i][:,sw[i]] for i in eachindex(sw))
-
-# function barycentric_weighting2(X,λ,sw)
-#     sum(λ[sw[i]]'.*X[i][:,sw[i]] for i in eachindex(sw))
-# end # This one was definitely bad
 
 function softmax(x)
     e = exp.(x)
@@ -458,33 +404,6 @@ function ISA(X, w=nothing; iters=100, printerval = typemax(Int))
 end
 
 
-## Measures with nonuniform weights, the bc should be pulled to atom 1 and 4 in the first measure. The trick seems to be to run ISA without weights and then use the weights to form the estimate
-
-# d = 2
-# k = 4
-# X0 = [1 1 2 2; 1 2 1 2]
-# X = [X0 .+ 0.3rand(d,k) .+ 0.020rand(d) for _ in 1:6]
-# w = [ones(1,k) for _ in 1:length(X)]
-# w[1][1] = 100
-# w[1][4] = 100
-# for i = 2:length(X)
-#     w[i][1] = 0.01
-#     w[i][4] = 0.01
-# end
-# w = s1.(w)
-# W = reduce(vcat,w)
-# W ./= sum(W,dims=1)
-# w2 = [W[i,:]' for i in 1:length(X)]
-# S = ISA(X, iters=1000, printerval=10)
-# X̂ = [w2[i].*X[i][:,S[i]] for i in eachindex(X)]
-# bc = sum(X̂)
-# # @test mean(bc) ≈ mean(X[1]) rtol=0.1
-# scatter(eachrow(reduce(hcat,X))...)
-# scatter!([X[1][1,:]],[X[1][2,:]])
-# scatter!(eachrow(bc)..., m=:square, legend=false, alpha=0.4)
-
-
-
 
 ## ======================
 """
@@ -507,18 +426,16 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
     N = length(Y)
     â = copy(â)
     a = copy(â)
-    # fill!(â, 1/N)
     ã = copy(â)
     t0 = 1
     t = 0
-    # weights = nothing
     𝛂 = similar(a, length(a), N)
     Mth = [distmat_euclidean(X,Y[1]) for i in 1:Threads.nthreads()]
     for outer t = 1:iters
         B = (t0+t)/2
         a .= (1-inv(B)).*â .+ inv(B).*ã
         for i in 1:N
-            # Threads.@spawn begin
+            Threads.@spawn begin
                 M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
                 ai = solver(M,a,b[i]; iters=50000, β=β, tol=tol)[2]
                 if !all(isfinite, a)
@@ -528,11 +445,9 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
                 end
                 scale!(ai, i, weights)
                 𝛂[:,i] .= ai
-            # end
+            end
         end
 
-        # @show round.(vec(mean(𝛂, dims=2)), sigdigits=3)
-        # @show round.(vec(mean(𝛂, dims=1)), sigdigits=3)
         ã .= ã .* exp.((-t0*B).*vec(mean(𝛂, dims=2)))
         ã ./= sum(ã)
         aerr = sum(abs2,â-ã)
@@ -543,7 +458,6 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
             t > printerval && @info "Sinkhorn alg1 done at iter $t"
             return â
         end
-        # â ./= sum(â)
     end
     t > printerval && @info "Sinkhorn alg1 maximum number of iterations reached: $iters"
     â
@@ -626,3 +540,52 @@ end
 scale!(x,_,::Nothing) = x
 scale!(x::AbstractArray{T},i,w::AbstractArray{T}) where T = (x .*= w[i])
 scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
+
+
+
+
+
+# function barycenter(d::OptimalTransportRootDistance,models; normalize=true, kwargs...)
+#     X, w, realpoles = barycenter_matrices(d, models, normalize)
+#     S = ISA(X; kwargs...)
+#     bc = barycentric_weighting(X,w,S)
+#
+#     r1 = complex.(bc[1,:],bc[2,:])
+#     if realpoles
+#         bcr = ContinuousRoots(r1)
+#     else
+#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+#         bcr = ContinuousRoots([r1; conj.(r1)])
+#     end
+#     AR(bcr)
+# end
+# function barycenter(d::OptimalTransportRootDistance,models,w; kwargs...)
+#     r = roots.(SpectralDistances.Continuous(), models)
+#     realpoles = any(any(iszero ∘ imag, r) for r in r)
+#
+#     if !realpoles
+#         r = [r[1:end÷2] for r in r]
+#     end
+#     X = [[real(r)'; imag(r)'] for r in r]
+#
+#     S = ISA(X, w; kwargs...)
+#     X̂ = [X[i][:,S[i]] for i in eachindex(X)]
+#     bc = sum(w.*X̂)
+#     r1 = complex.(bc[1,:],bc[2,:])
+#     if realpoles
+#         bcr = ContinuousRoots(r1)
+#     else
+#         @assert !any(iszero ∘ imag, r1) "A real root was found in barycenter even though inputs had no real roots"
+#         bcr = ContinuousRoots([r1; conj.(r1)])
+#     end
+#
+#     AR(bcr)
+# end
+# the method below does not work very well due to likely bug in ISA
+# function barycenter(X::Vector{<:AbstractArray}, λ; iters=100, kwargs...)
+#     sw = ISA(X, λ; iters=iters, kwargs...)
+#     barycentric_weighting(X,λ,sw)
+# end
+# function barycentric_weighting2(X,λ,sw)
+#     sum(λ[sw[i]]'.*X[i][:,sw[i]] for i in eachindex(sw))
+# end # This one was definitely bad

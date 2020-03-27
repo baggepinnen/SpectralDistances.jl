@@ -277,72 +277,6 @@ end
     @test median(res) < 0.01
 
 
-    ## Tests for sinkhorn_diff, it does not seem to produce the correct gradient ==============
-    # C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
-    # λl = SpectralDistances.softmax(1e-3randn(S))
-    #
-    # c,Pl,w = sinkhorn_diff(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log)
-    # display(w)
-    #
-    # using ForwardDiff
-    # g = ForwardDiff.gradient(λl->SpectralDistances.sinkhorn_cost(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log), λl)
-    # display(g)
-    # @test w ≈ g
-    ## =================================================
-
-    # @test mean(getindex.(res,2)) >= 0.9
-    # ##
-    # X0 = [1. 1 2 2 3 3; 1 2 3 1 2 3]
-    # # X0 = [X0 X0]
-    # d,k = size(X0)
-    # S = 7
-    # X = [X0[:,randperm(k)] .+ 0.050randn(d) .+ 0.0001 .* randn(d,k) for _ in 1:S]
-    # w = ones(S) |> s1
-    # sw = ISA(X, w, iters=100, printerval=1)
-    # X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
-    # # X̂2 = SpectralDistances.barycentric_weighting2(X,w,sw)
-    # scatter(eachrow(reduce(hcat,X))...)
-    # scatter!(eachrow(X̂)..., alpha=0.5)
-    # # scatter!(eachrow(X̂2)..., alpha=0.5)
-    # # In the plot above, the bc should have the same shape as the acnhors
-    #
-    #
-    # error("keep track of the cost function noted in the paper and ensure that it decreases")
-    # ##
-    #
-    # # Now testing for models
-    # ζ = [0.1, 0.3, 0.7]
-    # models = map(1:50) do _
-    #     pol = [1]
-    #     for i = eachindex(ζ)
-    #         pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
-    #     end
-    #     AR(Continuous(),pol)
-    # end
-    #
-    # # λ0 = rand(length(models)) |> s1
-    # # qmodel = barycenter(distance, models, λ0)
-    #
-    # distance = OptimalTransportRootDistance(domain=Continuous(),p=2, weight=unitweight)
-    #
-    # # We choose the point to be projected equal to one of the anchor points. In this case, the barycentric coordinates is a one-hot vector
-    # qmodel = models[1]
-    # q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ = 0.2, robust=true)
-    # @test λ[1] ≈ 1 atol=0.2
-    #
-    # qmodel = models[end]
-    # q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ=0.2, robust=false)
-    # @test λ[end] ≈ 1 atol=0.2
-    #
-    #
-    # qbc = barycenter(distance, models, λ) # TODO: the problem might be in this method of barycenter, not sure if it's actually any good
-    #
-    #
-    #
-    # plot()
-    # pzmap!.(tf.(models), lab="")
-    # pzmap!(tf(qmodel), m=:c, lab="q")
-    # pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
 
 end
 
@@ -411,29 +345,6 @@ end
     end
 end
 
-# d = 2
-# k = 4
-# S = 4
-# X0 = [1 1 2 2; 1 2 1 2]
-#
-# using JuMP, GLPK
-# ##
-# X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
-#
-# λ0 = [0.9; 0.1ones(S-1)] |> s1
-# ql = barycenter(X, λ0)
-#
-# ql2 = SpectralDistances.barycenter2(copy(X), λ0, printerval=10, γ=1, θ=0.5, iters=400, tol=1e-6, solver=SpectralDistances.sinkhorn_log)
-#
-# scatter(eachrow(reduce(hcat,X[2:end]))..., lab="X")
-# scatter!(eachrow(X[1])..., lab="X1")
-# # scatter!(eachrow(ql)..., lab="ql")
-# scatter!(eachrow(ql2)..., lab="ql2")
-
-
-
-
-##
 
 @testset "kbarycenters" begin
     @info "Testing kbarycenters"
@@ -454,8 +365,6 @@ end
     ##
     Q = SpectralDistances.kbarycenters(X,p,2, iters=7, solver=sinkhorn_log!, uniform=true, seed=:rand, tol=1e-3, innertol=1e-3, β=0.2, inneriters=50000, verbose=true)
 
-    # barycenter(X[5:end],p[5:end],ones(4)|> s1, solver=IPOT)
-    # barycenter(X[1:4],p[1:4],ones(4)|> s1, solver=IPOT)
     if isinteractive()
         scatter(eachrow(reduce(hcat,X))..., markerstrokewidth=false)
         scatter!(eachrow(reduce(hcat,Q.barycenters))..., markerstrokewidth=false, legend=false)
@@ -468,6 +377,115 @@ end
     c2 = SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=sinkhorn_log, β=0.01)
     @test c1 ≈ c2 rtol=0.01
 
-    # SpectralDistances.distmat_euclidean(X[1],X[2])
-
 end
+
+
+# d = 2
+# k = 4
+# S = 4
+# X0 = [1 1 2 2; 1 2 1 2]
+#
+# using JuMP, GLPK
+# ##
+# X = [X0[:,randperm(k)] .+ 10rand(d) for _ in 1:S]
+#
+# λ0 = [0.9; 0.1ones(S-1)] |> s1
+# ql = barycenter(X, λ0)
+#
+# ql2 = SpectralDistances.barycenter2(copy(X), λ0, printerval=10, γ=1, θ=0.5, iters=400, tol=1e-6, solver=SpectralDistances.sinkhorn_log)
+#
+# scatter(eachrow(reduce(hcat,X[2:end]))..., lab="X")
+# scatter!(eachrow(X[1])..., lab="X1")
+# # scatter!(eachrow(ql)..., lab="ql")
+# scatter!(eachrow(ql2)..., lab="ql2")
+## Measures with nonuniform weights, the bc should be pulled to atom 1 and 4 in the first measure. The trick seems to be to run ISA without weights and then use the weights to form the estimate
+
+# d = 2
+# k = 4
+# X0 = [1 1 2 2; 1 2 1 2]
+# X = [X0 .+ 0.3rand(d,k) .+ 0.020rand(d) for _ in 1:6]
+# w = [ones(1,k) for _ in 1:length(X)]
+# w[1][1] = 100
+# w[1][4] = 100
+# for i = 2:length(X)
+#     w[i][1] = 0.01
+#     w[i][4] = 0.01
+# end
+# w = s1.(w)
+# W = reduce(vcat,w)
+# W ./= sum(W,dims=1)
+# w2 = [W[i,:]' for i in 1:length(X)]
+# S = ISA(X, iters=1000, printerval=10)
+# X̂ = [w2[i].*X[i][:,S[i]] for i in eachindex(X)]
+# bc = sum(X̂)
+# # @test mean(bc) ≈ mean(X[1]) rtol=0.1
+# scatter(eachrow(reduce(hcat,X))...)
+# scatter!([X[1][1,:]],[X[1][2,:]])
+# scatter!(eachrow(bc)..., m=:square, legend=false, alpha=0.4)
+# =============================================================================
+## Tests for sinkhorn_diff, it does not seem to produce the correct gradient ==============
+# C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in X]
+# λl = SpectralDistances.softmax(1e-3randn(S))
+#
+# c,Pl,w = sinkhorn_diff(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log)
+# display(w)
+#
+# using ForwardDiff
+# g = ForwardDiff.gradient(λl->SpectralDistances.sinkhorn_cost(X,ql,p,q,C,λl, β=β, L=32, solver=sinkhorn_log), λl)
+# display(g)
+# @test w ≈ g
+## =================================================
+
+# @test mean(getindex.(res,2)) >= 0.9
+# ##
+# X0 = [1. 1 2 2 3 3; 1 2 3 1 2 3]
+# # X0 = [X0 X0]
+# d,k = size(X0)
+# S = 7
+# X = [X0[:,randperm(k)] .+ 0.050randn(d) .+ 0.0001 .* randn(d,k) for _ in 1:S]
+# w = ones(S) |> s1
+# sw = ISA(X, w, iters=100, printerval=1)
+# X̂ = SpectralDistances.barycentric_weighting(X,w,sw)
+# # X̂2 = SpectralDistances.barycentric_weighting2(X,w,sw)
+# scatter(eachrow(reduce(hcat,X))...)
+# scatter!(eachrow(X̂)..., alpha=0.5)
+# # scatter!(eachrow(X̂2)..., alpha=0.5)
+# # In the plot above, the bc should have the same shape as the acnhors
+#
+#
+# error("keep track of the cost function noted in the paper and ensure that it decreases")
+# ##
+#
+# # Now testing for models
+# ζ = [0.1, 0.3, 0.7]
+# models = map(1:50) do _
+#     pol = [1]
+#     for i = eachindex(ζ)
+#         pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+#     end
+#     AR(Continuous(),pol)
+# end
+#
+# # λ0 = rand(length(models)) |> s1
+# # qmodel = barycenter(distance, models, λ0)
+#
+# distance = OptimalTransportRootDistance(domain=Continuous(),p=2, weight=unitweight)
+#
+# # We choose the point to be projected equal to one of the anchor points. In this case, the barycentric coordinates is a one-hot vector
+# qmodel = models[1]
+# q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ = 0.2, robust=true)
+# @test λ[1] ≈ 1 atol=0.2
+#
+# qmodel = models[end]
+# q_proj, λ = barycentric_coordinates(distance, models, qmodel, γ=0.2, robust=false)
+# @test λ[end] ≈ 1 atol=0.2
+#
+#
+# qbc = barycenter(distance, models, λ) # TODO: the problem might be in this method of barycenter, not sure if it's actually any good
+#
+#
+#
+# plot()
+# pzmap!.(tf.(models), lab="")
+# pzmap!(tf(qmodel), m=:c, lab="q")
+# pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
