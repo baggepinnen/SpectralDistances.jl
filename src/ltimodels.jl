@@ -145,6 +145,7 @@ end
 
 
 hproots(a::AbstractVector{T}) where T = roots(Double64.(a))
+hproots(a::AbstractVector{<:Double64}) = roots(a)
 """
     ControlSystems.tf(m::AR, ts)
 

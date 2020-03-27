@@ -1,4 +1,4 @@
-import JuMP: Model, @objective, @variable, @constraint, termination_status, dual, value
+import .JuMP: Model, @objective, @variable, @constraint, termination_status, dual, value
 
 """
     ot_jump(D, P1, P2)

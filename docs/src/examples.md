@@ -1,6 +1,98 @@
 # Examples
 
 
+## Typical workflows
+In this section, we'll demonstrate some common ways of interacting with the package
+
+### Calculate root embeddings from sound files
+In this example, we'll read a bunch of sound files and calculate embedding vectors containing information about the poles of estimated rational spectra. These embeddings are useful for classification etc. See the paper for further explanation.
+
+This example makes use of a few other packages, notably [AudioClustering.jl](https://github.com/baggepinnen/AudioClustering.jl) for some convenience functions.
+```julia
+using Glob, WAV, SpectralDistances
+const fs = 44100
+using Grep
+##
+using DSP, LPVSpectral
+using AudioClustering
+
+path = "path/to/folder/with/wav-files"
+
+cd(path)
+files = glob("*.wav")
+labels0 = match.(r"[a-z_]+", files)..:match .|> String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
+ulabels = unique(labels0)
+labels = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)', dims=2)[:]
+na = 18 # Order of the models
+fitmethod = LS(na=na, λ=1e-5)
+
+models = mapsoundfiles(files, fs) do sound # mapsoundfiles is defined in AudioClustering
+    sound = SpectralDistances.bp_filter(sound, (50/fs, 18000/fs)) # prefiltering is a good idea
+    SpectralDistances.fitmodel(fitmethod, sound)
+end
+
+X = embeddings(models)
+```
+We now have a matrix `X` with features, we can run clustering on it like this:
+```julia
+using Clustering
+labels,models,X,Z = get_features(trainpath)
+cr = kmeans(v1(X,2), 30) # v1 normalizes mean and variance
+
+Plots.plot(
+    scatter(threeD(X'), marker_z=labels, m=(2,0.5), markerstrokealpha=0, colorbar=false, title="Correct assignment"),
+    scatter(threeD(X'), marker_z=cr.assignments, m=(2,0.5), markerstrokealpha=0, colorbar=false, title="K-means on w assignment"),
+    legend=false
+)
+```
+Another clustering approach is to use [`kbarycenters`](@ref), see example in the docstring.
+
+
+## Nearest Neighbor classification
+Here, we will classify a signal based on it's nearest neighbor in a training dataset. The example assumes that the matrix `X` from the previous example is available, and that there is a similar matrix `Xt` created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors `labels::Vector{Int}` and `labelst::Vector{Int}` that contain the class labels.
+```julia
+using AMD # For permutation of the confusion matrix to more easily identity similar classes.
+function knn_classify(labels, X, Xt, k)
+    N = size(Xt,2)
+    y = zeros(Int, N)
+    W = fit(Whitening, X)
+    X = MultivariateStats.transform(W,X)
+    Xt = MultivariateStats.transform(W,Xt)
+    tree = NearestNeighbors.KDTree(X)
+    for i in 1:N
+        inds, dists = knn(tree, Xt[:,i], k)
+        mode(labels[inds])
+        y[i] = mode(labels[inds])
+    end
+    y
+end
+##
+yht = knn_classify(labels,X,Xt,1)
+@show mean(labelst .== yht) # This is the accuracy
+cm = confusmat(30,labelst,yht)
+perm = amd(sparse(cm))
+cm = cm[perm,perm]
+heatmap(cm./sum(cm,dims=2), xlabel="Predicted class",ylabel="True class", title="Confusion Matrix for Test Data")
+anns = [(reverse(ci.I)..., text(val,8)) for (ci,val) in zip(CartesianIndices(cm)[:], vec(cm))]
+annotate!(anns)
+```
+
+
+## Pairwise distance matrix
+Many algorithms make use of a matrix containing all pairwise distances between points. Given a set of models, we can easily obtain such a matrix:
+```julia
+distance = OptimalTransportRootDistance(domain=Continuous())
+D = SpectralDistances.distmat(distance, models)
+```
+with this matrix, we can, for instance, run clustering:
+```julia
+using Clustering
+cr = hclust(Symmetric(sqrt.(D)))
+assignments = cutree(cr,k=30) # k is desired number of clusters
+```
+Another clustering approach is to use [`kbarycenters`](@ref), see example in the docstring.
+
+
 
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.

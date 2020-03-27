@@ -56,6 +56,27 @@ savefig("interpolation.svg"); nothing # hide
 
 ![](interpolation.svg)
 
+## Barycenters
+A barycenter is a generalization the the arithmetic mean to metrics other than the Euclidean. A barycenter between models is calculated like this
+```julia
+bc = barycenter(distance, models)
+```
+It can be useful to provide some options to the solvers:
+```julia
+options = (solver=sinkhorn_log!, tol=1e-8, iters=1_000_000, γ=0.0, uniform=true, inneriters=500_000, innertol=1e-6)
+distance = OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01, weight=s1∘residueweight)
+bc = barycenter(distance, models; options...)
+```
+We can plot the barycenters:
+```julia
+using ControlSystems, Plots
+bc = barycenter(distance, models; options...)
+w = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
+G = tf.(models) # Convert models to transfer functions from ControlSystems.jl
+plot()
+bodeplot!.(G, Ref(w), plotphase=false, lab="Input models", linestyle=:auto)
+bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:green)
+```
 
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
