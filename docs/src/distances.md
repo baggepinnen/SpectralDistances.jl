@@ -8,6 +8,9 @@ dist = DistanceType(options)
 d = evaluate(d, x1, x2; kwargs...) # keyword arguments are used to control the solvers for some transport-based distances
 d = dist(x1, x2) # A shorter syntax for calling the distance
 ```
+**Note:** All distances return the distance raised to the power `p`, thus
+`RationalOptimalTransportDistance(p=2)(x1,x2) == W₂(x1,x2)^2` where `W₂` denotes the Wasserstein distance of order 2.
+
 Before we proceed, the following distances are available
 ```@index
 Pages = ["distances.md"]
@@ -39,9 +42,9 @@ foreach(println, subtypes(SpectralDistances.AbstractRootDistance)) # hide
 ```
 
 ## A full example
-To use the [`SinkhornRootDistance`](@ref) and let it operate on signals, we may construct our distance object as follows
+To use the [`OptimalTransportRootDistance`](@ref) and let it operate on signals, we may construct our distance object as follows
 ```@repl dist
-innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
+innerdistance = OptimalTransportRootDistance(domain=Continuous(), β=0.005, p=2)
 dist = ModelDistance(TLS(na=30), innerdistance)
 X1, X2 = randn(1000), randn(1000);
 dist(X1,X2)
@@ -93,6 +96,6 @@ Transport-based distances may require some tuning parameters to be set for the s
 ### Providing solver and options
 ```julia
 options = (solver=sinkhorn_log!, tol=1e-6, iters=100_000)
-distance = SinkhornRootDistance(domain=Continuous(), p=1, β=0.001)
+distance = OptimalTransportRootDistance(domain=Continuous(), p=1, β=0.001)
 SpectralDistances.evaluate(distance, model1, model2; options...)
 ```

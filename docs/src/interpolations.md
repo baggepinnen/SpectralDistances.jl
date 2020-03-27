@@ -67,7 +67,7 @@ G = tf.(models) # Convert to transfer functions for visualization etc.
 
 ##
 using Clustering
-dist = SinkhornRootDistance(domain=Continuous(), β=0.01, weight=s1∘residueweight)
+dist = OptimalTransportRootDistance(domain=Continuous(), β=0.01, weight=s1∘residueweight)
 @time clusterresult = SpectralDistances.kbarycenters(
     dist,
     models,

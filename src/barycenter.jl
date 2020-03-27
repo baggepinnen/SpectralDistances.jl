@@ -27,7 +27,7 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
 end
 
 """
-    barycenter(d::SinkhornRootDistance, models; normalize = true, kwargs...)
+    barycenter(d::OptimalTransportRootDistance, models; normalize = true, kwargs...)
     $(SIGNATURES)
 
 **Approximately** calculate the barycenter supported on the same number of atoms as the number of poles in the models.
@@ -48,13 +48,13 @@ models = map(1:10) do _
     AR(Continuous(),pol)
 end
 
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
 Xe = barycenter(d, models, solver=sinkhorn_log!)
 
 G = tf.(models)
 plot()
 pzmap!.(G)
-pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
 current()
 ```
 
@@ -63,13 +63,13 @@ current()
 - `normalize`: make sure weights sum to 1
 - `kwargs`: are sent to the solver
 """
-function barycenter(d::SinkhornRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=IPOT, kwargs...)
+function barycenter(d::OptimalTransportRootDistance,models, λ=s1(ones(length(models))); normalize=true, uniform=true, solver=IPOT, kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)
     if uniform
-        bc = barycenter(X, λ; uniform=uniform, solver=solver, β=d.β, kwargs...)
+        bc = barycenter(X, λ; uniform=true, solver=solver, β=d.β, kwargs...)
     else
-        bc = barycenter(X,w, λ; uniform=uniform, solver=solver, β=d.β, kwargs...)
+        bc,w = barycenter(X,w, λ; uniform=false, solver=solver, β=d.β, kwargs...)
     end
     bc2model(bc, realpoles)
 
@@ -86,7 +86,7 @@ function bc2model(bc, realpoles)
  AR(bcr)
 end
 
-# function barycenter(d::SinkhornRootDistance,models; normalize=true, kwargs...)
+# function barycenter(d::OptimalTransportRootDistance,models; normalize=true, kwargs...)
 #     X, w, realpoles = barycenter_matrices(d, models, normalize)
 #     S = ISA(X; kwargs...)
 #     bc = barycentric_weighting(X,w,S)
@@ -101,7 +101,7 @@ end
 #     AR(bcr)
 # end
 
-# function barycenter(d::SinkhornRootDistance,models,w; kwargs...)
+# function barycenter(d::OptimalTransportRootDistance,models,w; kwargs...)
 #     r = roots.(SpectralDistances.Continuous(), models)
 #     realpoles = any(any(iszero ∘ imag, r) for r in r)
 #
@@ -262,13 +262,13 @@ models = map(1:10) do _
     AR(Continuous(),pol)
 end
 
-d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
 Xe = barycenter(d, models, solver=sinkhorn_log!)
 
 G = tf.(models)
 plot()
 pzmap!.(G)
-pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
 
 options = Optim.Options(store_trace    = true,
                         show_trace        = false,
@@ -290,7 +290,7 @@ bar(λ, title="Barycentric coorinates")
 G = tf.(models)
 plot()
 pzmap!.(G, lab="")
-pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
 # It's okay if the last system dot does not match the barycenter exactly, there are limited models to choose from.
 pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
 ```
@@ -311,6 +311,7 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     solver = sinkhorn_log!,
     tol    = 1e-7,
     β      = 0.1,
+    plot   = nothing,
     kwargs...) where T
 
     # C = [[mean(abs2, x1-x2) for x1 in eachcol(Xi), x2 in eachcol(ql)] for Xi in pl]
@@ -350,6 +351,12 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
         tol    = tol,
         β      = β,
         kwargs...)
+
+    if plot !== nothing
+        @assert S == 2 "Can only plot for two anchor measures"
+        cf = x -> costfun(log.([x,1-x]))
+        plot(LinRange(1e-3, 1-1e-3, 100), cf) |> display
+    end
     if robust
         res = Optim.optimize(costfun, λl, ParticleSwarm(), Optim.Options(iterations=100, store_trace=false))
         λl = res.minimizer
@@ -367,7 +374,7 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     λh
 end
 
-function barycentric_coordinates(d::SinkhornRootDistance,models, qmodel, method=BFGS(); kwargs...)
+function barycentric_coordinates(d::OptimalTransportRootDistance,models, qmodel, method=BFGS(); kwargs...)
 
     d.p == 2 || throw(ArgumentError("p must be 2"))
     pl, p, realpolesp = barycenter_matrices(d, models)

@@ -45,7 +45,7 @@ Random.seed!(1)
 # dist = CoefficientDistance(domain=Discrete(),distance=CosineDist())
 # dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=residueweight)
 # dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=unitweight)
-# dist = SinkhornRootDistance(domain=Continuous(), p=2, iters=500, β=0.5)
+# dist = OptimalTransportRootDistance(domain=Continuous(), p=2, iters=500, β=0.5)
 # function forward(b)
 #     real(dist(a, b))
 # end
@@ -266,7 +266,7 @@ Random.seed!(1)
             m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
             a = Vector(m.ac)
             for dist in [EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight),
-                        SinkhornRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)]
+                        OptimalTransportRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)]
                     H = SpectralDistances.curvature(dist, a)
                     @test all(>(0) ∘ real, eigvals(H[2:end,2:end]))
                     @test all(==(0) ∘ imag, eigvals(H[2:end,2:end]))
@@ -370,7 +370,7 @@ Random.seed!(1)
         @test ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # small frequency shifts gives small errors
 
         @test ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(0.2t)) rtol=1e-3  # frequency shifts of relative size should result in the same error, probably only true for p=1
-        ls_loss = ModelDistance(fitmethod(na=10), SinkhornRootDistance(domain=Discrete()))
+        ls_loss = ModelDistance(fitmethod(na=10), OptimalTransportRootDistance(domain=Discrete()))
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.1 # Filtered through same filter, this test is very non-robust for TLS
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(4),[4], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
     end
@@ -389,7 +389,7 @@ Random.seed!(1)
         @test ls_loss(sin.(0.1t), sin.(1.1 .* 0.1t)) < 0.1 # small frequency shifts gives small errors
 
         @test ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(0.2t)) rtol=1e-3  # frequency shifts of relative size should result in the same error, probably only true for p=1
-        ls_loss = ModelDistance(fitmethod(na=10,nc=2), SinkhornRootDistance(domain=Discrete()))
+        ls_loss = ModelDistance(fitmethod(na=10,nc=2), OptimalTransportRootDistance(domain=Discrete()))
         @test ls_loss(randn(1000), randn(1000)) > 0.05
         # @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 1 # Filtered through same filter, this test is very non-robust for TLS
         # @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(4),[4], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
@@ -560,11 +560,11 @@ end
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         d = D(domain=Continuous())
         println(D)
-        @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
+        @test d(m,m) < eps() + 0.001*(d isa OptimalTransportRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
         println(D)
-        @test d(m,m) < eps() + 0.001*(d isa SinkhornRootDistance)
+        @test d(m,m) < eps() + 0.001*(d isa OptimalTransportRootDistance)
     end
 end
 

@@ -323,7 +323,7 @@ end
     # # λ0 = rand(length(models)) |> s1
     # # qmodel = barycenter(distance, models, λ0)
     #
-    # distance = SinkhornRootDistance(domain=Continuous(),p=2, weight=unitweight)
+    # distance = OptimalTransportRootDistance(domain=Continuous(),p=2, weight=unitweight)
     #
     # # We choose the point to be projected equal to one of the anchor points. In this case, the barycentric coordinates is a one-hot vector
     # qmodel = models[1]
@@ -369,14 +369,14 @@ end
         pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
     end
     ##
-    d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+    d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
     Xe = barycenter(d, models, solver=sinkhorn_log!)
 
     G = tf.(models)
     if isinteractive()
         plot()
         pzmap!.(G)
-        pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+        pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
     end
 
     options = Optim.Options(store_trace    = true,
@@ -395,7 +395,7 @@ end
     using Optim
     method = LBFGS()
     method=ParticleSwarm()
-    # d = SinkhornRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
+    # d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
     λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
     isinteractive() && bar(λ)
 
@@ -405,7 +405,7 @@ end
     if isinteractive()
         plot()
         pzmap!.(G, lab="")
-        pzmap!(tf(Xe), m=:c, title="Barycenter SinkhornRootDistance", lab="BC")
+        pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
         pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
         # It's okay if the green dot do not match the blue exactly, there are limited models to choose from.
     end

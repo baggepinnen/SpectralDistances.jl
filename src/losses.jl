@@ -57,7 +57,7 @@ A model distance operates on signals and works by fitting an LTI model to the si
 # Example:
 ```julia
 using SpectralDistances
-innerdistance = SinkhornRootDistance(domain=Continuous(), β=0.005, p=2)
+innerdistance = OptimalTransportRootDistance(domain=Continuous(), β=0.005, p=2)
 dist = ModelDistance(TLS(na=30), innerdistance)
 ```
 """
@@ -88,7 +88,7 @@ EuclideanRootDistance
 end
 
 """
-    SinkhornRootDistance{D, F1, F2} <: AbstractRootDistance
+    OptimalTransportRootDistance{D, F1, F2} <: AbstractRootDistance
 
 The Sinkhorn distance between roots. The weights are provided by `weight`, which defaults to [`residueweight`](@ref).
 
@@ -100,8 +100,8 @@ The Sinkhorn distance between roots. The weights are provided by `weight`, which
 - `iters::Int = 10000`: Number of iterations of the Sinkhorn algorithm.
 - `p::Int = 2` : Order of the distance
 """
-SinkhornRootDistance
-@kwdef struct SinkhornRootDistance{D,F1,F2} <: AbstractRootDistance
+OptimalTransportRootDistance
+@kwdef struct OptimalTransportRootDistance{D,F1,F2} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
     weight::F2 = s1 ∘ residueweight
@@ -109,6 +109,8 @@ SinkhornRootDistance
     iters::Int = 10000
     p::Int = 2
 end
+
+@deprecate SinkhornRootDistance(args...;kwargs...) OptimalTransportRootDistance(args...;kwargs...)
 
 """
     HungarianRootDistance{D, ID <: Distances.PreMetric, F} <: AbstractRootDistance
@@ -315,7 +317,7 @@ distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 
 
 Compute the symmetric, pairwise distance matrix using the specified distance.
 
-- `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`SinkhornRootDistance`](@ref)
+- `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`OptimalTransportRootDistance`](@ref)
 """
 function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
@@ -415,13 +417,13 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots;
     real(l) # Workaround for expanding to complex for Zygote support
 end
 
-function evaluate(d::SinkhornRootDistance, e1::AbstractRoots,e2::AbstractRoots; solver=sinkhorn_log!, kwargs...)
+function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::AbstractRoots; solver=sinkhorn_log!, kwargs...)
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
     C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, iters=d.iters, kwargs...)[1]
     if any(isnan, C)
-        println("Nan in SinkhornRootDistance, increasing precision")
+        println("Nan in OptimalTransportRootDistance, increasing precision")
         C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, iters=d.iters, kwargs...)[1]
         any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)

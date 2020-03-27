@@ -127,7 +127,7 @@ function unnull!(ass,k)
 end
 
 """
-    kbarycenters(d::SinkhornRootDistance, models::Vector{<:AbstractModel}, k; normalize = true, kwargs...)
+    kbarycenters(d::OptimalTransportRootDistance, models::Vector{<:AbstractModel}, k; normalize = true, kwargs...)
 
 # Example:
 ```julia
@@ -154,7 +154,7 @@ clusterresult = kbarycenters(
 - `normalize`: Whether or not to normalize the weight vectors (recommended)
 - `kwargs`: are sent to inner solvers, (`solver,tol,iters`)
 """
-function kbarycenters(d::SinkhornRootDistance, models::Vector{<:AbstractModel}, k; normalize=true, kwargs...)
+function kbarycenters(d::OptimalTransportRootDistance, models::Vector{<:AbstractModel}, k; normalize=true, kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
     X, w, realpoles = barycenter_matrices(d, models, normalize)
     res = kbarycenters(X, w, k; β=d.β, kwargs...)
