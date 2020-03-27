@@ -434,7 +434,7 @@ function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, so
     for outer t = 1:iters
         B = (t0+t)/2
         a .= (1-inv(B)).*â .+ inv(B).*ã
-        for i in 1:N
+        @sync for i in 1:N
             Threads.@spawn begin
                 M = distmat_euclidean!(Mth[Threads.threadid()], X,Y[i])
                 ai = solver(M,a,b[i]; iters=50000, β=β, tol=tol)[2]
