@@ -2,7 +2,7 @@
 
 ## Overview
 
-The following is a reference on all the distances defined in this package. Once a distance is defined, it can be evaluated in one of two ways, defined by the  [Distances.jl](https://github.com/JuliaStats/Distances.jl) interface
+The following is a reference for all the distances defined in this package. Once a distance object is defined, it can be evaluated in one of two ways, defined by the  [Distances.jl](https://github.com/JuliaStats/Distances.jl) interface
 ```julia
 dist = DistanceType(options)
 d = evaluate(d, x1, x2; kwargs...) # keyword arguments are used to control the solvers for some transport-based distances
@@ -11,7 +11,7 @@ d = dist(x1, x2) # A shorter syntax for calling the distance
 **Note:** All distances return the distance raised to the power `p`, thus
 `RationalOptimalTransportDistance(p=2)(x1,x2) == W₂(x1,x2)^2` where `W₂` denotes the Wasserstein distance of order 2.
 
-Before we proceed, the following distances are available
+Before we proceed, we list a number of classes of distances that are available
 ```@index
 Pages = ["distances.md"]
 Order   = [:type]
@@ -19,8 +19,8 @@ Order   = [:type]
 ```@setup dist
 using SpectralDistances, InteractiveUtils
 ```
-
 Some of these distances operate directly on signals, these are
+
 ```@example dist
 foreach(println, subtypes(SpectralDistances.AbstractSignalDistance)) # hide
 ```
@@ -45,7 +45,7 @@ foreach(println, subtypes(SpectralDistances.AbstractRootDistance)) # hide
 To use the [`OptimalTransportRootDistance`](@ref) and let it operate on signals, we may construct our distance object as follows
 ```@repl dist
 innerdistance = OptimalTransportRootDistance(domain=Continuous(), β=0.005, p=2)
-dist = ModelDistance(TLS(na=30), innerdistance)
+dist = ModelDistance(TLS(na=10), innerdistance)
 X1, X2 = randn(1000), randn(1000);
 dist(X1,X2)
 
@@ -87,9 +87,9 @@ Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl"]
 
 ## Details
 Transport-based distances may require some tuning parameters to be set for the solvers. The available solvers are
-- [`sinkhorn`](@ref): not recommended due to numerical issues, but this is the standard algorithm.
+- [`sinkhorn`](@ref): not recommended due to numerical issues, but this is the most commonly cited algorithm.
 - [`sinkhorn_log`](@ref): better numerical stability than the standard.
-- [`sinkhorn_log!`](@ref): in-place version that is faster, but some AD libraries might not like it.
+- [`sinkhorn_log!`](@ref): in-place version that is faster, but some AD libraries might not like it (often the default if no solver is provided).
 - [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
 - [`ot_jump`](@ref): exact solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
 

@@ -93,6 +93,16 @@ assignments = cutree(cr,k=30) # k is desired number of clusters
 Another clustering approach is to use [`kbarycenters`](@ref), see example in the docstring.
 
 
+## Detection using examples
+A measure of distance can be used for detection, by selecting a few positive examples and calculating the distance to the nearest neighbor within these examples from a new query point, a simple example:
+
+```julia
+distance = OptimalTransportRootDistance(domain=Continuous())
+distance_vector = distance.(Ref(q),positive_examples)
+minimum(distance_vector)
+```
+This can be made significantly more effective (but less accurate) using the `knn` approach from the [example above](https://baggepinnen.github.io/SpectralDistances.jl/latest/examples/#Nearest-Neighbor-classification-1).
+
 
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.

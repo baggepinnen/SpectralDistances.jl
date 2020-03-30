@@ -17,6 +17,8 @@ The main workflow is as follows
 1. Define a distance
 2. Evaluate the distance between two points (signals, histograms, periodograms, etc.)
 
+You can also calculate barycenters, interpolations, and barycentric coordinates of signals under the chosen distance.
+
 This package extends [Distances.jl](https://github.com/JuliaStats/Distances.jl) and all distance types are subtypes of `Distances.PreMetric`, even though some technically are true metrics and some are not even pre-metrics.
 
 Many distances are differentiable and can thus be used for gradient-based learning. The rest of this manual is divided into the following sections

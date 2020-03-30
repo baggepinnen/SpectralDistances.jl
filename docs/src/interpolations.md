@@ -1,6 +1,6 @@
 # Interpolations and Barycenters
 
-Whenever you define a distance, that distance implies the existence of a shortest path, a *geodesic*. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models.
+Some distances distance define the existence of a shortest path, a *geodesic*. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models under transport-based metrics.
 
 Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter $t \in (0,1)$
 
@@ -110,11 +110,12 @@ bc,ass = clusterresult.barycenters, clusterresult.assignments
 # Visualize results
 using MLBase, Plots.PlotMeasures, AudioClustering
 newass,perm = AudioClustering.associate_clusters(labels,ass)
-yt = (classinds, [label_strings[findfirst(labels .== i)] for i in classinds])
+classinds   = 1:n_classes
+yt          = (classinds, [label_strings[findfirst(labels .== i)] for i in classinds])
 
 @show mean(labels .== newass)
 cm = confusmat(n_classes,labels,newass)
-heatmap(cm./sum(cm,dims=2), xlabel="Cluster assignment",ylabel="Best matching class", tickfontfamily="times", tickfontsize=12, left_margin=25mm, bottom_margin=18mm,size=(1000,900),color=:viridis)
+heatmap(cm./sum(cm,dims=2), xlabel="Cluster assignment",ylabel="Best matching class", color=:viridis)
 anns = [(reverse(ci.I)..., text(val,12,:gray)) for (ci,val) in zip(CartesianIndices(cm)[:], vec(cm))]
 annotate!(anns)
 yticks!(yt)
