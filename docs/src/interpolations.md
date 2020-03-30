@@ -68,15 +68,19 @@ distance = OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01, weigh
 bc = barycenter(distance, models; options...)
 ```
 We can plot the barycenters:
-```julia
-using ControlSystems, Plots
-bc = barycenter(distance, models; options...)
+```@example
+using SpectralDistances, ControlSystems, Plots
+models = examplemodels(3)
+distance = OptimalTransportRootDistance(domain=Continuous())
+bc = barycenter(distance, models)
 w = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
 G = tf.(models) # Convert models to transfer functions from ControlSystems.jl
 plot()
 bodeplot!.(G, Ref(w), plotphase=false, lab="Input models", linestyle=:auto)
 bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:green)
+savefig("barycenter.svg"); nothing # hide
 ```
+![](barycenter.svg)
 
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.

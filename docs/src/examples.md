@@ -4,7 +4,7 @@
 ## Typical workflows
 In this section, we'll demonstrate some common ways of interacting with the package
 
-To quickly try things out, you can generate some example models of signals using [`examplemodels`](@ref) like this `model = examplemodels(10)`.
+To quickly try things out, you can generate some example models of signals using [`examplemodels`](@ref) like this `models = examplemodels(10)`.
 
 ### Calculate root embeddings from sound files
 In this example, we'll read a bunch of sound files and calculate embedding vectors containing information about the poles of estimated rational spectra. These embeddings are useful for classification etc. See the paper for further explanation.
@@ -99,9 +99,11 @@ Another clustering approach is to use [`kbarycenters`](@ref), see example in the
 A measure of distance can be used for detection, by selecting a few positive examples and calculating the distance to the nearest neighbor within these examples from a new query point, a simple example:
 
 ```julia
-distance = OptimalTransportRootDistance(domain=Continuous())
-distance_vector = distance.(Ref(q),positive_examples)
-minimum(distance_vector)
+function scorefunction(query_model)
+    distance = OptimalTransportRootDistance(domain=Continuous())
+    distance_vector = distance.(Ref(query_model),positive_example_models)
+    score = minimum(distance_vector)
+end
 ```
 This can be made significantly more effective (but less accurate) using the `knn` approach from the [example above](https://baggepinnen.github.io/SpectralDistances.jl/latest/examples/#Nearest-Neighbor-classification-1).
 
@@ -133,7 +135,7 @@ vline!([0], l=(:black, :dash))
 hline!([0], l=(:black, :dash))
 
 plot(fig1, fig2, fig3, layout=(1,3))
-savefig("cumulative.png"); nothing # hide
+savefig("cumulative.svg"); nothing # hide
 ```
 
-![](cumulative.png)
+![](cumulative.svg)
