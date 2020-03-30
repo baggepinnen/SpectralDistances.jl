@@ -627,7 +627,7 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
     res = residues(a2, b, r2)
     e = 2π*sum(res)
     ae = real(e)
-    if (ae < 1e-3 || ae < 0)  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+    if ae < 1e-3  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         return spectralenergy(d, big.(a), b)
 
     end
