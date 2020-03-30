@@ -251,7 +251,7 @@ end
             β      = β)
 
 
-        @show norm(λ0-λh)
+        isinteractive() && @show norm(λ0-λh)
     end
     @test median(res) < 0.01
     # mean(norm(s1(rand(4)) - s1(rand(4))) for _ in 1:10000)
@@ -272,7 +272,7 @@ end
             scatter!(eachrow(ql)..., lab="ql")
         end
 
-        @show norm(λ0-λh)
+        isinteractive() && @show norm(λ0-λh)
     end
     @test median(res) < 0.01
 
@@ -284,7 +284,6 @@ end
 @testset "barycentric coordinates with models" begin
     @info "Testing barycentric coordinates with models"
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
-    ζ = [0.1, 0.3, 0.7]
 
     models = examplemodels(10)
     d = EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
@@ -292,8 +291,9 @@ end
     λ = barycentric_coordinates(d,models, Xe)
     @test λ ≈ s1(ones(length(λ))) atol=0.01
 
-    λ = barycentric_coordinates(d,models, models[1])
-    @test λ[1] ≈ 1 atol=0.01
+    λ = barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
+    isinteractive() && bar(λ)
+    @test λ[1] > 0.5
     @test sum(λ) ≈ 1
 
     G = tf.(models)

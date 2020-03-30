@@ -343,53 +343,10 @@ function barycentric_coordinates(d::EuclideanRootDistance, models, qmodel, args.
     pl = embedding.(models)
     ql = embedding(qmodel)
     ⅅ  = reduce(hcat, pl) # Dictionary matrix
-    simplex_ls(Float64.(ⅅ), Float64.(ql); kwargs...)
-end
-soft_th(x,e) = x < e ? zero(x) : x-e
-
-
-
-function simplex_ls(ⅅ, ql; iters=1000, verbose=false, kwargs...)
-
-    α0 = 1.0
-    # ⅅ = v1(D, 1)
-    @show λ = ⅅ\ql
-    λo = copy(λ)
-    s = similar(λ)
-    g = similar(s)
-    local ng, err
-    err = 0.0
-    DTD = ⅅ'ⅅ
-    for iter = 2:iters
-        g .= ⅅ'*(ql .- ⅅ*λ)
-        ng = norm(g)
-        α = α0 / sqrt(iter - 1)
-        λ .+= α .* g
-        proj_simplex!(s,λ; kwargs...)
-        err = norm(λ-λo)
-        verbose && @info "Iter $iter norm(g): $ng norm(λ-λo): $err"
-        err < 1e-5 && break
-        λo .= λ
-
-    end
-    verbose &&  @info "Converged norm(g): $ng norm(λ-λo): $err"
-    λ
+    TotalLeastSquares.sls(Float64.(ⅅ), Float64.(ql); kwargs...)
 end
 
-function proj_simplex!(s, x; iters=1000, r=0.1/length(x), tol=1e-8, kwargs...)
-    μ = minimum(x) - r;
-    cost = sum(s .= max.(x .- μ, 0) ) - r
 
-    for iter = 1:iters
-        cost = sum(s .= max.(x .- μ, 0) ) - r
-        df   = sum(@. s = -((x - μ) > 0))
-        μ   -= cost / df
-        abs(cost) < tol && break
-    end
-
-    @. x = max(x - μ, 0);
-    x ./= sum(x)
-end
 
 ##
 "Sum over j≠i. Internal function."
