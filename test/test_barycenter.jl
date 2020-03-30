@@ -286,15 +286,15 @@ end
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
     ζ = [0.1, 0.3, 0.7]
 
-    models = map(1:10) do _
-        pol = [1]
-        for i = eachindex(ζ)
-            pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
-        end
-        AR(Continuous(),pol)
-    end
+    models = examplemodels(10)
+    d = EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
+    Xe = barycenter(d, models)
+    λ = barycentric_coordinates(d,models, Xe)
+    @test λ ≈ s1(ones(length(λ))) atol=0.01
 
-    Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
+    λ = barycentric_coordinates(d,models, models[1])
+    @test λ[1] ≈ 1 atol=0.01
+    @test sum(λ) ≈ 1
 
     G = tf.(models)
     if isinteractive()

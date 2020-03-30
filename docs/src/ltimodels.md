@@ -17,7 +17,7 @@ To fit a model to data, one first has to specify a [`FitMethod`](@ref), the opti
 foreach(println, subtypes(SpectralDistances.FitMethod)) # hide
 ```
 
-For example, to estimate an [`AR`](@ref) model of order 30 using least-squares, we can do the following
+For example, to estimate an [`AR`](@ref) model of order 12 using least-squares, we can do the following
 ```@repl lti
 data = randn(1000);
 fitmethod = LS(na=12)

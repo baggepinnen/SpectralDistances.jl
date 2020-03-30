@@ -235,9 +235,10 @@ fitmodel(fm,X::AbstractModel) = X
 """
     LS <: FitMethod
 
+This fitmethod is a good default option.
 
 # Arguments:
-- `na::Int`: number of roots (order of the system)
+- `na::Int`: number of roots (order of the system). The number of peaks in the spectrum will be `na÷2`.
 - `λ::Float64 = 0.01`: reg factor
 """
 LS
@@ -271,10 +272,10 @@ end
 """
     TLS <: FitMethod
 
-Total least squares
+Total least squares. This fit method is good if the spectrum has sharp peaks, in particular if the number of peaks is known in advance.
 
 # Arguments:
-- `na::Int`: number of roots (order of the system)
+- `na::Int`: number of roots (order of the system). The number of peaks in the spectrum will be `na÷2`.
 """
 TLS
 @kwdef struct TLS <: FitMethod
@@ -300,7 +301,7 @@ end
 """
     IRLS <: FitMethod
 
-Total least squares
+Iteratively reqeighted least squares. This fitmethod is currently not recommended, it does not appear to produce nice spectra. (feel free to try it out though).
 
 # Arguments:
 - `na::Int`: number of roots (order of the system)
@@ -322,7 +323,7 @@ end
 """
     PLR <: FitMethod
 
-Pseudo linear regression. Estimates the noise components by performing an initial fit of higher order.
+Pseudo linear regression. Estimates the noise components by performing an initial fit of higher order. Tihs fitmethod produces an [`ARMA`](@ref) model. Support for ARMA models is not as strong as for [`AR`](@ref) models.
 
 # Arguments:
 - `nc::Int`: order of numerator
@@ -694,4 +695,21 @@ end
 function scalefactor(d::TimeDomain, a, σ²)
     e = spectralenergy(d, a, 1)
     (σ²/(e))
+end
+
+
+"""
+    examplemodels(n = 10)
+
+Return `n` random models with 6 complex poles each.
+"""
+function examplemodels(n=10)
+    ζ = [0.1, 0.3, 0.7]
+    models = map(1:n) do _
+        pol = [1]
+        for i = eachindex(ζ)
+            pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
+        end
+        AR(Continuous(),pol)
+    end
 end

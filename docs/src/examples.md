@@ -4,6 +4,8 @@
 ## Typical workflows
 In this section, we'll demonstrate some common ways of interacting with the package
 
+To quickly try things out, you can generate some example models of signals using [`examplemodels`](@ref) like this `model = examplemodels(10)`.
+
 ### Calculate root embeddings from sound files
 In this example, we'll read a bunch of sound files and calculate embedding vectors containing information about the poles of estimated rational spectra. These embeddings are useful for classification etc. See the paper for further explanation.
 

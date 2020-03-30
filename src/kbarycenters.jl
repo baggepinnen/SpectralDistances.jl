@@ -129,12 +129,14 @@ end
 """
     kbarycenters(d::OptimalTransportRootDistance, models::Vector{<:AbstractModel}, k; normalize = true, kwargs...)
 
+This function is only available if `using Clustering`.
+
 # Example:
 ```julia
 clusterresult = kbarycenters(
     dist,
     models,
-    n_classes, # number of clusters
+    k,         # number of clusters
     seed       = :rand,
     solver     = sinkhorn_log!,
     tol        = 2e-6,
@@ -147,6 +149,7 @@ clusterresult = kbarycenters(
     kiters     = 10
 )
 ```
+The docs contain [a more detailed example](https://baggepinnen.github.io/SpectralDistances.jl/latest/interpolations/#K-Barycenters-1)
 
 # Arguments:
 - `models`: A vector of models

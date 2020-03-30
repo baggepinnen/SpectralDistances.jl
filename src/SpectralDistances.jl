@@ -49,7 +49,8 @@ ARMA,
 PLR,
 LS,
 TLS,
-IRLS
+IRLS,
+examplemodels
 
 
 export TimeDomain,
