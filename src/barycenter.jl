@@ -21,6 +21,16 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
     X, w, realpoles
 end
 
+function embedding(model::AR)
+    embedding(roots(SpectralDistances.Continuous(), model))
+end
+
+function embedding(r::AbstractRoots)
+    realpoles = any(any(iszero ∘ imag, r) for r in r)
+    realpoles && @error("Model contained real poles, this produces weird results when used in an embedding")
+    @views [real(r[1:end÷2]); imag(r[1:end÷2])]
+end
+
 """
     barycenter(d::OptimalTransportRootDistance, models; normalize = true, kwargs...)
     $(SIGNATURES)
@@ -90,7 +100,7 @@ pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
 current()
 ```
 """
-function barycenter(d::EuclideanRootDistance,models::AbstractVector)
+function barycenter(d::EuclideanRootDistance,models::AbstractVector;kwargs...)
     r = roots.(SpectralDistances.Continuous(), models)
     w = d.weight.(r)
     bc = map(1:length(r[1])) do pi
@@ -323,6 +333,62 @@ function barycentric_coordinates(d::OptimalTransportRootDistance,models, qmodel,
 
     λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; β=d.β, kwargs...)
     return λ
+end
+
+
+function barycentric_coordinates(d::EuclideanRootDistance, models, qmodel, args...; kwargs...)
+    d.p == 2 || throw(ArgumentError("p must be 2"))
+    d.weight == unitweight || throw(ArgumentError("Barycentric coordinates only implemented for root distance with weight function `unitweight`"))
+    N = length(models)
+    pl = embedding.(models)
+    ql = embedding(qmodel)
+    ⅅ  = reduce(hcat, pl) # Dictionary matrix
+    simplex_ls(Float64.(ⅅ), Float64.(ql); kwargs...)
+end
+soft_th(x,e) = x < e ? zero(x) : x-e
+
+
+
+function simplex_ls(ⅅ, ql; iters=1000, verbose=false, kwargs...)
+
+    α0 = 1.0
+    # ⅅ = v1(D, 1)
+    @show λ = ⅅ\ql
+    λo = copy(λ)
+    s = similar(λ)
+    g = similar(s)
+    local ng, err
+    err = 0.0
+    DTD = ⅅ'ⅅ
+    for iter = 2:iters
+        g .= ⅅ'*(ql .- ⅅ*λ)
+        ng = norm(g)
+        α = α0 / sqrt(iter - 1)
+        λ .+= α .* g
+        proj_simplex!(s,λ; kwargs...)
+        err = norm(λ-λo)
+        verbose && @info "Iter $iter norm(g): $ng norm(λ-λo): $err"
+        err < 1e-5 && break
+        λo .= λ
+
+    end
+    verbose &&  @info "Converged norm(g): $ng norm(λ-λo): $err"
+    λ
+end
+
+function proj_simplex!(s, x; iters=1000, r=0.1/length(x), tol=1e-8, kwargs...)
+    μ = minimum(x) - r;
+    cost = sum(s .= max.(x .- μ, 0) ) - r
+
+    for iter = 1:iters
+        cost = sum(s .= max.(x .- μ, 0) ) - r
+        df   = sum(@. s = -((x - μ) > 0))
+        μ   -= cost / df
+        abs(cost) < tol && break
+    end
+
+    @. x = max(x - μ, 0);
+    x ./= sum(x)
 end
 
 ##
@@ -573,3 +639,32 @@ scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
 # function barycentric_weighting2(X,λ,sw)
 #     sum(λ[sw[i]]'.*X[i][:,sw[i]] for i in eachindex(sw))
 # end # This one was definitely bad
+## ==========================================================
+# function simplex_ls(ⅅ, ql; iters=2000, verbose=false, kwargs...)
+#
+#     N = length(ql)
+#     α = 1.0
+#     ε = 0.1/N
+#     @show λ = max.(ⅅ\ql .+ 0.01 .* randn.(), 0)
+#     λ ./= sum(λ)
+#     λo = copy(λ)
+#     g = similar(λ)
+#     local ng, err
+#     err = 0.0
+#     for iter = 1:iters # Do a few projected gradient iterations with soft thresholding
+#         g .= ⅅ'*(ql-ⅅ*λ) # This is the negative gradient so + below
+#         ng = norm(g)
+#         ng < 1e-10 && break
+#         λ .+= α.*g
+#         λ .-= minimum(λ)
+#         λ .= soft_th.(λ, ε)
+#         λ ./= sum(λ)
+#         α *= 0.999
+#         err = norm(λ-λo)
+#         verbose && @info "Iter $iter norm(g): $ng norm(λ-λo): $err"
+#         err < 1e-5 && break
+#         λo .= λ
+#     end
+#     verbose &&  @info "Converged norm(g): $ng norm(λ-λo): $err"
+#     λ
+# end

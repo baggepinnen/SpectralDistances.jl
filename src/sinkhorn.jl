@@ -94,8 +94,8 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
     ϵ = eps()
     K = @. exp(-C / β)
     Γ = zeros(T, size(K))
-    u = zeros(T, size(a)) .= 1
-    v = zeros(T, size(b)) .= 1
+    u = ones(T, size(a))
+    v = ones(T, size(b))
     local v, iter
     iter = 0
     for outer iter = 1:iters
@@ -124,14 +124,13 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
         end
 
     end
-    @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
-
+    @. Γ = exp(-(C-alpha-beta') / β + log(u + ϵ) + log(v' + ϵ))
     @. u = -β*log(u + ϵ) - alpha
     u .-= mean(u)
     @. v = -β*log(v + ϵ) - beta
     v .-= mean(v)
 
-    @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    @assert isapprox(sum(u), 0, atol=1e-10length(u)) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
     iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
 
     ea, eb = ot_error(Γ, a, b)
