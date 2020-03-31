@@ -454,10 +454,17 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     # dm1   = exp.(.- λ .* distmat(d.distance, e1,e1))
     # dm2   = exp.(.- λ .* distmat(d.distance, e2,e2))
     # dm12  = exp.(.- λ .* distmat(d.distance, e1,e2))
-    dm1   = exp.(.- λ .* distmat_euclidean(e1,e1))
-    dm2   = exp.(.- λ .* distmat_euclidean(e2,e2))
-    dm12  = exp.(.- λ .* distmat_euclidean(e1,e2))
-    mean(dm1) - 2mean(dm12) + mean(dm2)
+
+    D = distmat_euclidean(e1,e1)
+    D .= exp.(.- λ .* D)
+    c = mean(D)
+    distmat_euclidean!(D,e2,e2)
+    D .= exp.(.- λ .* D)
+    c += mean(D)
+    distmat_euclidean!(D,e1,e2)
+    D .= exp.(.- λ .* D)
+    c -= 2mean(D)
+    c
 end
 
 evaluate(d::AbstractCoefficientDistance,w1::AbstractModel,w2::AbstractModel; kwargs...) = evaluate(d, coefficients(domain(d),w1), coefficients(domain(d),w2); kwargs...)

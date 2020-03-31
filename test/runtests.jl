@@ -630,6 +630,15 @@ end
     @test dist(x1,x2) < dist(x1,x3)
 end
 
+@testset "KernelWassersteinRootDistance" begin
+    fm = LS(na=4)
+    x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))  |> fm
+    x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12)) |> fm
+    x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))  |> fm
+    dist = KernelWassersteinRootDistance(domain=Continuous())
+    @test dist(x1,x2) < dist(x1,x3)
+end
+
 @testset "ClosedForm" begin
     x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
