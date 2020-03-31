@@ -535,11 +535,7 @@ end
 
 function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
-    if issorted(w1.freq) && issorted(w2.freq)
-        C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
-    else
-        C = solver(D,s1(w1.power),s1(w2.power); β=d.β, iters=d.iters, kwargs...)[1]
-    end
+    C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     cost = sum(C .* D)
 end
 
