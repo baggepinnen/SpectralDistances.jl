@@ -1,7 +1,7 @@
 @info "Running tests"
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
-using DSP, Distances
+using DSP, Distances, DoubleFloats
 
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv
 
@@ -120,8 +120,8 @@ Random.seed!(1)
 @testset "SpectralDistances.jl" begin
 
 
-    @testset "Sinkhorn" begin
-        @info "Testing Sinkhorn"
+    @testset "Solvers" begin
+        @info "Testing Solvers"
 
         C = Float64.(Matrix(I(2)))
         a = [1., 0]
@@ -163,8 +163,9 @@ Random.seed!(1)
     end
 
 
-    false && get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
-
+    # true && get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
+    @testset "gradients" begin
+        @info "Testing gradients"
         using ForwardDiff, FiniteDifferences
         using SpectralDistances: njacobian, ngradient, nhessian
         using Zygote
@@ -191,9 +192,9 @@ Random.seed!(1)
         @test njacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
 
         a,b = randn(3), randn(4)
-        @test njacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a)
+        @test njacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a) rtol=1e-3
 
-        @test njacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b)
+        @test njacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b) rtol=1e-3
 
 
 
@@ -202,10 +203,10 @@ Random.seed!(1)
             @test d2c(w) ≈ pole(Gc)
         end
 
-        y = randn(5000)
-        fm = PLR(na=40, nc=2)
-        @test_skip Zygote.gradient(y->sum(fm(y)[1]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[1]), y)
-        @test_skip Zygote.gradient(y->sum(fm(y)[2]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[2]), y)
+        # y = randn(5000)
+        # fm = PLR(na=40, nc=2)
+        # @test_skip Zygote.gradient(y->sum(fm(y)[1]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[1]), y)
+        # @test_skip Zygote.gradient(y->sum(fm(y)[2]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[2]), y)
 
 
         p = [1.,1,1]
@@ -266,7 +267,7 @@ Random.seed!(1)
             m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
             a = Vector(m.ac)
             for dist in [EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight),
-                        OptimalTransportRootDistance(domain=Continuous(), p=2, iters=1000, β=0.01)]
+                        OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01)]
                     H = SpectralDistances.curvature(dist, a)
                     @test all(>(0) ∘ real, eigvals(H[2:end,2:end]))
                     @test all(==(0) ∘ imag, eigvals(H[2:end,2:end]))
@@ -274,20 +275,20 @@ Random.seed!(1)
 
         end
 
-
-        @testset "Sinkhorn zygote" begin
-            @info "testing sinkhorn zygote"
-            function sinkdist(D,a,b)
-                ai = s1(a)
-                bi = s1(a+b)
-                P,u,v = sinkhorn(D,ai,bi, iters=1000, β=0.1)
-                sum(P.*D)
-            end
-            a,b = abs.(randn(6)),abs.(randn(6))
-            D = SpectralDistances.distmat_euclidean(1:length(a), 1:length(a))
-            dD, da, db = Zygote.gradient(sinkdist, D,a,b)
-            @test n1(ForwardDiff.gradient(a->sinkdist(D,a,b), a))'n1(da) > 0.9
-        end
+        # Zygote segfaults here
+        # @testset "Sinkhorn zygote" begin
+        #     @info "testing sinkhorn zygote"
+        #     function sinkdist(D,a,b)
+        #         ai = s1(a)
+        #         bi = s1(a+b)
+        #         P,u,v = sinkhorn(D,ai,bi, iters=1000, β=0.1)
+        #         sum(P.*D)
+        #     end
+        #     a,b = abs.(randn(6)),abs.(randn(6))
+        #     D = SpectralDistances.distmat_euclidean(1:length(a), 1:length(a))
+        #     dD, da, db = Zygote.gradient(sinkdist, D,a,b)
+        #     @test n1(ForwardDiff.gradient(a->sinkdist(D,a,b), a))'n1(da) > 0.9
+        # end
 
 
     end
