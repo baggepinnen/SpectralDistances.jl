@@ -29,27 +29,28 @@ Plots.plot(
     scatter(threeD(X&#39;), marker_z=labels, m=(2,0.5), markerstrokealpha=0, colorbar=false, title=&quot;Correct assignment&quot;),
     scatter(threeD(X&#39;), marker_z=cr.assignments, m=(2,0.5), markerstrokealpha=0, colorbar=false, title=&quot;K-means on w assignment&quot;),
     legend=false
-)</code></pre><p>Another clustering approach is to use <a href="../interpolations/#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>kbarycenters</code></a>, see example in the docstring.</p><h2 id="Nearest-Neighbor-classification-1"><a class="docs-heading-anchor" href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a><a class="docs-heading-anchor-permalink" href="#Nearest-Neighbor-classification-1" title="Permalink"></a></h2><p>Here, we will classify a signal based on it&#39;s nearest neighbor in a training dataset. The example assumes that the matrix <code>X</code> from the previous example is available, and that there is a similar matrix <code>Xt</code> created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors <code>labels::Vector{Int}</code> and <code>labelst::Vector{Int}</code> that contain the class labels.</p><pre><code class="language-julia">using AMD # For permutation of the confusion matrix to more easily identity similar classes.
+)</code></pre><p>Another clustering approach is to use <a href="../interpolations/#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>kbarycenters</code></a>, see example <a href="../interpolations/#K-Barycenters-1">K-Barycenters</a>.</p><h2 id="Nearest-Neighbor-classification-1"><a class="docs-heading-anchor" href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a><a class="docs-heading-anchor-permalink" href="#Nearest-Neighbor-classification-1" title="Permalink"></a></h2><p>Here, we will classify a signal based on it&#39;s nearest neighbor in a training dataset. The example assumes that the matrix <code>X</code> from the previous example is available, and that there is a similar matrix <code>Xt</code> created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors <code>labels::Vector{Int}</code> and <code>labelst::Vector{Int}</code> that contain the class labels.</p><pre><code class="language-julia">using AMD # For permutation of the confusion matrix to more easily identity similar classes.
+using MultivariateStats # For whitening transform
+
 function knn_classify(labels, X, Xt, k)
-    N = size(Xt,2)
-    y = zeros(Int, N)
-    W = fit(Whitening, X)
-    X = MultivariateStats.transform(W,X)
-    Xt = MultivariateStats.transform(W,Xt)
+    N    = size(Xt,2)
+    y    = zeros(Int, N)
+    W    = fit(Whitening, X)
+    X    = MultivariateStats.transform(W,X)
+    Xt   = MultivariateStats.transform(W,Xt)
     tree = NearestNeighbors.KDTree(X)
     for i in 1:N
         inds, dists = knn(tree, Xt[:,i], k)
-        mode(labels[inds])
         y[i] = mode(labels[inds])
     end
     y
 end
-##
-yht = knn_classify(labels,X,Xt,1)
+
+yht = knn_classify(labels,X,Xt,1) # look at the single nearest neighbor
 @show mean(labelst .== yht) # This is the accuracy
-cm = confusmat(30,labelst,yht)
+cm   = confusmat(30,labelst,yht)
 perm = amd(sparse(cm))
-cm = cm[perm,perm]
+cm   = cm[perm,perm]
 heatmap(cm./sum(cm,dims=2), xlabel=&quot;Predicted class&quot;,ylabel=&quot;True class&quot;, title=&quot;Confusion Matrix for Test Data&quot;)
 anns = [(reverse(ci.I)..., text(val,8)) for (ci,val) in zip(CartesianIndices(cm)[:], vec(cm))]
 annotate!(anns)</code></pre><h2 id="Pairwise-distance-matrix-1"><a class="docs-heading-anchor" href="#Pairwise-distance-matrix-1">Pairwise distance matrix</a><a class="docs-heading-anchor-permalink" href="#Pairwise-distance-matrix-1" title="Permalink"></a></h2><p>Many algorithms make use of a matrix containing all pairwise distances between points. Given a set of models, we can easily obtain such a matrix:</p><pre><code class="language-julia">distance = OptimalTransportRootDistance(domain=Continuous())
@@ -59,7 +60,7 @@ assignments = cutree(cr,k=30) # k is desired number of clusters</code></pre><p>A
     distance = OptimalTransportRootDistance(domain=Continuous())
     distance_vector = distance.(Ref(query_model),positive_example_models)
     score = minimum(distance_vector)
-end</code></pre><p>This can be made significantly more effective (but less accurate) using the <code>knn</code> approach from the <a href="https://baggepinnen.github.io/SpectralDistances.jl/latest/examples/#Nearest-Neighbor-classification-1">example above</a>.</p><h2 id="The-closed-form-solution-1"><a class="docs-heading-anchor" href="#The-closed-form-solution-1">The closed-form solution</a><a class="docs-heading-anchor-permalink" href="#The-closed-form-solution-1" title="Permalink"></a></h2><p>In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.</p><pre><code class="language-julia">using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
+end</code></pre><p>This can be made significantly more effective (but less accurate) using the <code>knn</code> approach from the <a href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a>.</p><h2 id="The-closed-form-solution-1"><a class="docs-heading-anchor" href="#The-closed-form-solution-1">The closed-form solution</a><a class="docs-heading-anchor-permalink" href="#The-closed-form-solution-1" title="Permalink"></a></h2><p>In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.</p><pre><code class="language-julia">using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
 gr(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])
@@ -83,9 +84,9 @@ vline!([0], l=(:black, :dash))
 hline!([0], l=(:black, :dash))
 
 plot(fig1, fig2, fig3, layout=(1,3))</code></pre><pre><code class="language-none">┌ Warning: Spectral integration failed, increasing precision
-└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/losses.jl:647
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/losses.jl:650
 ┌ Warning: Spectral integration failed, increasing precision
-└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/losses.jl:647
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/losses.jl:650
 /home/travis/.julia/packages/GR/yMV3y/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
 connect: Connection refused
 GKS: can&#39;t connect to GKS socket application
@@ -587,4 +588,4 @@ latex: failed to create a dvi file
 sh: 1: latex: not found
 latex: failed to create a dvi file
 sh: 1: latex: not found
-latex: failed to create a dvi file</code></pre><p><img src="../cumulative.svg" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../misc/">« Misc.</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 31 March 2020 01:39">Tuesday 31 March 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+latex: failed to create a dvi file</code></pre><p><img src="../cumulative.svg" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../misc/">« Misc.</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 31 March 2020 02:44">Tuesday 31 March 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
