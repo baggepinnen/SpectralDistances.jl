@@ -595,13 +595,13 @@ function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},t
     g
 end
 
-function Base.inv(f::AbstractVector)
-    n = length(f)
-    r = LinRange(0, f[end], n)
-    map(r) do r
-        findfirst(>=(r), f)
-    end
-end
+# function Base.inv(f::AbstractVector)
+#     n = length(f)
+#     r = LinRange(0, f[end], n)
+#     map(r) do r
+#         findfirst(>=(r), f)
+#     end
+# end
 
 Base.inv(f::Function, interval) = x->finv(f, x, interval)
 # Base.inv(f::Function,fp) = x->finv(f, fp, x)

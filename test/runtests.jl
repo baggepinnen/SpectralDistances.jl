@@ -489,6 +489,10 @@ end
 
 @testset "residues and roots" begin
 
+    # @test inv(1:3) == 1:3
+    # @test inv([1,1,2]) == [1,1,3]
+    # @test inv([1,2,2]) == [1,1,2]
+
     a = randn(5); a[1]=1;a
     r = roots(reverse(a))
     @test roots2poly(r) ≈ a
@@ -607,6 +611,20 @@ end
     @test dist(x1,x2) < dist(x1,x3)
     dist = WelchOptimalTransportDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
+
+    dist = WelchLPDistance(p=1)
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = WelchLPDistance(p=2)
+    @test dist(x1,x2) < dist(x1,x3)
+end
+
+@testset "Bures" begin
+    fm = LS(na=4)
+    x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))  |> fm
+    x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12)) |> fm
+    x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))  |> fm
+    dist = BuresDistance()
+    @test dist(x1,x2) < dist(x1,x3)
 end
 
 @testset "ClosedForm" begin
@@ -621,9 +639,22 @@ end
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
 
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-15., 15)))
+    @test dist(x1,x2) < dist(x1,x3)
+    @test dist(x1,x2) < dist(x1,x3)
+    dist = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., 15.))
+    @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
+    @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
+
     w = LinRange(0, 2pi*15, 3000)
     dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15)))
     ddist = ModelDistance(fm, DiscretizedRationalDistance(w, sqrt.(SpectralDistances.distmat_euclidean(w,w))))
+    @test ddist(x1, x1) == 0
+    @test_broken ddist(x1, x2) ≈ dist(x1, x2)
+
+    w = LinRange(0, 2pi*15, 3000)
+    dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., 15)))
+    ddist = ModelDistance(fm, DiscretizedRationalDistance(w, (SpectralDistances.distmat_euclidean(w,w))))
     @test ddist(x1, x1) == 0
     @test_broken ddist(x1, x2) ≈ dist(x1, x2)
 
