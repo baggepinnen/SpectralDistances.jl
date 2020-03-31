@@ -616,6 +616,9 @@ end
     @test dist(x1,x2) < dist(x1,x3)
     dist = WelchLPDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
+
+    dist = EnergyDistance()
+    @test dist(x1,x2) < dist(x1,x3)
 end
 
 @testset "Bures" begin

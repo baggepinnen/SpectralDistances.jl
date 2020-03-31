@@ -472,23 +472,23 @@ function evaluate(d::ModelDistance,X,Xh; kwargs...)
     evaluate(d.distance, w, wh; kwargs...)
 end
 
-function batch_loss(bs::Int, loss, X, Xh; kwargs...)
-    l = zero(eltype(Xh))
-    lx = length(X)
-    n_batches = length(X)÷bs
-    inds = 1:bs
-    # TODO: introduce overlap for smoother transitions  #src
-    for i = 1:n_batches
-        l += loss(X[inds],Xh[inds]; kwargs...)
-        inds = inds .+ bs
-    end
-    l *= bs
-    residual_inds = inds[1]:lx
-    lr = length(residual_inds)
-    lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds]; kwargs...)*lr)
-    l /= length(X)
-    l / n_batches
-end
+# function batch_loss(bs::Int, loss, X, Xh; kwargs...)
+#     l = zero(eltype(Xh))
+#     lx = length(X)
+#     n_batches = length(X)÷bs
+#     inds = 1:bs
+#     # TODO: introduce overlap for smoother transitions  #src
+#     for i = 1:n_batches
+#         l += loss(X[inds],Xh[inds]; kwargs...)
+#         inds = inds .+ bs
+#     end
+#     l *= bs
+#     residual_inds = inds[1]:lx
+#     lr = length(residual_inds)
+#     lr > 0 && (l += loss(X[residual_inds],Xh[residual_inds]; kwargs...)*lr)
+#     l /= length(X)
+#     l / n_batches
+# end
 
 evaluate(d::EnergyDistance,X::AbstractArray,Xh::AbstractArray; kwargs...) = (std(X)-std(Xh))^2 + (mean(X)-mean(Xh))^2
 
