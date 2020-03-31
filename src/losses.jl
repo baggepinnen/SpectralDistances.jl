@@ -97,7 +97,6 @@ The Sinkhorn distance between roots. The weights are provided by `weight`, which
 - `transform::F1 = identity`: Probably not needed.
 - `weight::F2 = `[`s1`](@ref) `∘` [`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
 - `β::Float64 = 0.01`: Amount of entropy regularization
-- `iters::Int = 10000`: Number of iterations of the Sinkhorn algorithm.
 - `p::Int = 2` : Order of the distance
 """
 OptimalTransportRootDistance
@@ -106,7 +105,6 @@ OptimalTransportRootDistance
     transform::F1 = identity
     weight::F2 = s1 ∘ residueweight
     β::Float64 = 0.01
-    iters::Int = 10000
     p::Int = 2
 end
 
@@ -177,8 +175,6 @@ Calculates the Wasserstein distance between two signals by estimating a Welch pe
 WelchOptimalTransportDistance
 @kwdef struct WelchOptimalTransportDistance{DT,AT <: Tuple, KWT <: NamedTuple} <: AbstractWelchDistance
     distmat::DT = nothing
-    β::Float64 = 0.01
-    iters::Int = 10000
     args::AT = ()
     kwargs::KWT = NamedTuple()
     p::Int = 2
@@ -421,10 +417,10 @@ function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::Abstrac
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, iters=d.iters, kwargs...)[1]
+    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
     if any(isnan, C)
         println("Nan in OptimalTransportRootDistance, increasing precision")
-        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, iters=d.iters, kwargs...)[1]
+        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, kwargs...)[1]
         any(isnan, C) && error("Sinkhorn failed, consider increasing β")
         eltype(D).(C)
     end
