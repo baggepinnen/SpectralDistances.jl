@@ -166,35 +166,33 @@ Random.seed!(1)
     # true && get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
     @testset "gradients" begin
         @info "Testing gradients"
-        using ForwardDiff, FiniteDifferences
+        using FiniteDifferences#; ForwardDiff
         using SpectralDistances: njacobian, ngradient, nhessian
         using Zygote
         using SpectralDistances: getARXregressor, getARregressor
         y = (randn(10))
         u = (randn(10))
-        njacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[2]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,2)[1]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[2]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,2)[1]), y)
+        @test ngradient((y)->sum(getARXregressor(y,u,2,2)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,2)[2]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,2,2)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,2)[1]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,5,2)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,2)[2]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,5,2)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,2)[1]), y)[1]
 
-        @test njacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[2]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,2,1)[1]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[2]), y)
-        @test njacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y) == ForwardDiff.jacobian((y)->vec(getARXregressor(y,u,5,1)[1]), y)
+        @test ngradient((y)->sum(getARXregressor(y,u,2,1)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,1)[2]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,2,1)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,1)[1]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,5,1)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,1)[2]), y)[1]
+        @test ngradient((y)->sum(getARXregressor(y,u,5,1)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,1)[1]), y)[1]
 
 
 
         y = (randn(10))
-        @test njacobian((y)->vec(getARregressor(y,2)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[2]), y)
-        @test njacobian((y)->vec(getARregressor(y,2)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,2)[1]), y)
-        @test njacobian((y)->vec(getARregressor(y,5)[2]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[2]), y)
-        @test njacobian((y)->vec(getARregressor(y,5)[1]), y) == ForwardDiff.jacobian((y)->vec(getARregressor(y,5)[1]), y)
+        @test ngradient((y)->sum(getARregressor(y,2)[2]), y) == Zygote.gradient((y)->sum(getARregressor(y,2)[2]), y)[1]
+        @test ngradient((y)->sum(getARregressor(y,2)[1]), y) == Zygote.gradient((y)->sum(getARregressor(y,2)[1]), y)[1]
+        @test ngradient((y)->sum(getARregressor(y,5)[2]), y) == Zygote.gradient((y)->sum(getARregressor(y,5)[2]), y)[1]
+        @test ngradient((y)->sum(getARregressor(y,5)[1]), y) == Zygote.gradient((y)->sum(getARregressor(y,5)[1]), y)[1]
 
         a,b = randn(3), randn(4)
-        @test njacobian(a->SpectralDistances.polyconv(a,b), a) ≈ ForwardDiff.jacobian(a->SpectralDistances.polyconv(a,b),a) rtol=1e-3
-
-        @test njacobian(b->SpectralDistances.polyconv(a,b), b) ≈ ForwardDiff.jacobian(b->SpectralDistances.polyconv(a,b),b) rtol=1e-3
+        @test ngradient(a->sum(SpectralDistances.polyconv(a,b)), a) ≈ Zygote.gradient(a->sum(SpectralDistances.polyconv(a,b)),a)[1] rtol=1e-3
+        @test ngradient(b->sum(SpectralDistances.polyconv(a,b)), b) ≈ Zygote.gradient(b->sum(SpectralDistances.polyconv(a,b)),b)[1] rtol=1e-3
 
 
 
@@ -257,7 +255,7 @@ Random.seed!(1)
         f = a -> sum(abs2, residues(a,1))
         g = a -> real(residues(complex.(a),1)[2])
         @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[1][2:end]) < 1e-5
-        @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps()) # Not robust
+        @test_skip bs#; ForwardDiff, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps()) # Not robust
 
         @testset "Numerical curvature" begin
             @info "Testing Numerical curvature"
@@ -294,10 +292,9 @@ Random.seed!(1)
     end
 
     a = -5:-1
-    @test SpectralDistances.roots2poly(a) ≈ SpectralDistances.roots2poly_zygote(a)
-
-
-    @testset "Energy" begin
+    @test SpectralDistances.roots2poly(a) ≈ SpectralDistances.roots2poly_zygote(
+#; ForwardDiff
+stset#; ForwardDiff "Energy" begin
         @info "testing Energy"
         for σ² = [0.1, 1., 2., 3]
             m = AR(ContinuousRoots([-1.]), σ²)
@@ -375,7 +372,7 @@ Random.seed!(1)
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.1 # Filtered through same filter, this test is very non-robust for TLS
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(4),[4], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
     end
-    @testset "PLR" begin
+    @tPLR#; ForwardDiff" begin
         fitmethod = PLR
         @info "Testing fitmethod $(string(fitmethod))"
         t = 1:1000 .+ 0.01 .* randn.()
