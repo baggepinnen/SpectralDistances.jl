@@ -126,7 +126,7 @@ yticks!(yt)
 xticks!(yt, xrotation=45)
 current()
 ```
-
+The figure should look like the last figure in [the paper](https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view).
 
 ```@index
 Pages = ["interpolations.md"]

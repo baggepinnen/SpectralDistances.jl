@@ -47,38 +47,38 @@ Plots.plot(
     legend=false
 )
 ```
-Another clustering approach is to use [`kbarycenters`](@ref), see example in the docstring.
+Another clustering approach is to use [`kbarycenters`](@ref), see example [K-Barycenters](@ref).
 
 
 ## Nearest Neighbor classification
 Here, we will classify a signal based on it's nearest neighbor in a training dataset. The example assumes that the matrix `X` from the previous example is available, and that there is a similar matrix `Xt` created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors `labels::Vector{Int}` and `labelst::Vector{Int}` that contain the class labels.
 ```julia
 using AMD # For permutation of the confusion matrix to more easily identity similar classes.
+using MultivariateStats # For whitening transform
+
 function knn_classify(labels, X, Xt, k)
-    N = size(Xt,2)
-    y = zeros(Int, N)
-    W = fit(Whitening, X)
-    X = MultivariateStats.transform(W,X)
-    Xt = MultivariateStats.transform(W,Xt)
+    N    = size(Xt,2)
+    y    = zeros(Int, N)
+    W    = fit(Whitening, X)
+    X    = MultivariateStats.transform(W,X)
+    Xt   = MultivariateStats.transform(W,Xt)
     tree = NearestNeighbors.KDTree(X)
     for i in 1:N
         inds, dists = knn(tree, Xt[:,i], k)
-        mode(labels[inds])
         y[i] = mode(labels[inds])
     end
     y
 end
-##
-yht = knn_classify(labels,X,Xt,1)
+
+yht = knn_classify(labels,X,Xt,1) # look at the single nearest neighbor
 @show mean(labelst .== yht) # This is the accuracy
-cm = confusmat(30,labelst,yht)
+cm   = confusmat(30,labelst,yht)
 perm = amd(sparse(cm))
-cm = cm[perm,perm]
+cm   = cm[perm,perm]
 heatmap(cm./sum(cm,dims=2), xlabel="Predicted class",ylabel="True class", title="Confusion Matrix for Test Data")
 anns = [(reverse(ci.I)..., text(val,8)) for (ci,val) in zip(CartesianIndices(cm)[:], vec(cm))]
 annotate!(anns)
 ```
-
 
 ## Pairwise distance matrix
 Many algorithms make use of a matrix containing all pairwise distances between points. Given a set of models, we can easily obtain such a matrix:
@@ -105,7 +105,7 @@ function scorefunction(query_model)
     score = minimum(distance_vector)
 end
 ```
-This can be made significantly more effective (but less accurate) using the `knn` approach from the [example above](https://baggepinnen.github.io/SpectralDistances.jl/latest/examples/#Nearest-Neighbor-classification-1).
+This can be made significantly more effective (but less accurate) using the `knn` approach from the [Nearest Neighbor classification](@ref).
 
 
 ## The closed-form solution
