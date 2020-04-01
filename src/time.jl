@@ -1,3 +1,10 @@
+"""
+This is a time-aware distance. It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) supported), and some parameters that are specific to the time dimension, example:
+```
+dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=2, weight=s1∘residueweight), tp=2, c=0.1)
+```
+`tp` is the same as `p` but for the time dimension, and `c` trades off the distance along the time axis with the distance along the frequency axis. A smaller `c` makes it cheaper to transport mass across time. The frequency axis spans `[-π,π]` and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.
+"""
 @kwdef struct TimeDistance{D<:AbstractDistance,T} <: AbstractDistance
     inner::D
     tp::Int = 2
@@ -32,6 +39,16 @@ end
 
 PolynomialRoots.roots(::Continuous, m::TimeVaryingRoots) = m.roots
 
+
+"""
+We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
+# Example
+```
+fitmethod = TimeWindow(TLS(na=2), 1000, 500)
+y = sin.(0:0.1:100);
+model = fitmethod(y)
+```
+"""
 @kwdef struct TimeWindow{T<:FitMethod} <: FitMethod
     inner::T
     n::Int
