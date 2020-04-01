@@ -744,6 +744,11 @@ end
     include("test_barycenter.jl")
 end
 
+@testset "time" begin
+    @info "Testing time"
+    include("test_time.jl")
+end
+
 @testset "Slerp" begin
     a = n1(randn(3))
     b = n1(randn(3))
