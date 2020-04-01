@@ -63,7 +63,7 @@ end
 
 function evaluate(od::TimeDistance, m1::TimeVaryingRoots,m2::TimeVaryingRoots; solver=sinkhorn_log!, kwargs...)
     d     = od.inner
-    @show D     = distmat_euclidean(m1,m2,d.p, od.tp, od.c)
+    D     = distmat_euclidean(m1,m2,d.p, od.tp, od.c)
     w1    = s1(reduce(vcat,d.weight.(m1.roots)))
     w2    = s1(reduce(vcat,d.weight.(m2.roots)))
     C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
