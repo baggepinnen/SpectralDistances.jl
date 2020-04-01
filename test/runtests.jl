@@ -408,6 +408,23 @@ end
     g = SpectralDistances.discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] == y
     @test sum(g,dims=2)[:] == x
+
+    # test robustness for long vectors
+    x = s1(rand(1000))
+    y = s1(rand(1000))
+    g = SpectralDistances.discrete_grid_transportplan(x,y)
+    @test sum(g,dims=1)[:] ≈ y
+    @test sum(g,dims=2)[:] ≈ x
+    g = SpectralDistances.discrete_grid_transportplan(y,x)
+    @test sum(g,dims=1)[:] ≈ y
+    @test sum(g,dims=2)[:] ≈ x
+
+    # test exception for unequal masses
+    x = s1(rand(Float32,1000))
+    y = rand(Float32,1000)
+    @test_throws ErrorException SpectralDistances.discrete_grid_transportplan(x,y)
+    @test_throws ErrorException SpectralDistances.discrete_grid_transportplan(y,x)
+
 end
 
 
@@ -616,6 +633,7 @@ end
     @test dist(x1,x2) < dist(x1,x3)
     dist = WelchOptimalTransportDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
+    @test_throws ErrorException dist(NaN*x1,x3)
 
     dist = WelchLPDistance(p=1)
     @test dist(x1,x2) < dist(x1,x3)
