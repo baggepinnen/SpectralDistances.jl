@@ -416,8 +416,8 @@ end
     @test sum(g,dims=1)[:] ≈ y
     @test sum(g,dims=2)[:] ≈ x
     g = SpectralDistances.discrete_grid_transportplan(y,x)
-    @test sum(g,dims=1)[:] ≈ y
-    @test sum(g,dims=2)[:] ≈ x
+    @test sum(g,dims=1)[:] ≈ x
+    @test sum(g,dims=2)[:] ≈ y
 
     # test exception for unequal masses
     x = s1(rand(Float32,1000))
