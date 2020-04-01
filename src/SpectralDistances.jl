@@ -64,6 +64,8 @@ domain_transform
 
 export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting
 
+export TimeDistance, TimeVaryingRoots, TimeWindow
+
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")
 include("losses.jl")
@@ -73,6 +75,7 @@ include("plotting.jl")
 include("sinkhorn.jl")
 include("barycenter.jl")
 include("adjoints.jl")
+include("time.jl")
 
 import Requires
 function __init__()

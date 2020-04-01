@@ -120,6 +120,11 @@ Random.seed!(1)
 @testset "SpectralDistances.jl" begin
 
 
+    @testset "time" begin
+        @info "Testing time"
+        include("test_time.jl")
+    end
+
     @testset "Solvers" begin
         @info "Testing Solvers"
 

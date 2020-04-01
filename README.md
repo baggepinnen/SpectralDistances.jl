@@ -16,7 +16,7 @@ The package also contains a number of generic solvers for optimal transport prob
 See the [documentation](https://baggepinnen.github.io/SpectralDistances.jl/latest) for instructions.
 
 ![window](figs/spec.svg)
-> Interpolation between two rational spectra under three different metrics.
+> Interpolation between two rational spectra under four different metrics.
 
 ![window](figs/demon.svg)
 > Barycenter of three spectra and mixed spectrum which can be decomposed into a combination of the three input spectra
