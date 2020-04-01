@@ -5,7 +5,7 @@ dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=2,
 ```
 `tp` is the same as `p` but for the time dimension, and `c` trades off the distance along the time axis with the distance along the frequency axis. A smaller `c` makes it cheaper to transport mass across time. The frequency axis spans `[-π,π]` and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.
 """
-@kwdef struct TimeDistance{D<:AbstractDistance,T} <: AbstractDistance
+@kwdef struct TimeDistance{D<:OptimalTransportRootDistance,T} <: AbstractDistance
     inner::D
     tp::Int = 2
     c::T = 0.1
@@ -60,7 +60,6 @@ function fitmodel(fm::TimeWindow, x)
     models = map(arraysplit(x,n,noverlap)) do slice
         fitmodel(fm.inner, slice)
     end
-    # ModelSpectrogram(models)
     TimeVaryingRoots(roots.(Continuous(), models))
 end
 
@@ -80,12 +79,13 @@ end
 
 function evaluate(od::TimeDistance, m1::TimeVaryingRoots,m2::TimeVaryingRoots; solver=sinkhorn_log!, kwargs...)
     d     = od.inner
+    @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
     D     = distmat_euclidean(m1,m2,d.p, od.tp, od.c)
     w1    = s1(reduce(vcat,d.weight.(m1.roots)))
     w2    = s1(reduce(vcat,d.weight.(m2.roots)))
     C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
     if any(isnan, C)
-        println("Nan in OptimalTransportRootDistance, increasing precision")
+        @info("Nan in OptimalTransportRootDistance, increasing precision")
         C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, kwargs...)[1]
         any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         eltype(D).(C)
