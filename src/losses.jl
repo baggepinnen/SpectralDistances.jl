@@ -204,7 +204,7 @@ end
 """
     OptimalTransportHistogramDistance{DT} <: AbstractDistance
 
-What it sounds like
+Optimal transport between two histograms. If you pass two vectors to this distance two histograms will be computed automatically (`fit(Histogram,x)`). Pass two histograms to get better manual control.
 
 # Arguments:
 - `p::Int = 1`: order
@@ -314,6 +314,8 @@ distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 
 Compute the symmetric, pairwise distance matrix using the specified distance.
 
 - `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`OptimalTransportRootDistance`](@ref)
+
+This function uses multiple threads if available.
 """
 function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
@@ -540,6 +542,11 @@ function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
     cost = sum(C .* D)
+    if !isfinite(cost)
+        @show count(!isfinite, w1.power), count(!isfinite, w2.power), count(!isfinite, C), count(!isfinite, D)
+        error("WelchOptimalTransportDistance failed")
+    end
+    cost
 end
 
 function evaluate(d::WelchLPDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR;  kwargs...)
@@ -572,7 +579,7 @@ function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},t
     yf = zero(T)
     n  = length(x)
     @assert length(y) == n
-    g = zeros(n,n)
+    g = zeros(T,n,n)
     i = j = 1
     @inbounds while j <= n && i <= n
         needed = y[j] - yf
