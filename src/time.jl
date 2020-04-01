@@ -66,9 +66,9 @@ end
 
 preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 
-distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p=2, tp=2, c=0.1) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
+distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
-function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p=2, tp=2, c=0.1)
+function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p, tp, c)
     for i in 1:length(m1), j in 1:length(m2)
         _,t1 = mi2ij(m1,i)
         _,t2 = mi2ij(m2,j)

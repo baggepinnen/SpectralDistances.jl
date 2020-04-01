@@ -7,13 +7,13 @@ m = TimeVaryingRoots([r,r,r])
 @test m[3] == m[1,2]
 @test m[4] == m[2,2]
 
-D = SpectralDistances.distmat_euclidean(m,m,2)
+D = SpectralDistances.distmat_euclidean(m,m,2,2,1)
 @test all(iszero, diag(D))
 @test D[1,3] == 1
 @test D[1,2] != 1
 @test D[1,5] == 2^2
 
-D = SpectralDistances.distmat_euclidean(m,m,1)
+D = SpectralDistances.distmat_euclidean(m,m,1,1,1)
 @test all(iszero, diag(D))
 @test D[1,3] == 1
 @test D[1,2] != 1
@@ -33,14 +33,14 @@ m2 = fm(y2)
 @test m[3] == m[1,2]
 @test m[4] == m[2,2]
 
-D = SpectralDistances.distmat_euclidean(m,m)
+D = SpectralDistances.distmat_euclidean(m,m,2,2,1)
 @test all(iszero, diag(D))
 
 # test that the distance increases as expected with varying frequencies, p=1
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=s1∘residueweight), tp=1, c=1.0)
 
-@test evaluate(dist, m, m, printerval=1) < 1e-3
-@test evaluate(dist, m, m2, printerval=1000, iters=10000, tol=1e-3) > 0.1
+@test evaluate(dist, m, m) < 1e-3
+@test evaluate(dist, m, m2, iters=10000, tol=1e-3) > 0.1
 
 fm = TimeWindow(TLS(na=2), 1000, 500)
 y = sin.(0:0.1:100)
@@ -80,5 +80,5 @@ d = evaluate(dist, m, m2, iters=10000, tol=1e-3)
 @test d ≈ 0.1 rtol=1e-3
 
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=s1∘residueweight, β=0.001), tp=1, c=0.01)
-d = evaluate(dist, m, m2, iters=10000, tol=1e-5, printerval=1)
+d = evaluate(dist, m, m2, iters=10000, tol=1e-5)
 @test d ≈ 0.01 rtol=1e-2
