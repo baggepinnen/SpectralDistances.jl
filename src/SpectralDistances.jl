@@ -64,7 +64,7 @@ domain_transform
 
 export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting
 
-export TimeVaryingRoots, TimeWindow
+export TimeDistance, TimeVaryingRoots, TimeWindow
 
 include("eigenvalue_manipulations.jl")
 include("ltimodels.jl")

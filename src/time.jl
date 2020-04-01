@@ -1,3 +1,9 @@
+@kwdef struct TimeDistance{D<:AbstractDistance,T} <: AbstractDistance
+    inner::D
+    tp::Int = 2
+    c::T = 0.1
+end
+
 struct TimeVaryingRoots{T<:AbstractRoots} <: AbstractModel
     roots::Vector{T}
 end
@@ -43,20 +49,21 @@ end
 
 preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 
-distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p=2) = distmat_euclidean!(zeros(length(m1),length(m2)), m1,m2,p)
+distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p=2, tp=2, c=0.1) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
-function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p=2)
+function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p=2, tp=2, c=0.1)
     for i in 1:length(m1), j in 1:length(m2)
         _,t1 = mi2ij(m1,i)
         _,t2 = mi2ij(m2,j)
-        D[i,j] = abs(m1[i]-m2[j])^p + abs(t1-t2)^p
+        D[i,j] = abs(m1[i]-m2[j])^p + c*abs(t1-t2)^tp
     end
     D
 end
 
 
-function evaluate(d::OptimalTransportRootDistance, m1::TimeVaryingRoots,m2::TimeVaryingRoots; solver=sinkhorn_log!, kwargs...)
-    D     = distmat_euclidean(m1,m2,d.p)
+function evaluate(od::TimeDistance, m1::TimeVaryingRoots,m2::TimeVaryingRoots; solver=sinkhorn_log!, kwargs...)
+    d     = od.inner
+    @show D     = distmat_euclidean(m1,m2,d.p, od.tp, od.c)
     w1    = s1(reduce(vcat,d.weight.(m1.roots)))
     w2    = s1(reduce(vcat,d.weight.(m2.roots)))
     C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
