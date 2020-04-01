@@ -297,7 +297,7 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 The euclidean distance matrix between two vectors of complex numbers
 """
-distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = distmat_euclidean!(zeros(typeof(abs(e1[1])), length(e1),length(e2)), e1,e2,p)
 
 """
     distmat_euclidean!(D, e1::AbstractVector, e2::AbstractVector, p = 2) = begin
@@ -421,7 +421,7 @@ function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::Abstrac
     if any(isnan, C)
         println("Nan in OptimalTransportRootDistance, increasing precision")
         C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, kwargs...)[1]
-        any(isnan, C) && error("Sinkhorn failed, consider increasing β")
+        any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         eltype(D).(C)
     end
     sum(C.*D)

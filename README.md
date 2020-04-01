@@ -9,7 +9,7 @@ This repository implements all optimal-transport based distances between spectra
 See the [documentation](https://baggepinnen.github.io/SpectralDistances.jl/latest) for instructions.
 
 ![window](figs/spec.svg)
-> Interpolation between two rational spectra under three different metrics.
+> Interpolation between two rational spectra under four different metrics.
 
 ![window](figs/demon.svg)
 > Barycenter of three spectra and mixed spectrum which can be decomposed into a combination of the three input spectra
