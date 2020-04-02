@@ -21,11 +21,11 @@ using AudioClustering
 path = "path/to/folder/with/wav-files"
 
 cd(path)
-files = glob("*.wav")
-labels0 = match.(r"[a-z_]+", files)..:match .|> String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
-ulabels = unique(labels0)
-labels = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)', dims=2)[:]
-na = 18 # Order of the models
+files     = glob("*.wav")
+labels0   = match.(r"[a-z_]+", files)..:match .|> String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
+ulabels   = unique(labels0)
+labels    = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)', dims=2)[:]
+na        = 18 # Order of the models
 fitmethod = LS(na=na, λ=1e-5)
 
 models = mapsoundfiles(files, fs) do sound # mapsoundfiles is defined in AudioClustering
@@ -42,9 +42,21 @@ labels,models,X,Z = get_features(trainpath)
 cr = kmeans(v1(X,2), 30) # v1 normalizes mean and variance
 
 Plots.plot(
-    scatter(threeD(X'), marker_z=labels, m=(2,0.5), markerstrokealpha=0, colorbar=false, title="Correct assignment"),
-    scatter(threeD(X'), marker_z=cr.assignments, m=(2,0.5), markerstrokealpha=0, colorbar=false, title="K-means on w assignment"),
-    legend=false
+    scatter(threeD(X'),
+        marker_z          = labels,
+        m                 = (2, 0.5),
+        markerstrokealpha = 0,
+        colorbar          = false,
+        title             = "Correct assignment",
+    ),
+    scatter(threeD(X'),
+        marker_z          = cr.assignments,
+        m                 = (2, 0.5),
+        markerstrokealpha = 0,
+        colorbar          = false,
+        title             = "K-means on w assignment",
+    ),
+    legend = false,
 )
 ```
 Another clustering approach is to use [`kbarycenters`](@ref), see example [K-Barycenters](@ref).
@@ -65,7 +77,7 @@ function knn_classify(labels, X, Xt, k)
     tree = NearestNeighbors.KDTree(X)
     for i in 1:N
         inds, dists = knn(tree, Xt[:,i], k)
-        y[i] = mode(labels[inds])
+        y[i]        = mode(labels[inds])
     end
     y
 end
@@ -111,7 +123,7 @@ This can be made significantly more effective (but less accurate) using the `knn
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
-using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
+using ControlSystems, SpectralDistances, Plots
 gr(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])

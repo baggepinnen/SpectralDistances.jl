@@ -30,7 +30,7 @@ interp = SpectralDistances.interpolator(dist, A1, A2)
 w = exp10.(LinRange(-1.5, 1, 300))
 for t = LinRange(0, 1, 7)
     Φ = clamp.(interp(w,t), 1e-10, 100)
-    plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="Frequency", title="W_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
+    plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="", title="W_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
 rdist = EuclideanRootDistance(domain=Continuous(), p=2)
@@ -47,7 +47,7 @@ w = exp10.(LinRange(-1.5, 1, 300))
 Φ1 = bode(tf(A1), w)[1][:]
 Φ2 = bode(tf(A2), w)[1][:]
 for t = LinRange(0, 1, 7)
-    plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="", title="L_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
+    plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="Frequency", title="L_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
 fig = plot(fig1, fig2, fig3, layout=(3,1))

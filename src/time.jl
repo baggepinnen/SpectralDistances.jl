@@ -5,12 +5,20 @@ dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=2,
 ```
 `tp` is the same as `p` but for the time dimension, and `c` trades off the distance along the time axis with the distance along the frequency axis. A smaller `c` makes it cheaper to transport mass across time. The frequency axis spans `[-π,π]` and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.
 """
+TimeDistance
 @kwdef struct TimeDistance{D<:OptimalTransportRootDistance,T} <: AbstractDistance
     inner::D
     tp::Int = 2
     c::T = 0.1
 end
 
+"""
+    TimeVaryingRoots{T <: AbstractRoots} <: AbstractModel
+
+This model represents a rational spectrogram, i.e., a rational spectrum that changes with time. See [`TimeWindow`](@ref) for the corresponding fit method and [`TimeDistance`](@ref) for a time-aware distance.
+
+Internally, this model stores a vector of [`ContinuousRoots`](@ref).
+"""
 struct TimeVaryingRoots{T<:AbstractRoots} <: AbstractModel
     roots::Vector{T}
 end
@@ -30,7 +38,6 @@ end
     i,j
 end
 
-
 @inline function Base.getindex(m::TimeVaryingRoots, i)
     i,j = mi2ij(m,i)
     m[i,j]
@@ -39,6 +46,11 @@ end
 
 PolynomialRoots.roots(::Continuous, m::TimeVaryingRoots) = m.roots
 
+function Base.isapprox(m1::TimeVaryingRoots, m2::TimeVaryingRoots, args...; kwargs...)
+    isapprox(m1.roots, m2.roots, args...; kwargs...)
+end
+
+change_precision(F, m::TimeVaryingRoots) = TimeVaryingRoots(change_precision.(F, m.roots))
 
 """
 We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
@@ -49,6 +61,7 @@ y = sin.(0:0.1:100);
 model = fitmethod(y)
 ```
 """
+TimeWindow
 @kwdef struct TimeWindow{T<:FitMethod} <: FitMethod
     inner::T
     n::Int

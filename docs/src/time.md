@@ -1,5 +1,5 @@
 ```@setup time
-using SpectralDistances
+using SpectralDistances, Plots
 ```
 # Time-Frequency distances
 For non-stationary signals, it is important to consider how the spectrum changes with time. This package has some, so far, basic support for time-frequency representations of non-stationary signals.
@@ -39,28 +39,98 @@ m2 = signal(2,1) |> fm # Signal 2 has the reverse frequencies
 dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
-        p = 1,
+        p      = 1,
         weight = s1 ∘ residueweight,
     ),
     tp = 1,
-    c = 1.0, # c is large
+    c  = 1.0, # c is large
 )
 evaluate(dist, m, m2)
 ```
 
+Then we make it cheaper
 ```@example time
-# Then we make it cheaper
 dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
-        p = 1,
+        p      = 1,
         weight = s1 ∘ residueweight,
     ),
     tp = 1,
-    c = 0.01, # c is small
-) 
+    c  = 0.01, # c is small
+)
 evaluate(dist, m, m2)
 ```
+
+
+### Chirp example
+Here we consider the estimation of the distance between two signals containing chirps, where the onset of the chirp differs. We start by creating some signals with different chirp onsets:
+```@example time
+fs = 100000
+T = 3
+t = 0:1/fs:T
+N = length(t)
+f = range(1000, stop=10_000, length=N)
+chirp0 = sin.(f.*t)
+function chirp(onset)
+    y = 0.1sin.(20_000 .* t)
+    inds = max(round(Int,fs*onset), 1):N
+    y[inds] .+= chirp0[1:length(inds)]
+    y
+end
+using DSP, LPVSpectral
+plot(spectrogram(chirp(0), window=hanning), layout=2)
+plot!(spectrogram(chirp(1), window=hanning), sp=2)
+savefig("chirps.svg"); nothing # hide
+```
+
+![](chirps.svg)
+
+We then define the fit method and the distance, similar to previous examples
+```@example time
+fm     = TimeWindow(LS(na=4, λ=1e-4), 20000, 0)
+m      = chirp(1) |> fm # This is the signal we'll measure the distance to
+onsets = LinRange(0, 2, 21) # A vector of onset times
+cv     = exp10.(LinRange(-3, -0.5, 6)); # a vector of `c` values for the time-transport cost
+```
+
+We now calculate the distance to the base signal for varying onsets and varying time-transport costs.
+```@example time
+dists = map(Iterators.product(cv, onsets)) do (c, onset)
+    m2 = chirp(onset) |> fm
+    dist = TimeDistance(
+        inner = OptimalTransportRootDistance(
+            domain = Continuous(),
+            p      = 1,
+            weight = s1 ∘ residueweight,
+        ),
+        tp = 1,
+        c  = c,
+    )
+    evaluate(
+        dist,
+        change_precision(Float64, m),  # we reduce the precision for faster computations
+        change_precision(Float64, m2),
+        iters = 10000,
+        tol = 1e-2, # A coarse tolerance is okay for this example
+    )
+end
+
+plot(onsets, dists',
+    lab      = cv',
+    line_z   = log10.(cv)',
+    color    = :inferno,
+    legend   = false,
+    colorbar = true,
+    xlabel   = "Onset [s]",
+    title    = "Distance as function of onset and time cost"
+)
+savefig("chirp_dists.svg"); nothing # hide
+```
+The results are shown below. The figure indicates the cost `log10(c)` using the color scale. We can see that the distance between the signals is smallest at `onset=1`, which was the onset for the base signal. We also see that for small values of `c`, it's cheap to transport along time. After increasing `c` for a while it stops getting cheaper, indicating that it's now cheaper to transport along the frequency axis instead.
+![](chirp_dists.svg)
+
+In this example, we chose the weight function `s1∘residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.
 
 ## Function reference
 

@@ -2,6 +2,10 @@
 r = ContinuousRoots(randn(2))
 m = TimeVaryingRoots([r,r,r])
 
+mc = SpectralDistances.change_precision(Float32, m)
+@test m ≈ mc
+@test eltype(mc.roots[1]) == Complex{Float32}
+
 @test m[1] == m[1,1]
 @test m[2] == m[2,1]
 @test m[3] == m[1,2]
@@ -83,3 +87,38 @@ d = evaluate(dist, m, m2, iters=10000, tol=1e-3)
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=s1∘residueweight, β=0.001), tp=1, c=0.01)
 d = evaluate(dist, m, m2, iters=10000, tol=1e-5)
 @test d ≈ 0.01 rtol=1e-2
+
+
+## Test chirps
+
+fs = 100000
+T = 3
+t = 0:1/fs:T
+N = length(t)
+f = range(1000, stop=10_000, length=N)
+chirp0 = sin.(f.*t)
+function chirp(onset)
+    y = 0.1sin.(20_000 .* t)
+    inds = max(round(Int,fs*onset), 1):N
+    y[inds] .+= chirp0[1:length(inds)]
+    y
+end
+isinteractive() && begin
+    @eval using SpectralDistances, DSP, LPVSpectral, ThreadPools
+    plot(spectrogram(chirp(0), window=hanning), layout=2)
+    plot!(spectrogram(chirp(1), window=hanning), sp=2)
+end
+fm = TimeWindow(LS(na=4, λ=1e-4), 20000, 0)
+m = chirp(1)  |> fm
+@show length(m)
+
+onsets = LinRange(0, 2, 21); 1 ∈ onsets
+cv = exp10.(LinRange(-3, -0.5, 6))
+
+@time dists = map(Iterators.product(cv,onsets)) do (c,onset)
+    m2 = chirp(onset) |> fm
+    dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=s1∘residueweight), tp=1, c=c)
+    evaluate(dist, change_precision(Float64, m), change_precision(Float64, m2), iters=10000, tol=1e-2)
+end
+
+isinteractive() && plot(onsets, dists', lab=cv', line_z = log10.(cv)', color=:inferno, legend=false, colorbar=true, xlabel="Onset [s]", )

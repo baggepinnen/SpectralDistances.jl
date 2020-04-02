@@ -29,43 +29,43 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     #     ac = roots2poly(rc)
     #     new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc)
     # end
-    function AR(a::AbstractVector, σ²=nothing)
-        a = isderiving() ? complex.(a) : SVector{length(a)}(a)
-        r = DiscreteRoots(hproots(rev(a)))
-        rc = ContinuousRoots(r)
-        ac = roots2poly(rc)
-        ac = isderiving() ? complex.(ac) : ac
-        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
-    end
+end
+function AR(a::AbstractVector, σ²=nothing)
+    a = isderiving() ? complex.(a) : SVector{length(a)}(a)
+    r = DiscreteRoots(hproots(rev(a)))
+    rc = ContinuousRoots(r)
+    ac = roots2poly(rc)
+    ac = isderiving() ? complex.(ac) : ac
+    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
+end
 
-    function AR(::Continuous, ac::AbstractVector, σ²=nothing)
-        ac = isderiving() ? complex.(ac) : SVector{length(ac)}(ac)
-        rc = ContinuousRoots(hproots(rev(ac)))
-        r = DiscreteRoots(rc)
-        a = roots2poly(r)
-        a = isderiving() ? complex.(a) : a
-        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
-    end
-    function AR(rc::ContinuousRoots, σ²=nothing)
-        r = DiscreteRoots(rc)
-        a = roots2poly(r)
-        ac = roots2poly(rc)
-        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
-    end
-    function AR(r::DiscreteRoots, σ²=nothing)
-        rc = ContinuousRoots(r)
-        a = roots2poly(r)
-        ac = roots2poly(rc)
-        b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
-        new{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
-    end
+function AR(::Continuous, ac::AbstractVector, σ²=nothing)
+    ac = isderiving() ? complex.(ac) : SVector{length(ac)}(ac)
+    rc = ContinuousRoots(hproots(rev(ac)))
+    r = DiscreteRoots(rc)
+    a = roots2poly(r)
+    a = isderiving() ? complex.(a) : a
+    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
+end
+function AR(rc::ContinuousRoots, σ²=nothing)
+    r = DiscreteRoots(rc)
+    a = roots2poly(r)
+    ac = roots2poly(rc)
+    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
+end
+function AR(r::DiscreteRoots, σ²=nothing)
+    rc = ContinuousRoots(r)
+    a = roots2poly(r)
+    ac = roots2poly(rc)
+    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
 "`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."
-checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && println("Roots on negative real axis, no corresponding continuous time representation exists.")
+checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn("Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.", maxlog=5)
 
 """
     AR(X::AbstractArray, order::Int)
@@ -170,6 +170,18 @@ end
 Base.convert(::Type{ControlSystems.TransferFunction}, m::AbstractModel) = tf(m)
 Base.promote_rule(::Type{<:ControlSystems.TransferFunction}, ::Type{<:AbstractModel}) = ControlSystems.TransferFunction
 
+function Base.isapprox(m1::AR, m2::AR, args...; kwargs...)
+    all(isapprox(getfield(m1,field), getfield(m2,field), args...; kwargs...) for field in fieldnames(typeof(m1)))
+end
+
+function change_precision(F, m::AR)
+    CF = Complex{F}
+    a  = F.(m.a)
+    r  = change_precision(F,m.p)
+    rc = change_precision(F,m.pc)
+    AR{typeof(a), typeof(r), typeof(rc)}(a, F.(m.ac), r, rc, m.b)
+end
+
 
 """
     roots(m::AbstractModel)
@@ -257,15 +269,24 @@ function fitmodel(fm::LS,X::AbstractArray)
 end
 
 
+# diffpol(n) = [(-1)^k*binomial(n,k) for k in 1:n]
+diffpol(n) = diagm(0=>ones(n), 1=>-ones(n))[:,1:n]
+
 """
-    ls(yA::AbstractTuple, λ=0.01)
+    ls(A, y, λ=0)
 
 Regularized Least-squares
 """
-function ls(A, y, λ=1e-2)
-    # (A'A + 1e-9I)\(A'y) #src
-    A2 = [A; λ*I]
-    (A2'A2)\(A'y)
+function ls(A, y, λ=0)
+    n = size(A,2)
+    if λ > 0
+        A = [A; sqrt(λ)*I]
+        y = [y;zeros(n)]
+    end
+    # @show size(A2), size(y)
+    # svd(A2)\y
+    # (A'A - γ*I)\(A'y)
+    A\y
 end
 
 
@@ -276,10 +297,12 @@ Total least squares. This fit method is good if the spectrum has sharp peaks, in
 
 # Arguments:
 - `na::Int`: number of roots (order of the system). The number of peaks in the spectrum will be `na÷2`.
+- `λ::Float64 = 0`: reg factor
 """
 TLS
 @kwdef struct TLS <: FitMethod
     na::Int
+    λ::Float64 = 0
 end
 
 """
@@ -288,12 +311,20 @@ end
 function fitmodel(fm::TLS,X::AbstractArray)
     isderiving() && return fitmodel(fm,X,true)
     Ay = getARregressor_(X, fm.na)
+    if fm.λ > 0
+        Ay = [Ay;sqrt(fm.λ)*I]
+        Ay[end,end] = 0
+    end
     a = tls!(Ay, size(Ay,2)-1) |> vec |> rev |> polyvec
     AR(a, var(X))
 end
 
 function fitmodel(fm::TLS,X::AbstractArray,diff::Bool)
     y,A = getARregressor(X, fm.na)
+    if fm.λ > 0
+        A = [A;sqrt(fm.λ)*I]
+        y = [y;zeros(size(A,2))]
+    end
     a = tls(A,y) |> vec |> rev |> polyvec
     AR(a, var(X))
 end

@@ -85,6 +85,15 @@ domain_transform(d::Discrete,e::DiscreteRoots) = e
 domain(::DiscreteRoots) = Discrete()
 domain(::ContinuousRoots) = Continuous()
 
+"""
+    change_precision(F, m::AbstractModel)
+
+Changes the precision of all fields in `m` to `F`, e.g., `F=Float64`. This can be useful since the default precision for many operations in this package is `Double64`. This ensures that roots are calculated with high accuracy, but the high precision might not be required to evaluate distances etc.
+"""
+change_precision(F, r::ContinuousRoots) = ContinuousRoots(Complex{F}.(r.r))
+change_precision(F, r::DiscreteRoots) = DiscreteRoots(Complex{F}.(r.r))
+
+
 
 eigsort(e) = sort(e, by=imag)
 anglesort(e) = sort(e, by=angle)

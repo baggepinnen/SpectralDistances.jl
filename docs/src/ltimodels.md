@@ -21,7 +21,8 @@ For example, to estimate an [`AR`](@ref) model of order 12 using least-squares, 
 ```@repl lti
 data = randn(1000);
 fitmethod = LS(na=12)
-SpectralDistances.fitmodel(fitmethod, data)
+model = fitmethod(data)
+change_precision(Float32, model) # Can be useful to reduce the computational cost of some distances
 ```
 
 ## Type reference

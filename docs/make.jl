@@ -1,5 +1,5 @@
 using Documenter
-using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK
+using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK, DSP
 # using DocumenterLaTeX
 
 @info "makedocs"
