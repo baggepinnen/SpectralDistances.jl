@@ -1,6 +1,7 @@
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
+DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"

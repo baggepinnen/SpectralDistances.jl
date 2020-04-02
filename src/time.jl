@@ -1,7 +1,15 @@
 """
 This is a time-aware distance. It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) supported), and some parameters that are specific to the time dimension, example:
 ```
-dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=2, weight=s1∘residueweight), tp=2, c=0.1)
+dist = TimeDistance(
+    inner = OptimalTransportRootDistance(
+        domain = Continuous(),
+        p      = 2,
+        weight = s1 ∘ residueweight,
+    ),
+    tp = 2,
+    c  = 0.1,
+)
 ```
 `tp` is the same as `p` but for the time dimension, and `c` trades off the distance along the time axis with the distance along the frequency axis. A smaller `c` makes it cheaper to transport mass across time. The frequency axis spans `[-π,π]` and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.
 """
@@ -9,7 +17,7 @@ TimeDistance
 @kwdef struct TimeDistance{D<:OptimalTransportRootDistance,T} <: AbstractDistance
     inner::D
     tp::Int = 2
-    c::T = 0.1
+    c::T    = 0.1
 end
 
 """

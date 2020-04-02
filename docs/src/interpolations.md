@@ -9,7 +9,6 @@ using SpectralDistances, ControlSystems, Distances, Plots, Random
 Random.seed!(0)
 
 n = 4
-
 r1 = complex.(-0.01 .+ 0.001randn(3), 2randn(3))
 r1 = ContinuousRoots([r1; conj.(r1)])
 
@@ -21,31 +20,28 @@ r1,r2 = normalize_energy.((r1, r2))
 A1 = AR(r1)
 A2 = AR(r2)
 
-
 ##
-fig1 = plot()
-t = 0.1
-dist = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
+fig1   = plot()
+t      = 0.1
+dist   = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., exp10(1.01)))
 interp = SpectralDistances.interpolator(dist, A1, A2)
-w = exp10.(LinRange(-1.5, 1, 300))
+w      = exp10.(LinRange(-1.5, 1, 300))
 for t = LinRange(0, 1, 7)
     Φ = clamp.(interp(w,t), 1e-10, 100)
     plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="", title="W_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
-rdist = EuclideanRootDistance(domain=Continuous(), p=2)
+rdist  = EuclideanRootDistance(domain                           =Continuous(), p=2)
 interp = SpectralDistances.interpolator(rdist, A1, A2, normalize=false)
-fig2 = plot()
-w = exp10.(LinRange(-1.5, 1, 300))
+fig2   = plot()
 for t = LinRange(0, 1, 7)
     Φ = interp(w,t)
     plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="", title="RD", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
 fig3 = plot()
-w = exp10.(LinRange(-1.5, 1, 300))
-Φ1 = bode(tf(A1), w)[1][:]
-Φ2 = bode(tf(A2), w)[1][:]
+Φ1   = bode(tf(A1), w)[1][:]
+Φ2   = bode(tf(A2), w)[1][:]
 for t = LinRange(0, 1, 7)
     plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="Frequency", title="L_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
@@ -70,11 +66,11 @@ bc = barycenter(distance, models; options...)
 We can plot the barycenters:
 ```@example
 using SpectralDistances, ControlSystems, Plots
-models = examplemodels(3)
+models   = examplemodels(3)
 distance = OptimalTransportRootDistance(domain=Continuous())
-bc = barycenter(distance, models)
-w = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
-G = tf.(models) # Convert models to transfer functions from ControlSystems.jl
+bc       = barycenter(distance, models)
+w        = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
+G        = tf.(models) # Convert models to transfer functions from ControlSystems.jl
 plot()
 bodeplot!.(G, Ref(w), plotphase=false, lab="Input models", linestyle=:auto)
 bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:green)

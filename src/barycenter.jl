@@ -192,17 +192,14 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 # Example:
 ```julia
 using SpectralDistances, ControlSystems, Optim
-ζ = [0.1, 0.3, 0.7]
+models = examplemodels(10)
 
-models = map(1:10) do _
-    pol = [1]
-    for i = eachindex(ζ)
-        pol = SpectralDistances.polyconv(pol, [1,2ζ[i] + 0.1randn(),1+0.1randn()])
-    end
-    AR(Continuous(),pol)
-end
-
-d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+d = OptimalTransportRootDistance(
+    domain = SpectralDistances.Continuous(),
+    p      = 2,
+    weight = residueweight,
+    β      = 0.01,
+)
 Xe = barycenter(d, models, solver=sinkhorn_log!)
 
 G = tf.(models)
@@ -210,7 +207,7 @@ plot()
 pzmap!.(G)
 pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
 
-options = Optim.Options(store_trace    = true,
+options = Optim.Options(store_trace       = true,
                         show_trace        = false,
                         show_every        = 1,
                         iterations        = 50,
@@ -224,15 +221,21 @@ options = Optim.Options(store_trace    = true,
 
 
 method = LBFGS()
-λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
+λ = barycentric_coordinates(d, models, Xe, method,
+    options = options,
+    solver  = sinkhorn_log!,
+    robust  = true,
+    uniform = true,
+    tol     = 1e-6,
+)
 bar(λ, title="Barycentric coorinates")
 
 G = tf.(models)
 plot()
 pzmap!.(G, lab="")
-pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
+pzmap!(tf(Xe), m = :c, title = "Barycenter OptimalTransportRootDistance", lab = "BC")
 # It's okay if the last system dot does not match the barycenter exactly, there are limited models to choose from.
-pzmap!(G[argmax(λ)], m=:c, lab="Largest bc coord", legend=true)
+pzmap!(G[argmax(λ)], m = :c, lab = "Largest bc coord", legend = true)
 ```
 """
 function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS();
