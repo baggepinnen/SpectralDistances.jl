@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Time-Frequency distances · SpectralDistances</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">SpectralDistances</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">SpectralDistances</a></li><li><a class="tocitem" href="../ltimodels/">Models and root manipulations</a></li><li><a class="tocitem" href="../distances/">Distances</a></li><li class="is-active"><a class="tocitem" href>Time-Frequency distances</a><ul class="internal"><li><a class="tocitem" href="#Overview-1"><span>Overview</span></a></li><li><a class="tocitem" href="#Function-reference-1"><span>Function reference</span></a></li><li><a class="tocitem" href="#Docstrings-1"><span>Docstrings</span></a></li></ul></li><li><a class="tocitem" href="../interpolations/">Interpolations and Barycenters</a></li><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../misc/">Misc.</a></li><li><a class="tocitem" href="../examples/">Examples</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Time-Frequency distances</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Time-Frequency distances</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/master/docs/src/time.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Time-Frequency-distances-1"><a class="docs-heading-anchor" href="#Time-Frequency-distances-1">Time-Frequency distances</a><a class="docs-heading-anchor-permalink" href="#Time-Frequency-distances-1" title="Permalink"></a></h1><p>For non-stationary signals, it is important to consider how the spectrum changes with time. This package has some, so far, basic support for time-frequency representations of non-stationary signals.</p><h2 id="Overview-1"><a class="docs-heading-anchor" href="#Overview-1">Overview</a><a class="docs-heading-anchor-permalink" href="#Overview-1" title="Permalink"></a></h2><p>We define a custom fit method for fitting time varying spectra, <a href="@ref"><code>TimeWindow</code></a>. It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:</p><pre><code class="language-julia-repl">julia&gt; fitmethod = TimeWindow(TLS(na=2), 1000, 500)
-TimeWindow{TLS}(TLS(2), 1000, 500)
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Time-Frequency distances · SpectralDistances</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">SpectralDistances</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">SpectralDistances</a></li><li><a class="tocitem" href="../ltimodels/">Models and root manipulations</a></li><li><a class="tocitem" href="../distances/">Distances</a></li><li class="is-active"><a class="tocitem" href>Time-Frequency distances</a><ul class="internal"><li><a class="tocitem" href="#Overview-1"><span>Overview</span></a></li><li><a class="tocitem" href="#Function-reference-1"><span>Function reference</span></a></li><li><a class="tocitem" href="#Docstrings-1"><span>Docstrings</span></a></li></ul></li><li><a class="tocitem" href="../interpolations/">Interpolations and Barycenters</a></li><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../misc/">Misc.</a></li><li><a class="tocitem" href="../examples/">Examples</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Time-Frequency distances</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Time-Frequency distances</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/master/docs/src/time.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Time-Frequency-distances-1"><a class="docs-heading-anchor" href="#Time-Frequency-distances-1">Time-Frequency distances</a><a class="docs-heading-anchor-permalink" href="#Time-Frequency-distances-1" title="Permalink"></a></h1><p>For non-stationary signals, it is important to consider how the spectrum changes with time. This package has some, so far, basic support for time-frequency representations of non-stationary signals.</p><h2 id="Overview-1"><a class="docs-heading-anchor" href="#Overview-1">Overview</a><a class="docs-heading-anchor-permalink" href="#Overview-1" title="Permalink"></a></h2><p>We define a custom fit method for fitting time varying spectra, <a href="#SpectralDistances.TimeWindow"><code>TimeWindow</code></a>. It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:</p><pre><code class="language-julia-repl">julia&gt; fitmethod = TimeWindow(TLS(na=2), 1000, 500)
+TimeWindow{TLS}(TLS(2, 0.0), 1000, 500)
 
 julia&gt; y = sin.(0:0.1:100);
 
 julia&gt; model = fitmethod(y)
-TimeVaryingRoots{ContinuousRoots{Complex{Double64},Array{Complex{Double64},1}}}(ContinuousRoots{Complex{Double64},Array{Complex{Double64},1}}[[-1.1102230246251565e-16 - 0.10000000000000056im, -1.1102230246251565e-16 + 0.10000000000000056im]])</code></pre><p>This produces a custom model type, <a href="@ref"><code>TimeVaryingRoots</code></a> that internally stores a vector of <a href="../ltimodels/#SpectralDistances.ContinuousRoots"><code>ContinuousRoots</code></a>.</p><p>Accompanying this time-varying model is a time-aware distance, <a href="@ref"><code>TimeDistance</code></a>. It contains an inner distance (currently only <a href="../distances/#SpectralDistances.OptimalTransportRootDistance"><code>OptimalTransportRootDistance</code></a> supported), and some parameters that are specific to the time dimension, example:</p><pre><code class="language-julia-repl">julia&gt; dist = TimeDistance(
+TimeVaryingRoots{ContinuousRoots{Complex{Double64},Array{Complex{Double64},1}}}(ContinuousRoots{Complex{Double64},Array{Complex{Double64},1}}[[-1.1102230246251565e-16 - 0.10000000000000056im, -1.1102230246251565e-16 + 0.10000000000000056im]])</code></pre><p>This produces a custom model type, <a href="#SpectralDistances.TimeVaryingRoots"><code>TimeVaryingRoots</code></a> that internally stores a vector of <a href="../ltimodels/#SpectralDistances.ContinuousRoots"><code>ContinuousRoots</code></a>.</p><p>Accompanying this time-varying model is a time-aware distance, <a href="#SpectralDistances.TimeDistance"><code>TimeDistance</code></a>. It contains an inner distance (currently only <a href="../distances/#SpectralDistances.OptimalTransportRootDistance"><code>OptimalTransportRootDistance</code></a> supported), and some parameters that are specific to the time dimension, example:</p><pre><code class="language-julia-repl">julia&gt; dist = TimeDistance(
            inner = OptimalTransportRootDistance(
                domain = Continuous(),
                p = 2,
@@ -24,20 +24,100 @@ m2 = signal(2,1) |&gt; fm # Signal 2 has the reverse frequencies
 dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
-        p = 1,
+        p      = 1,
         weight = s1 ∘ residueweight,
     ),
     tp = 1,
-    c = 1.0, # c is large
+    c  = 1.0, # c is large
 )
-evaluate(dist, m, m2)</code></pre><pre><code class="language-none">0.10000000041222791</code></pre><pre><code class="language-julia"># Then we make it cheaper
-dist = TimeDistance(
+evaluate(dist, m, m2)</code></pre><pre><code class="language-none">0.10000000041222791</code></pre><p>Then we make it cheaper</p><pre><code class="language-julia">dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
-        p = 1,
+        p      = 1,
         weight = s1 ∘ residueweight,
     ),
     tp = 1,
-    c = 0.01, # c is small
+    c  = 0.01, # c is small
 )
-evaluate(dist, m, m2)</code></pre><pre><code class="language-none">0.010011105717993804</code></pre><h2 id="Function-reference-1"><a class="docs-heading-anchor" href="#Function-reference-1">Function reference</a><a class="docs-heading-anchor-permalink" href="#Function-reference-1" title="Permalink"></a></h2><ul></ul><h2 id="Docstrings-1"><a class="docs-heading-anchor" href="#Docstrings-1">Docstrings</a><a class="docs-heading-anchor-permalink" href="#Docstrings-1" title="Permalink"></a></h2></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../distances/">« Distances</a><a class="docs-footer-nextpage" href="../interpolations/">Interpolations and Barycenters »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 April 2020 10:27">Wednesday 1 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+evaluate(dist, m, m2)</code></pre><pre><code class="language-none">0.010011105717993804</code></pre><h3 id="Chirp-example-1"><a class="docs-heading-anchor" href="#Chirp-example-1">Chirp example</a><a class="docs-heading-anchor-permalink" href="#Chirp-example-1" title="Permalink"></a></h3><p>Here we consider the estimation of the distance between two signals containing chirps, where the onset of the chirp differs. We start by creating some signals with different chirp onsets:</p><pre><code class="language-julia">fs = 100000
+T = 3
+t = 0:1/fs:T
+N = length(t)
+f = range(1000, stop=10_000, length=N)
+chirp0 = sin.(f.*t)
+function chirp(onset)
+    y = 0.1sin.(20_000 .* t)
+    inds = max(round(Int,fs*onset), 1):N
+    y[inds] .+= chirp0[1:length(inds)]
+    y
+end
+using DSP, LPVSpectral
+plot(spectrogram(chirp(0), window=hanning), layout=2)
+plot!(spectrogram(chirp(1), window=hanning), sp=2)</code></pre><pre><code class="language-none">/home/travis/.julia/packages/GR/yMV3y/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="../chirps.svg" alt/></p><p>We then define the fit method and the distance, similar to previous examples</p><pre><code class="language-julia">fm     = TimeWindow(LS(na=4, λ=1e-4), 20000, 0)
+m      = chirp(1) |&gt; fm # This is the signal we&#39;ll measure the distance to
+onsets = LinRange(0, 2, 21) # A vector of onset times
+cv     = exp10.(LinRange(-3, -0.5, 6)); # a vector of `c` values for the time-transport cost</code></pre><pre><code class="language-none">6-element Array{Float64,1}:
+ 0.001
+ 0.003162277660168376
+ 0.010000000000000005
+ 0.03162277660168378
+ 0.10000000000000002
+ 0.31622776601683794</code></pre><p>We now calculate the distance to the base signal for varying onsets and varying time-transport costs.</p><pre><code class="language-julia">dists = map(Iterators.product(cv, onsets)) do (c, onset)
+    m2 = chirp(onset) |&gt; fm
+    dist = TimeDistance(
+        inner = OptimalTransportRootDistance(
+            domain = Continuous(),
+            p      = 1,
+            weight = s1 ∘ residueweight,
+        ),
+        tp = 1,
+        c  = c,
+    )
+    evaluate(
+        dist,
+        change_precision(Float64, m),  # we reduce the precision for faster computations
+        change_precision(Float64, m2),
+        iters = 10000,
+        tol = 1e-2, # A coarse tolerance is okay for this example
+    )
+end
+
+plot(onsets, dists&#39;,
+    lab      = cv&#39;,
+    line_z   = log10.(cv)&#39;,
+    color    = :inferno,
+    legend   = false,
+    colorbar = true,
+    xlabel   = &quot;Onset [s]&quot;,
+    title    = &quot;Distance as function of onset and time cost&quot;
+)</code></pre><pre><code class="language-none">┌ Warning: Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/ltimodels.jl:68
+┌ Warning: Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/ltimodels.jl:68
+┌ Warning: Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/ltimodels.jl:68
+┌ Warning: Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/ltimodels.jl:68
+┌ Warning: Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.
+└ @ SpectralDistances ~/build/baggepinnen/SpectralDistances.jl/src/ltimodels.jl:68
+/home/travis/.julia/packages/GR/yMV3y/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p>The results are shown below. The figure indicates the cost <code>log10(c)</code> using the color scale. We can see that the distance between the signals is smallest at <code>onset=1</code>, which was the onset for the base signal. We also see that for small values of <code>c</code>, it&#39;s cheap to transport along time. After increasing <code>c</code> for a while it stops getting more expensive, indicating that it&#39;s now cheaper to transport along the frequency axis instead. <img src="../chirp_dists.svg" alt/></p><p>In this example, we chose the weight function <code>s1∘residueweight</code>, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole&#39;s residue.</p><h2 id="Function-reference-1"><a class="docs-heading-anchor" href="#Function-reference-1">Function reference</a><a class="docs-heading-anchor-permalink" href="#Function-reference-1" title="Permalink"></a></h2><ul></ul><h2 id="Docstrings-1"><a class="docs-heading-anchor" href="#Docstrings-1">Docstrings</a><a class="docs-heading-anchor-permalink" href="#Docstrings-1" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.TimeDistance" href="#SpectralDistances.TimeDistance"><code>SpectralDistances.TimeDistance</code></a> — <span class="docstring-category">Type</span></header><section><div><p>This is a time-aware distance. It contains an inner distance (currently only <a href="../distances/#SpectralDistances.OptimalTransportRootDistance"><code>OptimalTransportRootDistance</code></a> supported), and some parameters that are specific to the time dimension, example:</p><pre><code class="language-none">dist = TimeDistance(
+    inner = OptimalTransportRootDistance(
+        domain = Continuous(),
+        p      = 2,
+        weight = s1 ∘ residueweight,
+    ),
+    tp = 2,
+    c  = 0.1,
+)</code></pre><p><code>tp</code> is the same as <code>p</code> but for the time dimension, and <code>c</code> trades off the distance along the time axis with the distance along the frequency axis. A smaller <code>c</code> makes it cheaper to transport mass across time. The frequency axis spans <code>[-π,π]</code> and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/4ddd0bec28b8ed26de8c57830d7a83cde95385ba/src/time.jl#L1-L15">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.TimeVaryingRoots" href="#SpectralDistances.TimeVaryingRoots"><code>SpectralDistances.TimeVaryingRoots</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">TimeVaryingRoots{T &lt;: AbstractRoots} &lt;: AbstractModel</code></pre><p>This model represents a rational spectrogram, i.e., a rational spectrum that changes with time. See <a href="#SpectralDistances.TimeWindow"><code>TimeWindow</code></a> for the corresponding fit method and <a href="#SpectralDistances.TimeDistance"><code>TimeDistance</code></a> for a time-aware distance.</p><p>Internally, this model stores a vector of <a href="../ltimodels/#SpectralDistances.ContinuousRoots"><code>ContinuousRoots</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/4ddd0bec28b8ed26de8c57830d7a83cde95385ba/src/time.jl#L23-L29">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.TimeWindow" href="#SpectralDistances.TimeWindow"><code>SpectralDistances.TimeWindow</code></a> — <span class="docstring-category">Type</span></header><section><div><p>We define a custom fit method for fitting time varying spectra, <a href="#SpectralDistances.TimeWindow"><code>TimeWindow</code></a>. It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:</p><p><strong>Example</strong></p><pre><code class="language-none">fitmethod = TimeWindow(TLS(na=2), 1000, 500)
+y = sin.(0:0.1:100);
+model = fitmethod(y)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/4ddd0bec28b8ed26de8c57830d7a83cde95385ba/src/time.jl#L63-L71">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../distances/">« Distances</a><a class="docs-footer-nextpage" href="../interpolations/">Interpolations and Barycenters »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 2 April 2020 10:19">Thursday 2 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

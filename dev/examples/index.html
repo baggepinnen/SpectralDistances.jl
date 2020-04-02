@@ -9,11 +9,11 @@ using AudioClustering
 path = &quot;path/to/folder/with/wav-files&quot;
 
 cd(path)
-files = glob(&quot;*.wav&quot;)
-labels0 = match.(r&quot;[a-z_]+&quot;, files)..:match .|&gt; String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
-ulabels = unique(labels0)
-labels = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)&#39;, dims=2)[:]
-na = 18 # Order of the models
+files     = glob(&quot;*.wav&quot;)
+labels0   = match.(r&quot;[a-z_]+&quot;, files)..:match .|&gt; String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
+ulabels   = unique(labels0)
+labels    = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)&#39;, dims=2)[:]
+na        = 18 # Order of the models
 fitmethod = LS(na=na, λ=1e-5)
 
 models = mapsoundfiles(files, fs) do sound # mapsoundfiles is defined in AudioClustering
@@ -26,9 +26,21 @@ labels,models,X,Z = get_features(trainpath)
 cr = kmeans(v1(X,2), 30) # v1 normalizes mean and variance
 
 Plots.plot(
-    scatter(threeD(X&#39;), marker_z=labels, m=(2,0.5), markerstrokealpha=0, colorbar=false, title=&quot;Correct assignment&quot;),
-    scatter(threeD(X&#39;), marker_z=cr.assignments, m=(2,0.5), markerstrokealpha=0, colorbar=false, title=&quot;K-means on w assignment&quot;),
-    legend=false
+    scatter(threeD(X&#39;),
+        marker_z          = labels,
+        m                 = (2, 0.5),
+        markerstrokealpha = 0,
+        colorbar          = false,
+        title             = &quot;Correct assignment&quot;,
+    ),
+    scatter(threeD(X&#39;),
+        marker_z          = cr.assignments,
+        m                 = (2, 0.5),
+        markerstrokealpha = 0,
+        colorbar          = false,
+        title             = &quot;K-means on w assignment&quot;,
+    ),
+    legend = false,
 )</code></pre><p>Another clustering approach is to use <a href="../interpolations/#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>kbarycenters</code></a>, see example <a href="../interpolations/#K-Barycenters-1">K-Barycenters</a>.</p><h2 id="Nearest-Neighbor-classification-1"><a class="docs-heading-anchor" href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a><a class="docs-heading-anchor-permalink" href="#Nearest-Neighbor-classification-1" title="Permalink"></a></h2><p>Here, we will classify a signal based on it&#39;s nearest neighbor in a training dataset. The example assumes that the matrix <code>X</code> from the previous example is available, and that there is a similar matrix <code>Xt</code> created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors <code>labels::Vector{Int}</code> and <code>labelst::Vector{Int}</code> that contain the class labels.</p><pre><code class="language-julia">using AMD # For permutation of the confusion matrix to more easily identity similar classes.
 using MultivariateStats # For whitening transform
 
@@ -41,7 +53,7 @@ function knn_classify(labels, X, Xt, k)
     tree = NearestNeighbors.KDTree(X)
     for i in 1:N
         inds, dists = knn(tree, Xt[:,i], k)
-        y[i] = mode(labels[inds])
+        y[i]        = mode(labels[inds])
     end
     y
 end
@@ -60,7 +72,7 @@ assignments = cutree(cr,k=30) # k is desired number of clusters</code></pre><p>A
     distance = OptimalTransportRootDistance(domain=Continuous())
     distance_vector = distance.(Ref(query_model),positive_example_models)
     score = minimum(distance_vector)
-end</code></pre><p>This can be made significantly more effective (but less accurate) using the <code>knn</code> approach from the <a href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a>.</p><h2 id="The-closed-form-solution-1"><a class="docs-heading-anchor" href="#The-closed-form-solution-1">The closed-form solution</a><a class="docs-heading-anchor-permalink" href="#The-closed-form-solution-1" title="Permalink"></a></h2><p>In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.</p><pre><code class="language-julia">using OrdinaryDiffEq, ControlSystems, SpectralDistances, Plots
+end</code></pre><p>This can be made significantly more effective (but less accurate) using the <code>knn</code> approach from the <a href="#Nearest-Neighbor-classification-1">Nearest Neighbor classification</a>.</p><h2 id="The-closed-form-solution-1"><a class="docs-heading-anchor" href="#The-closed-form-solution-1">The closed-form solution</a><a class="docs-heading-anchor-permalink" href="#The-closed-form-solution-1" title="Permalink"></a></h2><p>In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.</p><pre><code class="language-julia">using ControlSystems, SpectralDistances, Plots
 gr(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])
@@ -588,4 +600,4 @@ latex: failed to create a dvi file
 sh: 1: latex: not found
 latex: failed to create a dvi file
 sh: 1: latex: not found
-latex: failed to create a dvi file</code></pre><p><img src="../cumulative.svg" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../misc/">« Misc.</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 April 2020 10:27">Wednesday 1 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+latex: failed to create a dvi file</code></pre><p><img src="../cumulative.svg" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../misc/">« Misc.</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 2 April 2020 10:19">Thursday 2 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
