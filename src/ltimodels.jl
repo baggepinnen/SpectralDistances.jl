@@ -605,7 +605,7 @@ end
 
 function unitweight(m::AbstractModel)
     r = roots(Continuous(), m)
-    RT = real(eltype(r))
+    RT = float(real(eltype(r)))
     N = length(r)
     fill(RT(1/N), N)
 end

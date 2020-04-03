@@ -112,7 +112,7 @@ isinteractive() && begin
 end
 fm = TimeWindow(LS(na=4, λ=1e-4), 20000, 0)
 m = chirp(1)  |> fm
-@show length(m)
+# @show length(m)
 
 onsets = LinRange(0, 2, 21); 1 ∈ onsets
 cv = exp10.(LinRange(-3, -0.5, 6))

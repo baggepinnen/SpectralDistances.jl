@@ -198,7 +198,7 @@ end
 """
     residueweight(e::AbstractRoots)
 
-Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole.
+Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole. See also [`simplex_residueweight`](@ref) for a normalized version.
 """
 function residueweight(e::AbstractRoots)
     # @warn "This method disregards the numerator"
@@ -207,8 +207,21 @@ function residueweight(e::AbstractRoots)
     isderiving() ? complex.(rw) : rw
 end
 
+"""
+    simplex_residueweight(x)
+
+Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole, normalized to sum to 1. See [`residueweight`](@ref) for a non-normalized version.
+"""
+simplex_residueweight(x) = s1(residueweight(x))
+
+
+"""
+    unitweight(e)
+
+A weighting function that returns a vector of uniform weights that sum to 1.
+"""
 function unitweight(e::AbstractArray{T}) where T
-    RT = real(T)
+    RT = float(real(T))
     N = length(e)
     isderiving() ? complex.(fill(RT(1/N),size(e))) : fill(RT(1/N),size(e))
 end
