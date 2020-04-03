@@ -491,7 +491,7 @@ end
 end
 
 @testset "ControlSystems interoperability" begin
-    @infor "Testing ControlSystems interoperability"
+    @info "Testing ControlSystems interoperability"
     m = AR(ContinuousRoots([-1]))
     g = tf(1,[1.,1])
     @test tf(m) == g
