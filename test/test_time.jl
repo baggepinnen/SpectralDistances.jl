@@ -1,10 +1,12 @@
 # Test simple indexing
-r = ContinuousRoots(randn(2))
-m = TimeVaryingRoots([r,r,r])
+r = AR(ContinuousRoots(randn(2)))
+m = TimeVaryingAR([r,r,r])
 
+@test length(m) == 3*2
+@test size(m) == (2,3)
 mc = SpectralDistances.change_precision(Float32, m)
 @test m ≈ mc
-@test eltype(mc.roots[1]) == Complex{Float32}
+@test eltype(mc.models[1].pc) == Complex{Float32}
 
 @test m[1] == m[1,1]
 @test m[2] == m[2,1]

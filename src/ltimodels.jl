@@ -229,7 +229,7 @@ coefficients(::Discrete, m::ARMA) = [m.a[2:end]; m.b]
 coefficients(::Continuous, m::AR) = m.ac[2:end]
 coefficients(::Continuous, m::ARMA) = [m.ac[2:end]; m.bc]
 
-Base.getindex(m::AbstractModel, i) = i < length(m.ac) ? m.ac[1+i] : m.bc[i-length(m.ac)+1]
+Base.getindex(m::AbstractModel, i) = i < length(m.ac) ? m.ac[1+i] : m.b[i-length(m.ac)+1]
 Base.length(m::AbstractModel) = length(m.a)+length(m.b)-1
 
 function domain_transform(d::Continuous, m::AR)
@@ -601,6 +601,13 @@ function residueweight(m::AbstractModel)
     e = roots(Continuous(), m)
     rw = abs.(π*abs2.(res)./ real.(e))
     isderiving() ? complex.(rw) : rw
+end
+
+function unitweight(m::AbstractModel)
+    r = roots(Continuous(), m)
+    RT = real(eltype(r))
+    N = length(r)
+    fill(RT(1/N), N)
 end
 
 # Base.delete_method.(methods(residues))

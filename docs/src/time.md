@@ -11,7 +11,7 @@ fitmethod = TimeWindow(TLS(na=2), 1000, 500)
 y = sin.(0:0.1:100);
 model = fitmethod(y)
 ```
-This produces a custom model type, [`TimeVaryingRoots`](@ref) that internally stores a vector of [`ContinuousRoots`](@ref).
+This produces a custom model type, [`TimeVaryingAR`](@ref) that internally stores a vector of [`ContinuousRoots`](@ref).
 
 Accompanying this time-varying model is a time-aware distance, [`TimeDistance`](@ref). It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) supported), and some parameters that are specific to the time dimension, example:
 ```@repl time

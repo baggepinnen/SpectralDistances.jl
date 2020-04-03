@@ -207,7 +207,11 @@ function residueweight(e::AbstractRoots)
     isderiving() ? complex.(rw) : rw
 end
 
-unitweight(e) = isderiving() ? complex.(ones(size(e))) : ones(size(e))
+function unitweight(e::AbstractArray{T}) where T
+    RT = real(T)
+    N = length(e)
+    isderiving() ? complex.(fill(RT(1/N),size(e))) : fill(RT(1/N),size(e))
+end
 
 # function polar_ang(e)
 #     mag, ang = polar(e)

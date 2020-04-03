@@ -21,22 +21,22 @@ TimeDistance
 end
 
 """
-    TimeVaryingRoots{T <: AbstractRoots} <: AbstractModel
+    TimeVaryingAR{T <: AbstractRoots} <: AbstractModel
 
 This model represents a rational spectrogram, i.e., a rational spectrum that changes with time. See [`TimeWindow`](@ref) for the corresponding fit method and [`TimeDistance`](@ref) for a time-aware distance.
 
-Internally, this model stores a vector of [`ContinuousRoots`](@ref).
+Internally, this model stores a vector of [`AR`](@ref).
 """
-struct TimeVaryingRoots{T<:AbstractRoots} <: AbstractModel
-    roots::Vector{T}
+struct TimeVaryingAR{T<:AR} <: AbstractModel
+    models::Vector{T}
 end
 
-@inline Base.length(m::TimeVaryingRoots) = sum(length, m.roots)
-@inline Base.size(m::TimeVaryingRoots) = (length(m.roots[1]), length(m.roots))
-@inline Base.eachindex(m::TimeVaryingRoots) = 1:length(m)
+@inline Base.length(m::TimeVaryingAR) = sum(length, m.models)-length(m.models) # the length of a model is 1 more than the number of poles due to the numerator
+@inline Base.size(m::TimeVaryingAR) = (length(m.models[1])-1, length(m.models))
+@inline Base.eachindex(m::TimeVaryingAR) = 1:length(m)
 
-@inline function Base.getindex(m::TimeVaryingRoots, i, j)
-    m.roots[j][i]
+@inline function Base.getindex(m::TimeVaryingAR, i::Int, j::Int)
+    m.models[j].pc[i]
 end
 
 @inline function mi2ij(m,i)
@@ -46,19 +46,19 @@ end
     i,j
 end
 
-@inline function Base.getindex(m::TimeVaryingRoots, i)
+@inline function Base.getindex(m::TimeVaryingAR, i::Int)
     i,j = mi2ij(m,i)
     m[i,j]
 end
 
 
-PolynomialRoots.roots(::Continuous, m::TimeVaryingRoots) = m.roots
+PolynomialRoots.roots(::Continuous, m::TimeVaryingAR) = roots.(Continuous(), m.models)
 
-function Base.isapprox(m1::TimeVaryingRoots, m2::TimeVaryingRoots, args...; kwargs...)
-    isapprox(m1.roots, m2.roots, args...; kwargs...)
+function Base.isapprox(m1::TimeVaryingAR, m2::TimeVaryingAR, args...; kwargs...)
+    all(isapprox(m1, m2, args...; kwargs...) for m1 in m1.models, m2 in m2.models)
 end
 
-change_precision(F, m::TimeVaryingRoots) = TimeVaryingRoots(change_precision.(F, m.roots))
+change_precision(F, m::TimeVaryingAR) = TimeVaryingAR(change_precision.(F, m.models))
 
 """
 We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
@@ -81,14 +81,14 @@ function fitmodel(fm::TimeWindow, x)
     models = map(arraysplit(x,n,noverlap)) do slice
         fitmodel(fm.inner, slice)
     end
-    TimeVaryingRoots(roots.(Continuous(), models))
+    TimeVaryingAR(models)
 end
 
 preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 
 distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
-function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p, tp, c)
+function distmat_euclidean!(D, m1::TimeVaryingAR,m2::TimeVaryingAR,p, tp, c)
     for i in 1:length(m1), j in 1:length(m2)
         _,t1 = mi2ij(m1,i)
         _,t2 = mi2ij(m2,j)
@@ -98,12 +98,12 @@ function distmat_euclidean!(D, m1::TimeVaryingRoots,m2::TimeVaryingRoots,p, tp, 
 end
 
 
-function evaluate(od::TimeDistance, m1::TimeVaryingRoots,m2::TimeVaryingRoots; solver=sinkhorn_log!, kwargs...)
+function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=sinkhorn_log!, kwargs...)
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
-    D     = distmat_euclidean(m1,m2,d.p, od.tp, od.c)
-    w1    = s1(reduce(vcat,d.weight.(m1.roots)))
-    w2    = s1(reduce(vcat,d.weight.(m2.roots)))
+    D     = distmat_euclidean(m1, m2, d.p, od.tp, od.c)
+    w1    = s1(reduce(vcat,d.weight.(m1.models)))
+    w2    = s1(reduce(vcat,d.weight.(m2.models)))
     C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
     if any(isnan, C)
         @info("Nan in OptimalTransportRootDistance, increasing precision")

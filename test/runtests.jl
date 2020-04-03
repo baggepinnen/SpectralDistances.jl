@@ -472,6 +472,22 @@ end
     @test SpectralDistances.determine_domain(randn(10).-4) isa Continuous
     @test_throws Exception SpectralDistances.determine_domain(0.1randn(10).-0.3)
 
+
+    @testset "weight functions" begin
+        @info "Testing weight functions"
+        r = ContinuousRoots(randn(ComplexF64, 4))
+        m = AR(r, 2.0)
+        @test sum(unitweight(r)) == 1
+        @test sum(unitweight(m)) == 1
+        @test length(unitweight(r)) == 4
+        @test length(unitweight(m)) == 4
+
+        @test m.b^2*sum(residueweight(r)) ≈ sum(residueweight(m)) # Calling residueweight with a model should mutiply energy by b²
+        @test length(residueweight(r)) == 4
+        @test length(residueweight(m)) == 4
+    end
+
+
 end
 
 @testset "ControlSystems interoperability" begin
