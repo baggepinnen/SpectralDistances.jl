@@ -88,7 +88,7 @@ preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 
 distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
-function distmat_euclidean!(D, m1::TimeVaryingAR,m2::TimeVaryingAR,p, tp, c)
+function distmat_euclidean!(D, m1::TimeVaryingAR,m2::TimeVaryingAR, p, tp, c)
     for i in 1:length(m1), j in 1:length(m2)
         _,t1 = mi2ij(m1,i)
         _,t2 = mi2ij(m2,j)
@@ -104,10 +104,10 @@ function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=
     D     = distmat_euclidean(m1, m2, d.p, od.tp, od.c)
     w1    = s1(reduce(vcat,d.weight.(m1.models)))
     w2    = s1(reduce(vcat,d.weight.(m2.models)))
-    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
+    C     = solver(D,w1,w2; β=d.β, kwargs...)[1]
     if any(isnan, C)
         @info("Nan in OptimalTransportRootDistance, increasing precision")
-        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, kwargs...)[1]
+        C     = solver(big.(D),big.(w1),big.(w2); β=d.β, kwargs...)[1]
         any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         eltype(D).(C)
     end
