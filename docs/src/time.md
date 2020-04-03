@@ -1,5 +1,6 @@
 ```@setup time
 using SpectralDistances, Plots
+plotly()
 ```
 # Time-Frequency distances
 For non-stationary signals, it is important to consider how the spectrum changes with time. This package has some, so far, basic support for time-frequency representations of non-stationary signals.
@@ -19,7 +20,7 @@ dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
         p = 2,
-        weight = s1 ∘ residueweight,
+        weight = simplex_residueweight,
     ),
     tp = 2,
     c = 0.1,
@@ -40,7 +41,7 @@ dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
         p      = 1,
-        weight = s1 ∘ residueweight,
+        weight = simplex_residueweight,
     ),
     tp = 1,
     c  = 1.0, # c is large
@@ -54,7 +55,7 @@ dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
         p      = 1,
-        weight = s1 ∘ residueweight,
+        weight = simplex_residueweight,
     ),
     tp = 1,
     c  = 0.01, # c is small
@@ -81,10 +82,12 @@ end
 using DSP, LPVSpectral
 plot(spectrogram(chirp(0), window=hanning), layout=2)
 plot!(spectrogram(chirp(1), window=hanning), sp=2)
-savefig("chirps.svg"); nothing # hide
+savefig("chirps.html"); nothing # hide
 ```
 
-![](chirps.svg)
+```@raw html
+<object type="text/html" data="chirps.html" style="width:100%;height:450px;"></object>
+```
 
 We then define the fit method and the distance, similar to previous examples
 ```@example time
@@ -102,7 +105,7 @@ dists = map(Iterators.product(cv, onsets)) do (c, onset)
         inner = OptimalTransportRootDistance(
             domain = Continuous(),
             p      = 1,
-            weight = s1 ∘ residueweight,
+            weight = simplex_residueweight,
         ),
         tp = 1,
         c  = c,
@@ -125,12 +128,14 @@ plot(onsets, dists',
     xlabel   = "Onset [s]",
     title    = "Distance as function of onset and time cost"
 )
-savefig("chirp_dists.svg"); nothing # hide
+savefig("chirp_dists.html"); nothing # hide
 ```
 The results are shown below. The figure indicates the cost `log10(c)` using the color scale. We can see that the distance between the signals is smallest at `onset=1`, which was the onset for the base signal. We also see that for small values of `c`, it's cheap to transport along time. After increasing `c` for a while it stops getting more expensive, indicating that it's now cheaper to transport along the frequency axis instead.
-![](chirp_dists.svg)
+```@raw html
+<object type="text/html" data="chirp_dists.html" style="width:100%;height:450px;"></object>
+```
 
-In this example, we chose the weight function `s1∘residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.
+In this example, we chose the weight function `simplex_residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.
 
 ## Function reference
 

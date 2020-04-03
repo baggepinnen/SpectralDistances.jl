@@ -124,7 +124,7 @@ This can be made significantly more effective (but less accurate) using the `knn
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
 using ControlSystems, SpectralDistances, Plots
-gr(grid=false)
+plotly(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])
 G2   = tf(1,[1,0.12,2])*tf(1,[1,0.1,0.4])
@@ -147,7 +147,9 @@ vline!([0], l=(:black, :dash))
 hline!([0], l=(:black, :dash))
 
 plot(fig1, fig2, fig3, layout=(1,3))
-savefig("cumulative.svg"); nothing # hide
+savefig("cumulative.html"); nothing # hide
 ```
 
-![](cumulative.svg)
+```@raw html
+<object type="text/html" data="cumulative.html" style="width:100%;height:450px;"></object>
+```

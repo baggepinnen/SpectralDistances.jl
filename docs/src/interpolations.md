@@ -6,6 +6,7 @@ Below is an example usage of interpolations. We initially create two random syst
 
 ```@example
 using SpectralDistances, ControlSystems, Distances, Plots, Random
+plotly()
 Random.seed!(0)
 
 n = 4
@@ -47,10 +48,12 @@ for t = LinRange(0, 1, 7)
 end
 
 fig = plot(fig1, fig2, fig3, layout=(3,1))
-savefig("interpolation.svg"); nothing # hide
+savefig("interpolation.html"); nothing # hide
 ```
 
-![](interpolation.svg)
+```@raw html
+<object type="text/html" data="interpolation.html" style="width:100%;height:450px;"></object>
+```
 
 ## Barycenters
 A barycenter is a generalization the the arithmetic mean to metrics other than the Euclidean. A barycenter between models is calculated like this
@@ -74,9 +77,11 @@ G        = tf.(models) # Convert models to transfer functions from ControlSystem
 plot()
 bodeplot!.(G, Ref(w), plotphase=false, lab="Input models", linestyle=:auto)
 bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:green)
-savefig("barycenter.svg"); nothing # hide
+savefig("barycenter.html"); nothing # hide
 ```
-![](barycenter.svg)
+```@raw html
+<object type="text/html" data="barycenter.html" style="width:100%;height:450px;"></object>
+```
 
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.

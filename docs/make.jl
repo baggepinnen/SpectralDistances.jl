@@ -2,8 +2,7 @@ using Documenter
 using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK, DSP
 
 using Plots
-using Plots.PlotMeasures
-default(margin=10mm)
+plotly()
 
 
 @info "makedocs"
@@ -14,6 +13,15 @@ makedocs(
     modules = [SpectralDistances],
     pages = ["index.md", "ltimodels.md", "distances.md", "time.md", "interpolations.md", "plotting.md", "misc.md", "examples.md"]
 )
+
+# For debugging purposes
+# makedocs(
+#     sitename = "SpectralDistances",
+#     # format = LaTeX(),
+#     format = Documenter.HTML(prettyurls = haskey(ENV, "CI")),
+#     modules = [SpectralDistances],
+#     pages = ["time.md"]
+# )
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
