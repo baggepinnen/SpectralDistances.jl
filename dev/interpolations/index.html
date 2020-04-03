@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Interpolations and Barycenters · SpectralDistances</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">SpectralDistances</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">SpectralDistances</a></li><li><a class="tocitem" href="../ltimodels/">Models and root manipulations</a></li><li><a class="tocitem" href="../distances/">Distances</a></li><li><a class="tocitem" href="../time/">Time-Frequency distances</a></li><li class="is-active"><a class="tocitem" href>Interpolations and Barycenters</a><ul class="internal"><li><a class="tocitem" href="#Barycenters-1"><span>Barycenters</span></a></li><li><a class="tocitem" href="#K-Barycenters-1"><span>K-Barycenters</span></a></li></ul></li><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../misc/">Misc.</a></li><li><a class="tocitem" href="../examples/">Examples</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Interpolations and Barycenters</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Interpolations and Barycenters</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/master/docs/src/interpolations.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Interpolations-and-Barycenters-1"><a class="docs-heading-anchor" href="#Interpolations-and-Barycenters-1">Interpolations and Barycenters</a><a class="docs-heading-anchor-permalink" href="#Interpolations-and-Barycenters-1" title="Permalink"></a></h1><p>Some distances distance define the existence of a shortest path, a <em>geodesic</em>. An interpolation is essentially a datapoint on that shortest path. We provide some functionality to interpolate between different spectra and models under transport-based metrics.</p><p>Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter <span>$t \in (0,1)$</span></p><pre><code class="language-julia">using SpectralDistances, ControlSystems, Distances, Plots, Random
+plotly()
 Random.seed!(0)
 
 n = 4
@@ -40,12 +41,7 @@ for t = LinRange(0, 1, 7)
     plot!(w, (1-t).*Φ1 .+ t.*Φ2, xscale=:log10, yscale=:log10, line_z = t, lab=&quot;&quot;, xlabel=&quot;Frequency&quot;, title=&quot;L_2&quot;, ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
-fig = plot(fig1, fig2, fig3, layout=(3,1))</code></pre><pre><code class="language-none">/home/travis/.julia/packages/GR/yMV3y/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
-connect: Connection refused
-GKS: can&#39;t connect to GKS socket application
-
-GKS: Open failed in routine OPEN_WS
-GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="../interpolation.svg" alt/></p><h2 id="Barycenters-1"><a class="docs-heading-anchor" href="#Barycenters-1">Barycenters</a><a class="docs-heading-anchor-permalink" href="#Barycenters-1" title="Permalink"></a></h2><p>A barycenter is a generalization the the arithmetic mean to metrics other than the Euclidean. A barycenter between models is calculated like this</p><pre><code class="language-julia">bc = barycenter(distance, models)</code></pre><p>It can be useful to provide some options to the solvers:</p><pre><code class="language-julia">options = (solver=sinkhorn_log!, tol=1e-8, iters=1_000_000, γ=0.0, uniform=true, inneriters=500_000, innertol=1e-6)
+fig = plot(fig1, fig2, fig3, layout=(3,1))</code></pre><object type="text/html" data="interpolation.html" style="width:100%;height:450px;"></object><h2 id="Barycenters-1"><a class="docs-heading-anchor" href="#Barycenters-1">Barycenters</a><a class="docs-heading-anchor-permalink" href="#Barycenters-1" title="Permalink"></a></h2><p>A barycenter is a generalization the the arithmetic mean to metrics other than the Euclidean. A barycenter between models is calculated like this</p><pre><code class="language-julia">bc = barycenter(distance, models)</code></pre><p>It can be useful to provide some options to the solvers:</p><pre><code class="language-julia">options = (solver=sinkhorn_log!, tol=1e-8, iters=1_000_000, γ=0.0, uniform=true, inneriters=500_000, innertol=1e-6)
 distance = OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01, weight=s1∘residueweight)
 bc = barycenter(distance, models; options...)</code></pre><p>We can plot the barycenters:</p><pre><code class="language-julia">using SpectralDistances, ControlSystems, Plots
 models   = examplemodels(3)
@@ -55,228 +51,7 @@ w        = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
 G        = tf.(models) # Convert models to transfer functions from ControlSystems.jl
 plot()
 bodeplot!.(G, Ref(w), plotphase=false, lab=&quot;Input models&quot;, linestyle=:auto)
-bodeplot!(tf(bc), w, plotphase=false, lab=&quot;Barycenter&quot;, xscale=:identity, c=:green)</code></pre><pre><code class="language-none">/home/travis/.julia/packages/GR/yMV3y/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
-connect: Connection refused
-GKS: can&#39;t connect to GKS socket application
-
-GKS: Open failed in routine OPEN_WS
-GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file
-sh: 1: latex: not found
-latex: failed to create a dvi file</code></pre><p><img src="../barycenter.svg" alt/></p><h2 id="K-Barycenters-1"><a class="docs-heading-anchor" href="#K-Barycenters-1">K-Barycenters</a><a class="docs-heading-anchor-permalink" href="#K-Barycenters-1" title="Permalink"></a></h2><p>Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. <code>sounds</code> is expected to be of type <code>Vector{Vector{T}}</code>. The example further assumes that there is a vector of <code>labels::Vector{Int}</code> that contain the true classes of the datapoints, which you do not have in an unsupervised setting.</p><pre><code class="language-julia">using SpectralDistances, ControlSystems
+bodeplot!(tf(bc), w, plotphase=false, lab=&quot;Barycenter&quot;, xscale=:identity, c=:green)</code></pre><object type="text/html" data="barycenter.html" style="width:100%;height:450px;"></object><h2 id="K-Barycenters-1"><a class="docs-heading-anchor" href="#K-Barycenters-1">K-Barycenters</a><a class="docs-heading-anchor-permalink" href="#K-Barycenters-1" title="Permalink"></a></h2><p>Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. <code>sounds</code> is expected to be of type <code>Vector{Vector{T}}</code>. The example further assumes that there is a vector of <code>labels::Vector{Int}</code> that contain the true classes of the datapoints, which you do not have in an unsupervised setting.</p><pre><code class="language-julia">using SpectralDistances, ControlSystems
 fitmethod = TLS(na=12)
 models = SpectralDistances.fitmodel.(fitmethod, sounds)
 G = tf.(models) # Convert to transfer functions for visualization etc.
@@ -315,8 +90,8 @@ anns = [(reverse(ci.I)..., text(val,12,:gray)) for (ci,val) in zip(CartesianIndi
 annotate!(anns)
 yticks!(yt)
 xticks!(yt, xrotation=45)
-current()</code></pre><p>The figure should look like the last figure in <a href="https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view">the paper</a>.</p><ul><li><a href="#SpectralDistances.ISA"><code>SpectralDistances.ISA</code></a></li><li><a href="#SpectralDistances.barycenter-Tuple{Array{#s65,1} where #s65&lt;:AbstractArray,Any}"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycenter"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T"><code>SpectralDistances.barycentric_coordinates</code></a></li><li><a href="#SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}"><code>SpectralDistances.interpolator</code></a></li><li><a href="#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>SpectralDistances.kbarycenters</code></a></li><li><a href="#SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}"><code>SpectralDistances.kbarycenters</code></a></li></ul><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}" href="#SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}"><code>SpectralDistances.interpolator</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">interpolator(d, A1, A2)
-</code></pre><p>Perform displacement interpolation between two models.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/interpolations.jl#L48-L52">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.ISA" href="#SpectralDistances.ISA"><code>SpectralDistances.ISA</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">ISA(X, w = nothing; iters = 100, printerval = typemax(Int))</code></pre><p>Iterative swapping algorithm from &quot;On the Computation of Wasserstein barycenters&quot;, Giovanni Puccetti et al.</p><p><strong>Arguments:</strong></p><ul><li><code>X</code>: vector of d×k matrices where d is dimension and k number of atoms</li><li><code>w</code>: weights. See the files <code>test_barycenter.jl</code> for different uses.</li><li><code>iters</code>: maximum number of iterations</li><li><code>printerval</code>: print this often</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/barycenter.jl#L368-L378">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter" href="#SpectralDistances.barycenter"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">barycenter(d::OptimalTransportRootDistance, models; normalize = true, kwargs...)</code></pre><pre><code class="language-julia">barycenter(d, models)
+current()</code></pre><p>The figure should look like the last figure in <a href="https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view">the paper</a>.</p><ul><li><a href="#SpectralDistances.ISA"><code>SpectralDistances.ISA</code></a></li><li><a href="#SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycenter"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycenter-Tuple{Array{#s55,1} where #s55&lt;:AbstractArray,Any}"><code>SpectralDistances.barycenter</code></a></li><li><a href="#SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T"><code>SpectralDistances.barycentric_coordinates</code></a></li><li><a href="#SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}"><code>SpectralDistances.interpolator</code></a></li><li><a href="#SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}"><code>SpectralDistances.kbarycenters</code></a></li><li><a href="#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>SpectralDistances.kbarycenters</code></a></li></ul><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}" href="#SpectralDistances.interpolator-Tuple{RationalOptimalTransportDistance,Any,Any}"><code>SpectralDistances.interpolator</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">interpolator(d, A1, A2)
+</code></pre><p>Perform displacement interpolation between two models.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/interpolations.jl#L48-L52">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.ISA" href="#SpectralDistances.ISA"><code>SpectralDistances.ISA</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">ISA(X, w = nothing; iters = 100, printerval = typemax(Int))</code></pre><p>Iterative swapping algorithm from &quot;On the Computation of Wasserstein barycenters&quot;, Giovanni Puccetti et al.</p><p><strong>Arguments:</strong></p><ul><li><code>X</code>: vector of d×k matrices where d is dimension and k number of atoms</li><li><code>w</code>: weights. See the files <code>test_barycenter.jl</code> for different uses.</li><li><code>iters</code>: maximum number of iterations</li><li><code>printerval</code>: print this often</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/barycenter.jl#L368-L378">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter" href="#SpectralDistances.barycenter"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">barycenter(d::OptimalTransportRootDistance, models; normalize = true, kwargs...)</code></pre><pre><code class="language-julia">barycenter(d, models)
 barycenter(d, models, λ; normalize, uniform, solver, kwargs...)
 </code></pre><p><strong>Approximately</strong> calculate the barycenter supported on the same number of atoms as the number of poles in the models.</p><p>The solver can be selected by providing a keword argument, example: <code>solver=IPOT</code>.</p><p>Uses the algorithms from <a href="https://arxiv.org/pdf/1310.4375.pdf">&quot;Fast Computation of Wasserstein Barycenters&quot;</a></p><p><strong>Example:</strong></p><pre><code class="language-julia">models = examplemodels(10)
 
@@ -327,7 +102,7 @@ G = tf.(models)
 plot()
 pzmap!.(G)
 pzmap!(tf(Xe), m=:c, title=&quot;Barycenter OptimalTransportRootDistance&quot;, lab=&quot;BC&quot;)
-current()</code></pre><p><strong>Arguments:</strong></p><ul><li><code>models</code>: vector of AR models</li><li><code>normalize</code>: make sure weights sum to 1</li><li><code>kwargs</code>: are sent to the solver</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/barycenter.jl#L34-L62">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter-Tuple{Array{#s65,1} where #s65&lt;:AbstractArray,Any}" href="#SpectralDistances.barycenter-Tuple{Array{#s65,1} where #s65&lt;:AbstractArray,Any}"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">barycenter(X::Vector{&lt;:AbstractArray}, λ)</code></pre><p>Calculate the weighted barycenter for point clouds in <code>X</code>. Each <code>X[i]</code> has the shame <code>n_dims × n_atoms</code> <code>λ</code> is the weight vector that should sum to 1.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/barycenter.jl#L127-L133">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}" href="#SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">barycenter(d::EuclideanRootDistance, models::AbstractVector)</code></pre><p><strong>Example:</strong></p><pre><code class="language-julia">models = examplemodels(10)
+current()</code></pre><p><strong>Arguments:</strong></p><ul><li><code>models</code>: vector of AR models</li><li><code>normalize</code>: make sure weights sum to 1</li><li><code>kwargs</code>: are sent to the solver</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/barycenter.jl#L34-L62">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter-Tuple{Array{#s55,1} where #s55&lt;:AbstractArray,Any}" href="#SpectralDistances.barycenter-Tuple{Array{#s55,1} where #s55&lt;:AbstractArray,Any}"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">barycenter(X::Vector{&lt;:AbstractArray}, λ)</code></pre><p>Calculate the weighted barycenter for point clouds in <code>X</code>. Each <code>X[i]</code> has the shame <code>n_dims × n_atoms</code> <code>λ</code> is the weight vector that should sum to 1.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/barycenter.jl#L127-L133">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}" href="#SpectralDistances.barycenter-Tuple{EuclideanRootDistance,AbstractArray{T,1} where T}"><code>SpectralDistances.barycenter</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">barycenter(d::EuclideanRootDistance, models::AbstractVector)</code></pre><p><strong>Example:</strong></p><pre><code class="language-julia">models = examplemodels(10)
 
 Xe = barycenter(EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2), models)
 
@@ -335,7 +110,7 @@ G = tf.(models)
 plot()
 pzmap!.(G)
 pzmap!(tf(Xe), m=:c, title=&quot;Barycenter EuclideanRootDistance&quot;)
-current()</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/barycenter.jl#L87-L102">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T" href="#SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T"><code>SpectralDistances.barycentric_coordinates</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">λ = barycentric_coordinates(pl, ql, p, q; options, kwargs...)</code></pre><p>Compute the barycentric coordinates <code>λ</code> such that sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.</p><p>This function works best with the <code>sinkhorn_log!</code> solver, a large β (around 1) and small tolerance. These are set using <code>kwargs...</code>.</p><p><strong>Arguments:</strong></p><ul><li><code>pl</code>: Atoms in measures <code>p</code>, vector, length <code>n_measures</code>, of matrices of size <code>n_dims × n_atoms</code></li><li><code>ql</code>: Atoms in measure <code>q</code></li><li><code>p</code>: Measures <code>p</code>, a matrix of weight vectors, size <code>n_atoms × n_measures</code> that sums to 1</li><li><code>q</code>: the veight vector for measure <code>q</code>, length is <code>n_atoms</code></li><li><code>options</code>: For the Optim solver. Defaults are <code>options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)</code></li><li><code>solver</code>: = <a href="../distances/#SpectralDistances.sinkhorn_log!-Tuple{Any,Any,Any}"><code>sinkhorn_log!</code></a> solver</li><li><code>tol</code>:    = 1e-7 tolerance</li><li><code>β</code>:      = 0.1 entropy regularization. This function works best with rather large regularization, hence the large default value.</li><li><code>kwargs</code>: these are sent to the solver algorithm.</li></ul><p><strong>Example:</strong></p><pre><code class="language-julia">using SpectralDistances, ControlSystems, Optim
+current()</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/barycenter.jl#L87-L102">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T" href="#SpectralDistances.barycentric_coordinates-Union{Tuple{T}, Tuple{Any,Any,Any,AbstractArray{T,1}}, Tuple{Any,Any,Any,AbstractArray{T,1},Any}} where T"><code>SpectralDistances.barycentric_coordinates</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">λ = barycentric_coordinates(pl, ql, p, q; options, kwargs...)</code></pre><p>Compute the barycentric coordinates <code>λ</code> such that sum(λᵢ W(pᵢ,q) for i in eachindex(p)) is minimized.</p><p>This function works best with the <code>sinkhorn_log!</code> solver, a large β (around 1) and small tolerance. These are set using <code>kwargs...</code>.</p><p><strong>Arguments:</strong></p><ul><li><code>pl</code>: Atoms in measures <code>p</code>, vector, length <code>n_measures</code>, of matrices of size <code>n_dims × n_atoms</code></li><li><code>ql</code>: Atoms in measure <code>q</code></li><li><code>p</code>: Measures <code>p</code>, a matrix of weight vectors, size <code>n_atoms × n_measures</code> that sums to 1</li><li><code>q</code>: the veight vector for measure <code>q</code>, length is <code>n_atoms</code></li><li><code>options</code>: For the Optim solver. Defaults are <code>options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)</code></li><li><code>solver</code>: = <a href="../distances/#SpectralDistances.sinkhorn_log!-Tuple{Any,Any,Any}"><code>sinkhorn_log!</code></a> solver</li><li><code>tol</code>:    = 1e-7 tolerance</li><li><code>β</code>:      = 0.1 entropy regularization. This function works best with rather large regularization, hence the large default value.</li><li><code>kwargs</code>: these are sent to the solver algorithm.</li></ul><p><strong>Example:</strong></p><pre><code class="language-julia">using SpectralDistances, ControlSystems, Optim
 models = examplemodels(10)
 
 d = OptimalTransportRootDistance(
@@ -379,7 +154,7 @@ plot()
 pzmap!.(G, lab=&quot;&quot;)
 pzmap!(tf(Xe), m = :c, title = &quot;Barycenter OptimalTransportRootDistance&quot;, lab = &quot;BC&quot;)
 # It&#39;s okay if the last system dot does not match the barycenter exactly, there are limited models to choose from.
-pzmap!(G[argmax(λ)], m = :c, lab = &quot;Largest bc coord&quot;, legend = true)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/barycenter.jl#L173-L240">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.kbarycenters-Tuple{Any,Any,Any}" href="#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>SpectralDistances.kbarycenters</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">kbarycenters(X, p, k; seed = :rand, kiters = 10, verbose = false, output = :best, kwargs...)</code></pre><p>Clustering using K-barycenters. If you want to cluster spectra, consider the method that accepts models instead.</p><p><strong>Arguments:</strong></p><ul><li><code>X</code>: Support of input measures, Vector{Matrix} where each matrix is n<em>dims×n</em>atoms</li><li><code>p</code>: Weights of input measures Vector{Vector} where each matrix is of length n_atoms and should sum to 1.</li><li><code>k</code>: number of clusters</li><li><code>seed</code>: :rand or :eq</li><li><code>kiters</code>: number of iterations</li><li><code>verbose</code>: print stuff?</li><li><code>output</code>: output lowest cost clustering or :latest?</li><li><code>kwargs</code>: are sent to the inner solvers.</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/kbarycenters.jl#L22-L36">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}" href="#SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}"><code>SpectralDistances.kbarycenters</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">kbarycenters(d::OptimalTransportRootDistance, models::Vector{&lt;:AbstractModel}, k; normalize = true, kwargs...)</code></pre><p>This function is only available if <code>using Clustering</code>.</p><p><strong>Example:</strong></p><pre><code class="language-julia">clusterresult = kbarycenters(
+pzmap!(G[argmax(λ)], m = :c, lab = &quot;Largest bc coord&quot;, legend = true)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/barycenter.jl#L173-L240">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.kbarycenters-Tuple{Any,Any,Any}" href="#SpectralDistances.kbarycenters-Tuple{Any,Any,Any}"><code>SpectralDistances.kbarycenters</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">kbarycenters(X, p, k; seed = :rand, kiters = 10, verbose = false, output = :best, kwargs...)</code></pre><p>Clustering using K-barycenters. If you want to cluster spectra, consider the method that accepts models instead.</p><p><strong>Arguments:</strong></p><ul><li><code>X</code>: Support of input measures, Vector{Matrix} where each matrix is n<em>dims×n</em>atoms</li><li><code>p</code>: Weights of input measures Vector{Vector} where each matrix is of length n_atoms and should sum to 1.</li><li><code>k</code>: number of clusters</li><li><code>seed</code>: :rand or :eq</li><li><code>kiters</code>: number of iterations</li><li><code>verbose</code>: print stuff?</li><li><code>output</code>: output lowest cost clustering or :latest?</li><li><code>kwargs</code>: are sent to the inner solvers.</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/kbarycenters.jl#L22-L36">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}" href="#SpectralDistances.kbarycenters-Tuple{OptimalTransportRootDistance,Array{#s8,1} where #s8&lt;:SpectralDistances.AbstractModel,Any}"><code>SpectralDistances.kbarycenters</code></a> — <span class="docstring-category">Method</span></header><section><div><pre><code class="language-julia">kbarycenters(d::OptimalTransportRootDistance, models::Vector{&lt;:AbstractModel}, k; normalize = true, kwargs...)</code></pre><p>This function is only available if <code>using Clustering</code>.</p><p><strong>Example:</strong></p><pre><code class="language-julia">clusterresult = kbarycenters(
     dist,
     models,
     k,         # number of clusters
@@ -393,4 +168,4 @@ pzmap!(G[argmax(λ)], m = :c, lab = &quot;Largest bc coord&quot;, legend = true)
     output     = :best,
     uniform    = true,
     kiters     = 10
-)</code></pre><p>The docs contain <a href="https://baggepinnen.github.io/SpectralDistances.jl/latest/interpolations/#K-Barycenters-1">a more detailed example</a></p><p><strong>Arguments:</strong></p><ul><li><code>models</code>: A vector of models</li><li><code>k</code>: number of clusters</li><li><code>normalize</code>: Whether or not to normalize the weight vectors (recommended)</li><li><code>kwargs</code>: are sent to inner solvers, (<code>solver,tol,iters</code>)</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/8244db03251ba32c5cecdfd744ee946db9563b4e/src/kbarycenters.jl#L129-L159">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../time/">« Time-Frequency distances</a><a class="docs-footer-nextpage" href="../plotting/">Plotting »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 3 April 2020 03:42">Friday 3 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre><p>The docs contain <a href="https://baggepinnen.github.io/SpectralDistances.jl/latest/interpolations/#K-Barycenters-1">a more detailed example</a></p><p><strong>Arguments:</strong></p><ul><li><code>models</code>: A vector of models</li><li><code>k</code>: number of clusters</li><li><code>normalize</code>: Whether or not to normalize the weight vectors (recommended)</li><li><code>kwargs</code>: are sent to inner solvers, (<code>solver,tol,iters</code>)</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/ce21f106fa2aef10229a4adc0fa1d9312e4ae9ef/src/kbarycenters.jl#L129-L159">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../time/">« Time-Frequency distances</a><a class="docs-footer-nextpage" href="../plotting/">Plotting »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 3 April 2020 06:23">Friday 3 April 2020</span>. Using Julia version 1.4.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
