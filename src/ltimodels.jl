@@ -160,6 +160,11 @@ Convert model to a transfer function compatible with ControlSystems.jl
 ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
 ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
 ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
+
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{<:ControlSystems.SisoRational} = tf(m)
+
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{<:ControlSystems.SisoZpk} = zpk(tf(m))
+
 function ARMA(g::ControlSystems.TransferFunction)
     ControlSystems.issiso(g) || error("Can only convert SISO systems to ARMA")
     b,a = numvec(g)[], denvec(g)[]
@@ -209,13 +214,21 @@ ControlSystems.numvec(::Discrete, m::ARMA) = m.b
 ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
 ControlSystems.numvec(::Continuous, m::ARMA) = m.bc
 
-ControlSystems.bode(m::AbstractModel, args...; kwargs...) = bode(tf(m), args...; kwargs...)
-ControlSystems.nyquist(m::AbstractModel, args...; kwargs...) = nyquist(tf(m), args...; kwargs...)
-ControlSystems.freqresp(m::AbstractModel, w::AbstractVector{<:Real}, args...; kwargs...) = freqresp(tf(m), w, args...; kwargs...)
-ControlSystems.step(m::AbstractModel, Tf::Real, args...; kwargs...) = step(tf(m), Tf, args...; kwargs...)
+
+for T in (:AR, :ARMA)
+    @eval begin
+        ControlSystems.bode(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = bode(tf(m), w, args...; kwargs...)
+        ControlSystems.nyquist(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = nyquist(tf(m), w, args...; kwargs...)
+        ControlSystems.freqresp(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = freqresp(tf(m), w, args...; kwargs...)
+        ControlSystems.step(m::$T, Tf::Real, args...; kwargs...) = step(tf(m), Tf, args...; kwargs...)
+    end
+end
 
 function Base.getproperty(m::AbstractModel, p::Symbol)
     p === :Ts && return 0.0
+    p === :nx && return length(m.ac)
+    p === :nu && return 1
+    p === :ny && return 1
     getfield(m,p)
 end
 
@@ -231,6 +244,7 @@ coefficients(::Continuous, m::ARMA) = [m.ac[2:end]; m.bc]
 
 Base.getindex(m::AbstractModel, i) = i < length(m.ac) ? m.ac[1+i] : m.b[i-length(m.ac)+1]
 Base.length(m::AbstractModel) = length(m.a)+length(m.b)-1
+Base.size(m::AbstractModel) = (1,1)
 
 function domain_transform(d::Continuous, m::AR)
     p = domain_transform(d, roots(m))

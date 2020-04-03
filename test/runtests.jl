@@ -491,6 +491,7 @@ end
 end
 
 @testset "ControlSystems interoperability" begin
+    @infor "Testing ControlSystems interoperability"
     m = AR(ContinuousRoots([-1]))
     g = tf(1,[1.,1])
     @test tf(m) == g
@@ -502,6 +503,11 @@ end
     @test all(ControlSystems.nyquist(m) .≈ nyquist(g))
     @test ControlSystems.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
     @test all(ControlSystems.step(m, 10) .≈ step(g, 10))
+
+    bodeplot(m)
+    pzmap(m)
+    nyquistplot(m)
+
 end
 
 @testset "polynomial acrobatics" begin

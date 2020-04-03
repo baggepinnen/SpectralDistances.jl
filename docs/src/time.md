@@ -79,7 +79,7 @@ function chirp(onset)
     y[inds] .+= chirp0[1:length(inds)]
     y
 end
-using DSP, LPVSpectral
+using DSP
 plot(spectrogram(chirp(0), window=hanning), layout=2)
 plot!(spectrogram(chirp(1), window=hanning), sp=2)
 savefig("chirps.html"); nothing # hide
