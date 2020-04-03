@@ -226,21 +226,8 @@ function unitweight(e::AbstractArray{T}) where T
     isderiving() ? complex.(fill(RT(1/N),size(e))) : fill(RT(1/N),size(e))
 end
 
-# function polar_ang(e)
-#     mag, ang = polar(e)
-#     I   = sortperm(ang)
-#     mag[I], ang[I], I
-# end
-#
-# function polar_mag(e)
-#     mag, ang = polar(e)
-#     I   = sortperm(mag)
-#     mag[I], ang[I], I
-# end
-#
 toreim(x::AbstractVector{<:Complex}) = (real.(x), imag.(x))
 toreim(x::Tuple) = x
-
 
 reflectc(x::Real) = x < 0 ? x : -x
 reflectc(x::Complex) = complex(x.re < 0 ? x.re : -x.re,x.im)

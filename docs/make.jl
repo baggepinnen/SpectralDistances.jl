@@ -1,6 +1,10 @@
 using Documenter
 using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK, DSP
-# using DocumenterLaTeX
+
+using Plots
+using Plots.PlotMeasures
+default(margin=10mm)
+
 
 @info "makedocs"
 makedocs(
