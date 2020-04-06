@@ -32,12 +32,12 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
 
     @assert sum(a) ≈ 1 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
-    T = promote_type(eltype(a), eltype(b), eltype(C))
-    alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
+    T = real(promote_type(eltype(a), eltype(b), eltype(C)))
+    alpha,beta = zeros(T, size(a)), zeros(T, size(b))
     ϵ = eps(T)
     K = @. exp(-C / β)
     Γ = zeros(T, size(K))
-    u = zeros(T, size(a)) .= 1
+    u = ones(T, size(a))
     local v, iter
     iter = 0
     for outer iter = 1:iters
@@ -56,7 +56,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
         if iter % 10 == 0 || iter % printerval == 0
             Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
             err = +(ot_error(Γ, a, b)...)
-            iter % printerval == 0 && @info "Iter: $iter, err: $err"
+            iter % printerval == 0 && println("Iter: $iter, err: $err")
             if err < tol
                break
             end
@@ -71,11 +71,11 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     v = v .- mean(v)
 
     @assert isapprox(sum(u), 0, atol=1e-10) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
-    iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
+    iter == iters && iters > printerval && println("Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))")
 
     ea, eb = ot_error(Γ, a, b)
     if ea > tol || eb > tol
-        @error "sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
+        println("sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol")
     end
 
     Γ, u, v
@@ -86,9 +86,8 @@ end
 Same as [`sinkhorn_log`](@ref) but operates in-place to save memory allocations. This function has higher performance than `sinkhorn_log`, but might not work as well with AD libraries.
 """
 function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
-
-    @assert sum(a) ≈ 1 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
-    @assert sum(b) ≈ 1 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
+    @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
+    @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
     T = promote_type(eltype(a), eltype(b), eltype(C))
     alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
     ϵ = eps()

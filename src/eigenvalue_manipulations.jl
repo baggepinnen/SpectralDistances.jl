@@ -94,8 +94,9 @@ change_precision(F, r::ContinuousRoots) = ContinuousRoots(Complex{F}.(r.r))
 change_precision(F, r::DiscreteRoots) = DiscreteRoots(Complex{F}.(r.r))
 
 
-
-eigsort(e) = sort(e, by=imag)
+imageigsortby(λ::Real) = λ
+imageigsortby(λ::Complex) = (imag(λ),real(λ))
+eigsort(e) = sort(e, by=imageigsortby)
 anglesort(e) = sort(e, by=angle)
 
 Base.Vector(r::AbstractRoots) = r.r

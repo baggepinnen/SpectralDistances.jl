@@ -292,6 +292,7 @@ diffpol(n) = diagm(0=>ones(n), 1=>-ones(n))[:,1:n]
 Regularized Least-squares
 """
 function ls(A, y, λ=0)
+    isderiving() && (return _ls(A,y,λ))
     n = size(A,2)
     if λ > 0
         A = [A; sqrt(λ)*I]
@@ -301,6 +302,17 @@ function ls(A, y, λ=0)
     # svd(A2)\y
     # (A'A - γ*I)\(A'y)
     A\y
+end
+
+function _ls(A,y,λ)
+    # if λ > 0
+        # A2 = [A; sqrt(λ)*I]
+    # else
+        # A2 = A
+    # end
+    # @show size(A2), size(y), size(A)
+   # (A2'A2)\(A'y)
+   (A'A + λ*I)\A'y
 end
 
 
@@ -679,7 +691,7 @@ function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
     res = residues(a2, b, r2)
     e = 2π*sum(res)
     ae = real(e)
-    if ae < 1e-3  && !(T <: BigFloat) # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
+    if ae < 1e-3  && !(T <: BigFloat) && !isderiving() # In this case, accuracy is probably compromised and we should do the calculation with higher precision.
         return spectralenergy(d, big.(a), b)
 
     end
