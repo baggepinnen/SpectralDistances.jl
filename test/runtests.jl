@@ -375,7 +375,6 @@ end
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         d = D(domain=Continuous())
         println(D)
-        @test_throws ErrorException d(m,NaN*m)
         @test d(m,m) < eps() + 0.001*(d isa OptimalTransportRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
