@@ -38,7 +38,7 @@ Represent roots in discrete time
 """
 struct DiscreteRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
-    DiscreteRoots(r) = new{eltype(r), typeof(r)}(reflectd.(anglesort(r)))
+    DiscreteRoots(r) = new{eltype(r), typeof(r)}(anglesort(reflectd.(r)))
 end
 StaticArrays.similar_type(r::DiscreteRoots{T,V}) where {T,V} = DiscreteRoots
 
@@ -49,7 +49,7 @@ Represents roots in continuous time
 """
 struct ContinuousRoots{T, V <: AbstractVector{T}} <: AbstractRoots{T}
     r::V
-    ContinuousRoots(r) = new{eltype(r), typeof(r)}(reflectc.(eigsort(r)))
+    ContinuousRoots(r) = new{eltype(r), typeof(r)}(eigsort(reflectc.(r)))
 end
 StaticArrays.similar_type(r::ContinuousRoots{T,V}) where {T,V} = ContinuousRoots
 

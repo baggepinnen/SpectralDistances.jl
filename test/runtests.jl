@@ -213,17 +213,17 @@ end
     @test SpectralDistances.reflectd(complex(0,2)) ≈ 0 + 0.5im
     @test SpectralDistances.reflectd(complex(0,-2)) ≈ 0 - 0.5im
 
-    e = roots(randn(7))
+    e = SpectralDistances.hproots(randn(7))
     ed = DiscreteRoots(e)
     @test real(e) == real.(e)
     @test real(ed) == real.(ed)
-    @test issorted(ed, by=angle)
+    @test issorted(ed.r, by=angle)
     @test all(<(1) ∘ abs, ed)
     ec = log(ed)
-    @test issorted(ec, by=imag)
+    @test issorted(ec, by=SpectralDistances.imageigsortby)
     @test all(<(0) ∘ real, ec)
     @test domain_transform(Continuous(), ed) isa ContinuousRoots
-    @test domain_transform(Continuous(), ed) == log.(ed) == ContinuousRoots(ed)
+    @test domain_transform(Continuous(), ed) ≈ SpectralDistances.eigsort(SpectralDistances.reflectc.(log.(ed))) ≈ ContinuousRoots(ed)
     @test domain_transform(Discrete(), ed) == ed
     @test domain(ed) isa Discrete
     @test domain(ContinuousRoots(ed)) isa Continuous
