@@ -61,8 +61,8 @@ innerdistance = OptimalTransportRootDistance(domain=Continuous(), β=0.005, p=2)
 dist = ModelDistance(TLS(na=30), innerdistance)
 ```
 """
-struct ModelDistance{D <: AbstractDistance} <: AbstractSignalDistance
-    fitmethod::FitMethod
+struct ModelDistance{D <: AbstractDistance, FM <: FitMethod} <: AbstractSignalDistance
+    fitmethod::FM
     distance::D
 end
 
@@ -103,7 +103,7 @@ OptimalTransportRootDistance
 @kwdef struct OptimalTransportRootDistance{D,F1,F2} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
-    weight::F2 = s1 ∘ residueweight
+    weight::F2 = simplex_residueweight
     β::Float64 = 0.01
     p::Int = 2
 end
@@ -357,8 +357,9 @@ function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; k
         # w1,w2 = change_precision(Float64, w1), change_precision(Float64, w2)
         return evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); solver=sinkhorn_log, tol=0.01) # workaround for https://github.com/FluxML/Zygote.jl/issues/584, when that has been closed, this branch can be removed
     end
-
-    evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)
+    r1 = preprocess_roots(d,w1)
+    r2 = preprocess_roots(d,w2)
+    evaluate(d, r1, r2; kwargs...)
 end
 function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
     d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
@@ -426,11 +427,11 @@ function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::Abstrac
     w2    = d.weight(e2)
     # C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
     C     = solver(D,w1,w2; β=d.β, kwargs...)[1]
-    if any(isnan, C)
+    if any(isnan, C) && !isderiving()
         println("Nan in OptimalTransportRootDistance, increasing precision")
         C     = solver(big.(D),big.(w1),big.(w2); β=d.β, kwargs...)[1]
         any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
-        eltype(D).(C)
+        C = eltype(D).(C)
     end
     sum(C.*D)
 end

@@ -32,7 +32,7 @@ end
 
 curvature(dist, a) = Symmetric(nhessian(b->dist(a,b), a))
 
-isderiving() = false
+@inline isderiving() = false
 
 @adjoint isderiving() = true, _ -> nothing
 

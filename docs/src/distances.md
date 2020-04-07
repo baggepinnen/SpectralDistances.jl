@@ -77,8 +77,8 @@ the [`OptimalTransportRootDistance`](@ref)
 ```@example dist
 using Zygote
 Zygote.@nograd rand # Currently needed woraround
-x1 = randn(100000)  # Create two signals
-x2 = randn(100000)
+x1 = SpectralDistances.bp_filter(randn(100000), (0.1,0.3))  # Create two signals
+x2 = SpectralDistances.bp_filter(randn(100000), (0.1,0.2))
 fm = LS(na=10)      # LS is the best supported fitmethod for gradients
 
 dist = ModelDistance(fm,OptimalTransportRootDistance(domain = Continuous()))      # Since we're measureing distance between signals, we wrap the distance in a ModelDistance
@@ -86,6 +86,12 @@ dist = ModelDistance(fm,OptimalTransportRootDistance(domain = Continuous()))    
 ```@repl dist
 dist(x1,x2)
 ∇x1 = Zygote.gradient(x->real(evaluate(dist,x,x2)), x1)[1] # the call to real is a workaround due to Zygote bug
+```
+
+The differentiation takes some time, but it should be fast enough to be generally useful for gradient-based learning of autoencoders etc. The following is a benchmark performed on an old laptop without GPU (the distances are not yet tested on GPUs)
+```julia
+@btime Zygote.gradient(x->real(evaluate($dist,x,$x2)), $x1);
+#  180.208 ms (253201 allocations: 140.29 MiB)
 ```
 
 ## Function reference
