@@ -395,8 +395,8 @@ using SpectralDistances, Zygote
     g = Zygote.gradient(df, x1)[1]
     gn = ngradient(x -> evaluate(dist, x, x2, iters = 50, solver = sinkhorn_log), x1)
 
-    isinteractive() && plot([gn g], layout = 2)
     @test cosdist(g, gn) > 0.9
+    isinteractive() && plot([gn g], layout = 2)
 
 
 end

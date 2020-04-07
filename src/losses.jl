@@ -355,7 +355,7 @@ end
 function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; kwargs...)
     if isderiving()
         # w1,w2 = change_precision(Float64, w1), change_precision(Float64, w2)
-        return evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); solver=sinkhorn_log, iters=50, kwargs...)
+        return evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); solver=sinkhorn_log, tol=0.01) # workaround for https://github.com/FluxML/Zygote.jl/issues/584, when that has been closed, this branch can be removed
     end
 
     evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)

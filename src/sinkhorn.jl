@@ -26,9 +26,11 @@ end
 
 The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn_log!`](@ref) for a faster implementation operating in-place, and [`IPOT`](@ref) for a potentially more exact solution.
 
-https://arxiv.org/pdf/1610.06519.pdf
+When this function is being differentiated, warnings about inaccurate solutions are turned off. You may choose to manually asses the error in the constrains by `ea, eb = SpectralDistances.ot_error(Γ, a, b)`.
+
+The IPOT algorithm: https://arxiv.org/pdf/1610.06519.pdf
 """
-function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-3, printerval = typemax(Int), kwargs...)
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
 
     @assert sum(a) ≈ 1 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
@@ -74,7 +76,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-3, printerval
     iter == iters && iters > printerval && println("Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))")
 
     ea, eb = ot_error(Γ, a, b)
-    if ea > tol || eb > tol
+    if (ea > tol || eb > tol) && !isderiving()
         println("sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol")
     end
 
