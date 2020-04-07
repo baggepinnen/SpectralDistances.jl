@@ -28,7 +28,7 @@ The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are ve
 
 https://arxiv.org/pdf/1610.06519.pdf
 """
-function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
+function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-3, printerval = typemax(Int), kwargs...)
 
     @assert sum(a) ≈ 1 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
