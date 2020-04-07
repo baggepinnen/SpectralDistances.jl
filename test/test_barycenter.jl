@@ -168,7 +168,7 @@ end
     k = 4
     Y0 = 0.1*[1 1 2 2; 1 2 1 2]
     Y = [Y0[:,randperm(k)] .+ 1rand(d) for _ in 1:4]
-    X = mean(Y) .+ 0.05 .* randn.()
+    X = mean(Y) .+ Y0
     a = ones(k) |> s1
     b = [ones(k) |> s1 for _ in eachindex(Y)]
     a1 = SpectralDistances.alg1(X,Y,a,b;β=1/100.0, printerval=100)
@@ -188,7 +188,7 @@ end
 
     using JuMP, GLPK
 
-    r3(x) = round.(x, digits=3)
+    r6(x) = x#round.(x, digits=6)
     ip(x,y) = x'y/norm(x)/norm(y)
 
     M = SpectralDistances.distmat_euclidean(X,Y[1])
@@ -196,9 +196,9 @@ end
     SpectralDistances.distmat_euclidean!(M2,X,Y[1])
     @test M == M2
 
-    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
-    g2,a2,b2 = sinkhorn_log!(M,a,b[1], β=0.0001, iters=500000, tol=1e-6) .|> r3
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000) .|> r3
+    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r6
+    g2,a2,b2 = sinkhorn_log!(M,a,b[1], β=0.0001, iters=1000000, tol=1e-8) .|> r6
+    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=100000) .|> r6
     @test ip(a1,a2) ≈ 1 atol=1e-1
     @test ip(a1,a3) ≈ 1 atol=1e-1
 
@@ -209,9 +209,9 @@ end
     a = ones(k) |> s1
     b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
     M = SpectralDistances.distmat_euclidean(X,Y[1])
-    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r3
-    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=5000, tol=1e-9) .|> r3
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000, printerval=5000, tol=1e-9) .|> r3
+    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r6
+    g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=5000, tol=1e-9) .|> r6
+    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000, printerval=5000, tol=1e-9) .|> r6
     @test ip(a1,a2) ≈ 1 atol=1e-1
     @test ip(a1,a3) ≈ 1 atol=1e-1
 
@@ -240,7 +240,7 @@ end
         β = 0.1
         ql = barycenter(X, λ0, inneriters=200000, tol=1e-9, innertol=1e-8, β=β, solver=sinkhorn_log!)
 
-        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=false, tol=1e-10)
+        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true, tol=1e-10)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="initial bc")
