@@ -3,7 +3,7 @@ using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances, DoubleFloats
 
-using SpectralDistances: ngradient, nhessian, njacobian, polyconv
+using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
 
 
 @testset "SpectralDistances.jl" begin
@@ -313,7 +313,7 @@ end
 
     b,a = 1,0.1randn(5)
     a[1] = 1
-    r   = roots(reverse(a))
+    r   = SpectralDistances.hproots(reverse(a))
     G   = tf(b,a)
     w   = im
     F = evalfr(G,w)[]
@@ -338,12 +338,12 @@ end
 
     n = 4
     a1 = randn(n+1); a1[1] = 1
-    r1 = SpectralDistances.reflectc.(roots(reverse(a1)))
+    r1 = SpectralDistances.reflectc.(hproots(reverse(a1)))
     r1 = complex.(0.01real.(r1), imag.(r1))
     r1 = SpectralDistances.normalize_energy(ContinuousRoots(r1))
 
     a2 = randn(n+1); a2[1] = 1
-    r2 = SpectralDistances.reflectc.(roots(reverse(a2)))
+    r2 = SpectralDistances.reflectc.(hproots(reverse(a2)))
     r2 = complex.(0.01real.(r2), imag.(r2))
     r2o = SpectralDistances.normalize_energy(ContinuousRoots(r2))
 

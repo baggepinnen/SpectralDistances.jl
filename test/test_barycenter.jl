@@ -63,31 +63,31 @@ end
     @test bc isa AR
     @test roots.(Continuous(), bc)[1] ≈ -2
 
-    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
+    models = [AR(ContinuousRoots([-1.0im,+im])), AR(ContinuousRoots([-3.0im,+3im]))]
     bc = barycenter(d,models)
     @test bc isa AR
-    @test roots.(Continuous(), bc) ≈ [-2im,+2im]
+    @test roots.(Continuous(), bc) ≈ [-2.0im,+2im]
 
 
     d = EuclideanRootDistance(domain=Continuous())
-    models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
+    models = [AR(ContinuousRoots([-1.0])), AR(ContinuousRoots([-3.0]))]
     bc = barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc)[1] ≈ -2
 
-    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+3im]))]
+    models = [AR(ContinuousRoots([-im,+1.0im])), AR(ContinuousRoots([-3.0im,+3im]))]
     bc = barycenter(d,models)
     @test bc isa AR
-    @test roots.(Continuous(), bc) ≈ [-2im,+2im]
+    @test roots.(Continuous(), bc) ≈ [-2.0im,+2im]
 
-    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3im,+2im]))]
+    models = [AR(ContinuousRoots([-im,+im])), AR(ContinuousRoots([-3.0im,+2im]))]
     bc = barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc) ≈ [-2im,+1.5im]
 
 
     d = EuclideanRootDistance(domain=Continuous(), weight=residueweight)
-    models = [AR(ContinuousRoots([-5-im,-1+im])), AR(ContinuousRoots([-1-im,-1+im]))]
+    models = [AR(ContinuousRoots([-5.0-im,-1+im])), AR(ContinuousRoots([-1.0-im,-1+im]))]
     bc = barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc) ≈ [-1.1538-im,-1+im] rtol=0.01
