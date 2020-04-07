@@ -5,117 +5,6 @@ using DSP, Distances, DoubleFloats
 
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv
 
-Random.seed!(1)
-
-
-# using Zygote
-# function jacobian(m,x)
-#     y  = m(x)
-#     k  = length(y)
-#     n  = length(x)
-#     J  = Matrix{eltype(x)}(undef,k,n)
-#     for i = 1:k
-#         g = Zygote.gradient(x->m(x)[i], x)[1]
-#         J[i,:] .= g
-#     end
-#     J
-# end
-# using ForwardDiff, FiniteDifferences
-#
-# function hessian(f, a)
-#     H = jacobian(f', a)
-# end
-#
-#
-# function hessian_fd_reverse(f,a)
-#     fd = central_fdm(9,1)
-#     FiniteDifferences.jacobian(fd, f', a)
-# end
-#
-# function nhessian_reverse(f,a)
-#     njacobian(f', a)
-# end
-#
-# a = randn(11)
-# a[1] = 1
-# using DoubleFloats
-# m = AR(ContinuousRoots([-Float64(0.1)+im, -Float64(0.1)-im]))
-# m2 = AR(ContinuousRoots([-Float64(0.11)+im, -Float64(0.12)-im]))
-# a = Vector(m.ac)
-# dist = CoefficientDistance(domain=Discrete(),distance=CosineDist())
-# dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=residueweight)
-# dist = EuclideanRootDistance(domain=Continuous(), p=2, weight=unitweight)
-# dist = OptimalTransportRootDistance(domain=Continuous(), p=2, iters=500, β=0.5)
-# function forward(b)
-#     real(dist(a, b))
-# end
-# forward(a)
-# forward'(a)
-# Zygote.refresh()
-# dist(m,m2) |> typeof
-# g = Zygote.gradient(Float64 ∘ dist, m.pc, m2.pc)
-#
-# mdist = ModelDistance(TLS(na=4), dist)
-# t = 0:0.01:100
-# x1 = sin.(70 .*t) .+ sin.(150 .* t) .+ 0.1 .*randn.()
-# # x1 = filt(ones(10),[10],randn(10000))
-# x2 = randn(10000)
-# mdist(x1,x2)
-#
-# using TotalLeastSquares
-# function TotalLeastSquares.tls(A::AbstractArray,y::AbstractArray)
-#     AA  = [A y]
-#     U,S,V   = svd(AA)
-#     n   = size(A,2)
-#     V21 = V[1:n,n+1:end]
-#     V22 = V[n+1:end,n+1:end]
-#     x   = -V21/V22
-# end
-#
-# shift1(x) = x .+ x[2]
-# g1,g2 = Zygote.gradient(abs ∘ mdist, x1, x2)
-# gradfun(xo,x2) = xo .= Zygote.gradient(abs ∘ mdist, x2, x1)[1]
-# gradfun(x2) = Zygote.gradient(abs ∘ mdist, x2, x1)[1]
-# gradfun(x2)
-# # x1 = filt(ones(10),[10],randn(10000))
-# # x2 = randn(10000)
-# for i = 1:1000
-#     if i % 40 == 0
-#         P = welch_pgram(x1)
-#         plot(P)
-#         P = welch_pgram(x2)
-#         plot!(P) |> display
-#     end
-#     @show mdist(x1,x2)
-#     x2 .-= 30 .* gradfun(x2)
-# end
-# using Optim
-# res = Optim.optimize(x2->mdist(x2,x1), gradfun, x2, LBFGS(), Optim.Options(store_trace=true, show_trace=true, show_every=1, iterations=100, allow_f_increases=true, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=100, g_calls_limit=0))
-# x2 = res.minimizer
-
-# ngradient(Float64 ∘ dist, m, m2)
-
-
-# Zygote.refresh()
-#
-# # NOTE: Gradient at a should be almost zero as it is the minimum, everything else is incorrect. Hessian should be pos.def.
-# @time forward'(a)
-# @time H = hessian_fd_reverse(forward, a)
-# @time H = nhessian_reverse(forward, a)
-# c∇ = central_fdm(3,1)
-#
-# grad(c∇, forward, (a))
-# ngradient(forward, copy(a))
-#
-#
-# @btime H = hessian_fd_reverse($(forward), $a)
-#
-# eigvals(H[2:end,2:end])
-#
-# hessian(forward, a)
-
-
-
 
 @testset "SpectralDistances.jl" begin
 
@@ -168,136 +57,12 @@ Random.seed!(1)
     end
 
 
-    # true && get(ENV, "TRAVIS_BRANCH", nothing) == nothing && @testset "gradients" begin
     @testset "gradients" begin
         @info "Testing gradients"
-        using FiniteDifferences
-        using SpectralDistances: njacobian, ngradient, nhessian
-        using Zygote
-        using SpectralDistances: getARXregressor, getARregressor
-        y = (randn(10))
-        u = (randn(10))
-        @test ngradient((y)->sum(getARXregressor(y,u,2,2)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,2)[2]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,2,2)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,2)[1]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,5,2)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,2)[2]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,5,2)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,2)[1]), y)[1]
-
-        @test ngradient((y)->sum(getARXregressor(y,u,2,1)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,1)[2]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,2,1)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,2,1)[1]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,5,1)[2]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,1)[2]), y)[1]
-        @test ngradient((y)->sum(getARXregressor(y,u,5,1)[1]), y) == Zygote.gradient((y)->sum(getARXregressor(y,u,5,1)[1]), y)[1]
-
-
-
-        y = (randn(10))
-        @test ngradient((y)->sum(getARregressor(y,2)[2]), y) == Zygote.gradient((y)->sum(getARregressor(y,2)[2]), y)[1]
-        @test ngradient((y)->sum(getARregressor(y,2)[1]), y) == Zygote.gradient((y)->sum(getARregressor(y,2)[1]), y)[1]
-        @test ngradient((y)->sum(getARregressor(y,5)[2]), y) == Zygote.gradient((y)->sum(getARregressor(y,5)[2]), y)[1]
-        @test ngradient((y)->sum(getARregressor(y,5)[1]), y) == Zygote.gradient((y)->sum(getARregressor(y,5)[1]), y)[1]
-
-        a,b = randn(3), randn(4)
-        @test ngradient(a->sum(SpectralDistances.polyconv(a,b)), a) ≈ Zygote.gradient(a->sum(SpectralDistances.polyconv(a,b)),a)[1] rtol=1e-3
-        @test ngradient(b->sum(SpectralDistances.polyconv(a,b)), b) ≈ Zygote.gradient(b->sum(SpectralDistances.polyconv(a,b)),b)[1] rtol=1e-3
-
-
-
-        @test_skip let Gc = tf(1,[1,1,1,1])
-            w = c2d(Gc,1).matrix[1] |> ControlSystems.denvec
-            @test d2c(w) ≈ pole(Gc)
-        end
-
-        # y = randn(5000)
-        # fm = PLR(na=40, nc=2)
-        # @test_skip Zygote.gradient(y->sum(fm(y)[1]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[1]), y)
-        # @test_skip Zygote.gradient(y->sum(fm(y)[2]), y)[1] ≈ ForwardDiff.gradient(y->sum(fm(y)[2]), y)
-
-
-        p = [1.,1,1]
-        # @btime riroots(p)
-        fd = central_fdm(3, 1)
-        @test Zygote.gradient(p) do p
-            r = roots(p)
-            sum(abs2, r)
-        end[1][1:end-1] ≈ FiniteDifferences.grad(fd, p->begin
-            r = roots(p)
-            sum(abs2, r)
-        end, p)[1][1:end-1]
-
-        fm = TLS(na=4)
-        y = randn(50)
-        sum(abs2, fm(y).pc)
-        @test_broken Zygote.gradient(y) do y
-            sum(abs2, fitmodel(fm,y,true).pc)
-        end
-
-
-
-
-        a = randn(5)
-        a[end] = 1
-        f = x -> sum(abs2(r) for r in roots(x))
-        G = Zygote.gradient(f, a)[1]
-
-
-        fdm = central_fdm(5,1)
-        @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1][1:end-1]
-
-
-        fd = central_fdm(5,1)
-        a = randn(30)
-        a[1] = 1
-        r = roots(reverse(a)) |> ContinuousRoots
-        residues(a,1,r)
-        f = a -> sum(abs2, residues(a,1,r))
-        g = a -> real(residues(complex.(a),1,r)[2])
-        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[1][2:end]) < sqrt(eps())
-        @test sum(abs, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps())
-
-        fd = central_fdm(7,1)
-        a = randn(30)
-        a[1] = 1
-        residues(a,1)
-        f = a -> sum(abs2, residues(a,1))
-        g = a -> real(residues(complex.(a),1)[2])
-        @test sum(abs, f'(complex.(a))[2:end] - grad(fd,f,a)[1][2:end]) < 1e-5
-        @test_skip sum(abs, g'((a))[2:end] - grad(fd,g,a)[1][2:end]) < sqrt(eps()) # Not robust
-
-        @testset "Numerical curvature" begin
-            @info "Testing Numerical curvature"
-            a = randn(11)
-            a[1] = 1
-            using DoubleFloats
-            m = AR(ContinuousRoots([-Double64(0.1)+im, -Double64(0.1)-im]))
-            a = Vector(m.ac)
-            for dist in [EuclideanRootDistance(domain=Continuous(), p=1, weight=residueweight),
-                        OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01)]
-                    H = SpectralDistances.curvature(dist, a)
-                    @test all(>(0) ∘ real, eigvals(H[2:end,2:end]))
-                    @test all(==(0) ∘ imag, eigvals(H[2:end,2:end]))
-            end
-
-        end
-
-        # Zygote segfaults here
-        # @testset "Sinkhorn zygote" begin
-        #     @info "testing sinkhorn zygote"
-        #     function sinkdist(D,a,b)
-        #         ai = s1(a)
-        #         bi = s1(a+b)
-        #         P,u,v = sinkhorn(D,ai,bi, iters=1000, β=0.1)
-        #         sum(P.*D)
-        #     end
-        #     a,b = abs.(randn(6)),abs.(randn(6))
-        #     D = SpectralDistances.distmat_euclidean(1:length(a), 1:length(a))
-        #     dD, da, db = Zygote.gradient(sinkdist, D,a,b)
-        #     @test n1(ForwardDiff.gradient(a->sinkdist(D,a,b), a))'n1(da) > 0.9
-        # end
-
-
+        include("test_diff.jl")
     end
 
-    a = -5:-1
-    @test SpectralDistances.roots2poly(a) ≈ SpectralDistances.roots2poly_zygote(a)
+
 
 
     @testset "Energy" begin
@@ -448,17 +213,17 @@ end
     @test SpectralDistances.reflectd(complex(0,2)) ≈ 0 + 0.5im
     @test SpectralDistances.reflectd(complex(0,-2)) ≈ 0 - 0.5im
 
-    e = roots(randn(7))
+    e = SpectralDistances.hproots(randn(7))
     ed = DiscreteRoots(e)
     @test real(e) == real.(e)
     @test real(ed) == real.(ed)
-    @test issorted(ed, by=angle)
+    @test issorted(ed.r, by=angle)
     @test all(<(1) ∘ abs, ed)
     ec = log(ed)
-    @test issorted(ec, by=imag)
+    @test issorted(ec, by=SpectralDistances.imageigsortby)
     @test all(<(0) ∘ real, ec)
     @test domain_transform(Continuous(), ed) isa ContinuousRoots
-    @test domain_transform(Continuous(), ed) == log.(ed) == ContinuousRoots(ed)
+    @test domain_transform(Continuous(), ed) ≈ SpectralDistances.eigsort(SpectralDistances.reflectc.(log.(ed))) ≈ ContinuousRoots(ed)
     @test domain_transform(Discrete(), ed) == ed
     @test domain(ed) isa Discrete
     @test domain(ContinuousRoots(ed)) isa Continuous
@@ -610,7 +375,6 @@ end
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
         d = D(domain=Continuous())
         println(D)
-        @test_throws ErrorException d(m,NaN*m)
         @test d(m,m) < eps() + 0.001*(d isa OptimalTransportRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
@@ -691,9 +455,8 @@ end
     x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
-    fm = TLS(na=4)
+    fm = LS(na=4)
     dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(-15., 15)))
-    @test dist(x1,x2) < dist(x1,x3)
     @test dist(x1,x2) < dist(x1,x3)
     dist = RationalOptimalTransportDistance(domain=Continuous(), p=1, interval=(0., 15.))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
@@ -701,9 +464,7 @@ end
 
     dist = ModelDistance(fm, RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-15., 15)))
     @test dist(x1,x2) < dist(x1,x3)
-    @test dist(x1,x2) < dist(x1,x3)
     dist = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(0., 15.))
-    @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
     @test dist(fm(x1),welch_pgram(x2)) < dist(fm(x1),welch_pgram(x3))
 
     w = LinRange(0, 2pi*15, 3000)

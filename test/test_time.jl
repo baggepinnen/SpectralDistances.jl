@@ -47,7 +47,6 @@ dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1,
 
 @test evaluate(dist, m, m) < 1e-3
 @test evaluate(dist, m, m2, iters=10000, tol=1e-3) > 0.1
-@test_throws ErrorException evaluate(dist, NaN*m, m2)
 
 fm = TimeWindow(TLS(na=2), 1000, 500)
 y = sin.(0:0.1:100)

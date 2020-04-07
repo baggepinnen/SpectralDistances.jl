@@ -24,7 +24,7 @@ Base.Broadcast.broadcastable(p::Log) = Ref(p)
 magnitude(d) = Identity()
 
 
-evaluate(d::DistanceCollection,x,y) = sum(evaluate(d,x,y) for d in d)
+evaluate(d::DistanceCollection,x,y;kwargs...) = sum(evaluate(d,x,y;kwargs...) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
 
 (d::AbstractDistance)(x,y) = evaluate(d, x, y)
@@ -297,7 +297,7 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 The euclidean distance matrix between two vectors of complex numbers
 """
-distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = distmat_euclidean!(zeros(typeof(abs(e1[1])), length(e1),length(e2)), e1,e2,p)
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p # Do not replace with call to mutating version, Zygote limitation
 
 """
     distmat_euclidean!(D, e1::AbstractVector, e2::AbstractVector, p = 2) = begin
@@ -353,6 +353,11 @@ function preprocess_roots(d::AbstractRootDistance, m::AbstractModel)
 end
 
 function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; kwargs...)
+    if isderiving()
+        # w1,w2 = change_precision(Float64, w1), change_precision(Float64, w2)
+        return evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); solver=sinkhorn_log, iters=50, kwargs...)
+    end
+
     evaluate(d, preprocess_roots(d,w1), preprocess_roots(d,w2); kwargs...)
 end
 function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
@@ -419,10 +424,11 @@ function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::Abstrac
     D     = distmat_euclidean(e1,e2,d.p)
     w1    = d.weight(e1)
     w2    = d.weight(e2)
-    C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
+    # C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
+    C     = solver(D,w1,w2; β=d.β, kwargs...)[1]
     if any(isnan, C)
         println("Nan in OptimalTransportRootDistance, increasing precision")
-        C     = solver(big.(D),SVector{length(w1)}(big.(w1)),SVector{length(w2)}(big.(w2)); β=d.β, kwargs...)[1]
+        C     = solver(big.(D),big.(w1),big.(w2); β=d.β, kwargs...)[1]
         any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         eltype(D).(C)
     end

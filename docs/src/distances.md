@@ -70,6 +70,23 @@ X1, X2 = sin.(2π*1 .*t), sin.(2π*2 .*t);   # Two signals that are further apar
 dist(X1,X2)
 ```
 
+## Gradients
+Some distances will allow you to propagate gradients
+through them. Below is an example using Zygote and
+the [`OptimalTransportRootDistance`](@ref)
+```@example dist
+using Zygote
+Zygote.@nograd rand # Currently needed woraround
+x1 = randn(100000)  # Create two signals
+x2 = randn(100000)
+fm = LS(na=10)      # LS is the best supported fitmethod for gradients
+
+dist = ModelDistance(fm,OptimalTransportRootDistance(domain = Continuous()))      # Since we're measureing distance between signals, we wrap the distance in a ModelDistance
+```
+```@repl dist
+dist(x1,x2)
+∇x1 = Zygote.gradient(x->real(evaluate(dist,x,x2)), x1)[1] # the call to real is a workaround due to Zygote bug
+```
 
 ## Function reference
 

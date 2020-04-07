@@ -1,8 +1,8 @@
-function ngradient(f, xs::AbstractArray...)
+function ngradient(f, xs::AbstractArray...; δ = sqrt(eps()))
     grads = zero.(xs)
     xs = copy.(xs)
+
     for (x, Δ) in zip(xs, grads), i in eachindex(x)
-        δ = sqrt(eps())
         tmp = x[i]
         x[i] = tmp - δ/2
         y1 = f(xs...)
@@ -36,15 +36,32 @@ isderiving() = false
 
 @adjoint isderiving() = true, _ -> nothing
 
-ZygoteRules.@adjoint sortperm(args...; kwargs...) = sortperm(args...; kwargs...), x->nothing
+# ZygoteRules.@adjoint sortperm(args...; kwargs...) = sortperm(args...; kwargs...), x->nothing
 
-ZygoteRules.@adjoint ContinuousRoots(r) = ContinuousRoots(r), x->(x,)
-ZygoteRules.@adjoint DiscreteRoots(r) = DiscreteRoots(r), x->(x,)
+ZygoteRules.@adjoint function ContinuousRoots(r)
+    p = sortperm(r; by=imageigsortby)
+    ContinuousRoots(r), x->(x[invperm(p)],)
+end
+ZygoteRules.@adjoint function ContinuousRoots(r::DiscreteRoots)
+    _,f = Zygote.pullback(r->log.(r), r.r)
+    ContinuousRoots(r), f
+end
+ZygoteRules.@adjoint function DiscreteRoots(r)
+    p = sortperm(r; by=angle)
+    DiscreteRoots(r), x->(x[invperm(p)],)
+end
 
-# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(SArray{T1,T2,T3,T4}(x),)
+@adjoint function sort(x::AbstractArray; by=identity) # can be removed when https://github.com/FluxML/Zygote.jl/pull/586 is merged
+  p = sortperm(x; by=by)
 
-# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
-# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r::Vector) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,)
+  return x[p], x̄ -> (x̄[invperm(p)],)
+end
+
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(SArray{T1,T2,T3,T4}(x),) # got "internal error" but julia did not terminate
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,) # got segfault after defining this
+# ZygoteRules.@adjoint SArray{T1,T2,T3,T4}(r::Vector) where {T1,T2,T3,T4} = SArray{T1,T2,T3,T4}(r), x->(x,) # does not appear to do anything
+# ZygoteRules.@adjoint (T::Type{<:SArray})(x::Number...) = T(x...), y->(nothing, y...)
+
 
 ZygoteRules.@adjoint function getARregressor(y,na)
     getARregressor((y),na),  function (Δ)
@@ -84,7 +101,7 @@ ZygoteRules.@adjoint function getARXregressor(y, u, na::Int, nb)
 end
 end
 
-PolynomialRoots.roots(p) = eigvals(companion(p))
+PolynomialRoots.roots(p) = eigsort(eigvals(companion(p)))
 
 ZygoteRules.@adjoint function polyconv(a,b)
     c = polyconv(a,b)
@@ -108,10 +125,10 @@ end
 
 ZygoteRules.@adjoint function polyvec(w)
     pv = polyvec(w)
-    function polyconv_back(Δ)
+    function polyvec_back(Δ)
         (-Δ[2:end],)
     end
-    pv, polyconv_back
+    pv, polyvec_back
 end
 
 # using ForwardDiff
@@ -126,23 +143,30 @@ function companion(r)
     A
 end
 
-ZygoteRules.@adjoint function roots(p)
-    eV = LinearAlgebra.eigen(companion(p))
-    eV.values, function (Δ)
+function rootadjoint(eV, perm)
+    function rootadjoint_inner(Δ)
+        iperm = invperm(perm)
         eltype(Δ) == Nothing && return (nothing,)
         e,V = eV
-        d = [-(inv(V)'*Diagonal(Δ)*V')[:,end]; 0]
+        # V = V[:,perm]
+        # V = transpose(V)
+        # V = conj.(V)
+        V = V'
+        d = [-(inv(V)*Diagonal(Δ[iperm])*V)[:,end]; 0]
         (d, )
     end
 end
 
+ZygoteRules.@adjoint function roots(p)
+    eV = LinearAlgebra.eigen(companion((p)))
+    perm = sortperm(eV.values, by=imageigsortby)
+    eV.values[perm], rootadjoint(eV, perm)
+end
+
 ZygoteRules.@adjoint function hproots(p)
-    eV = LinearAlgebra.eigen(companion(p))
-    eV.values, function (Δ)
-        e,V = eV
-        d = [-(inv(V)'*Diagonal(Δ)*V')[:,end]; 0]
-        (d, )
-    end
+    eV = LinearAlgebra.eigen(companion((p)))
+    perm = sortperm(eV.values, by=imageigsortby)
+    eV.values[perm], rootadjoint(eV, perm)
 end
 
 # ZygoteRules.@adjoint function svd(A)
