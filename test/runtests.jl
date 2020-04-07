@@ -72,8 +72,10 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv
             e = spectralenergy(Continuous(),m)
             @test e ≈ σ²
             x = sqrt(σ²)randn(10000)
+            m = LS(na=10)(x)
+            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.15
             m = TLS(na=10)(x)
-            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.05
+            @test spectralenergy(Continuous(),m) ≈ σ² atol=0.15
         end
         # y = filt(numvec(Discrete(),m), denvec(Discrete(),m), x)
         # @test var(y) ≈ var(x)
