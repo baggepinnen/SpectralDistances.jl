@@ -121,44 +121,44 @@ using SpectralDistances: getARXregressor, getARregressor
 y = (randn(10))
 u = (randn(10))
 @test ngradient((y) -> sum(getARXregressor(y, u, 2, 2)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 2)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 2)[2]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 2, 2)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 2)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 2)[1]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 5, 2)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 2)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 2)[2]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 5, 2)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 2)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 2)[1]), y)[1]
 
 @test ngradient((y) -> sum(getARXregressor(y, u, 2, 1)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 1)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 1)[2]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 2, 1)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 1)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 2, 1)[1]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 5, 1)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 1)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 1)[2]), y)[1]
 @test ngradient((y) -> sum(getARXregressor(y, u, 5, 1)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 1)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARXregressor(y, u, 5, 1)[1]), y)[1]
 
 
 
 y = (randn(10))
 @test ngradient((y) -> sum(getARregressor(y, 2)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARregressor(y, 2)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARregressor(y, 2)[2]), y)[1]
 @test ngradient((y) -> sum(getARregressor(y, 2)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARregressor(y, 2)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARregressor(y, 2)[1]), y)[1]
 @test ngradient((y) -> sum(getARregressor(y, 5)[2]), y) ==
-      Zygote.gradient((y) -> sum(getARregressor(y, 5)[2]), y)[1]
+Zygote.gradient((y) -> sum(getARregressor(y, 5)[2]), y)[1]
 @test ngradient((y) -> sum(getARregressor(y, 5)[1]), y) ==
-      Zygote.gradient((y) -> sum(getARregressor(y, 5)[1]), y)[1]
+Zygote.gradient((y) -> sum(getARregressor(y, 5)[1]), y)[1]
 
 a, b = randn(3), randn(4)
 @test ngradient(a -> sum(SpectralDistances.polyconv(a, b)), a) ≈
-      Zygote.gradient(a -> sum(SpectralDistances.polyconv(a, b)), a)[1] rtol = 1e-3
+Zygote.gradient(a -> sum(SpectralDistances.polyconv(a, b)), a)[1] rtol = 1e-3
 @test ngradient(b -> sum(SpectralDistances.polyconv(a, b)), b) ≈
-      Zygote.gradient(b -> sum(SpectralDistances.polyconv(a, b)), b)[1] rtol = 1e-3
+Zygote.gradient(b -> sum(SpectralDistances.polyconv(a, b)), b)[1] rtol = 1e-3
 
 
 @test ngradient(a -> sum(SpectralDistances.polyvec(a)), a) ≈
-      Zygote.gradient(a -> sum(SpectralDistances.polyvec(a)), a)[1] rtol = 1e-3
+Zygote.gradient(a -> sum(SpectralDistances.polyvec(a)), a)[1] rtol = 1e-3
 
 
 
@@ -181,8 +181,8 @@ fd = central_fdm(3, 1)
     r = roots(p)
     sum(abs2, r)
 end[1][1:end-1] ≈ FiniteDifferences.grad(fd, p -> begin
-    r = roots(p)
-    sum(abs2, r)
+r = roots(p)
+sum(abs2, r)
 end, p)[1][1:end-1]
 
 fm = TLS(na = 4)
@@ -194,14 +194,13 @@ end
 
 
 
+fdm = central_fdm(5, 1)
 
 a = randn(5)
 a[end] = 1
-f = x -> sum(abs2(r) for r in roots(x))
+f = x -> sum(abs2(r) for r in (hproots(x)))
+
 G = Zygote.gradient(f, a)[1]
-
-
-fdm = central_fdm(5, 1)
 @test G[1:end-1] ≈ FiniteDifferences.grad(fdm, f, a)[1][1:end-1]
 
 
@@ -234,7 +233,7 @@ g = a -> real(residues((a), 1)[2])
     for dist in [
         EuclideanRootDistance(domain = Continuous(), p = 1, weight = residueweight),
         OptimalTransportRootDistance(domain = Continuous(), p = 2, β = 0.01),
-    ]
+        ]
         H = SpectralDistances.curvature(dist, a)
         @test all(>(0) ∘ real, eigvals(H[2:end, 2:end]))
         @test all(==(0) ∘ imag, eigvals(H[2:end, 2:end]))
@@ -264,115 +263,127 @@ a = -5:-1
 ##
 cosdist(x1, x2) = x1'x2 / norm(x1) / norm(x2)
 using SpectralDistances, Zygote
-# Testing roots carefully
-a = polyconv([1.0, 1], [1.1, 1])
-b = polyconv([1.0, 1], [2, 1])
+@testset "More roots diff tests" begin
+    @info "Testing More roots diff tests"
 
-@test SpectralDistances.roots(a) ≈ [-1.1, -1]
-@test SpectralDistances.roots(b) ≈ [-2, -1]
+    rootfun   = eigsort ∘ hproots ∘ rev
+    rootfunnr = eigsort ∘ hproots
+    # Testing roots carefully
+    a = polyconv([1.0, 1], [1.1, 1])
+    b = polyconv([1.0, 1], [2, 1])
 
-@test hproots(a) ≈ [-1.1, -1]
-@test hproots(b) ≈ [-2, -1]
+    @test SpectralDistances.roots(a) ≈ [-1.1, -1]
+    @test SpectralDistances.roots(b) ≈ [-2, -1]
 
-g1 = Zygote.gradient(a -> sum(abs, hproots(a)), a)[1]
-g2 = ngradient(a -> sum(abs, hproots(a)), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
-g1 = Zygote.gradient(b -> sum(abs, hproots(b)), b)[1]
-g2 = ngradient(b -> sum(abs, hproots(b)), b)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    @test hproots(a) ≈ [-1.1, -1]
+    @test hproots(b) ≈ [-2, -1]
 
-a = [1, 0.1, 1]
-g1 = Zygote.gradient(a -> sum(abs, hproots(a)), a)[1]
-g2 = ngradient(a -> sum(abs, hproots(a)), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    g1 = Zygote.gradient(a -> sum(abs, rootfunnr(a)), a)[1]
+    g2 = ngradient(a -> sum(abs, rootfunnr(a)), a)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    g1 = Zygote.gradient(b -> sum(abs, rootfunnr(b)), b)[1]
+    g2 = ngradient(b -> sum(abs, rootfunnr(b)), b)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-a = [1, 0.1, 1]
-g1 = Zygote.gradient(a -> sum(abs2, hproots(a)), a)[1]
-g2 = ngradient(a -> sum(abs2, hproots(a)), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    a = [1, 0.1, 1]
+    g1 = Zygote.gradient(a -> sum(abs, rootfunnr(a)), a)[1]
+    g2 = ngradient(a -> sum(abs, rootfunnr(a)), a)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-a = [1, 0.1, 1]
-g1 = Zygote.gradient(a -> real(hproots(a)[2]), a)[1]
-g2 = ngradient(a -> real(hproots(a)[2]), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    a = [1, 0.1, 1]
+    g1 = Zygote.gradient(a -> sum(abs2, rootfunnr(a)), a)[1]
+    g2 = ngradient(a -> sum(abs2, rootfunnr(a)), a)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-g1 = Zygote.gradient(a -> imag(hproots(a)[2]), a)[1]
-g2 = ngradient(a -> imag(hproots(a)[2]), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
+    a = [1, 0.1, 1]
+    g1 = Zygote.gradient(a -> real(rootfunnr(a)[2]), a)[1]
+    g2 = ngradient(a -> real(rootfunnr(a)[2]), a)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-function getpoly(n)
-      skew(x) = x - x' + 0.1(x'x)
-      r = eigsort(eigvals(skew(randn(n,n))))
-      a = Vector(SpectralDistances.roots2poly(r))
-      a,r
-end
-a,r = getpoly(8)
+    g1 = Zygote.gradient(a -> imag(rootfunnr(a)[2]), a)[1]
+    g2 = ngradient(a -> imag(rootfunnr(a)[2]), a)
+    @test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-r1 = eigsort(hproots(rev(a)))
-r2 = eigsort(eigen(companion(rev(a))).values)
-@test cosdist(real(r1), real(r2)) > 0.99
-@test cosdist(real(r1), real(r)) > 0.99
+    function getpoly(n, γ=0.1)
+        skew(x) = x - x' + 0.1 * (x'x)
+        r = eigsort(eigvals(skew(γ.*randn(n, n))))
+        a = Vector(SpectralDistances.roots2poly(r))
+        a, r
+    end
+    a, r = getpoly(9)
 
-# TODO: I was adding eigsort to all tests to make sure sorting is the same. Zygote does not appear to like eigsort..
-g1 = Zygote.gradient(a -> sum(abs2, eigsort(hproots(a))), a)[1]
-g2 = ngradient(a -> sum(abs2, eigsort(hproots(a))), a)
-cosdist(real(g1)[1:end-1], real(g2)[1:end-1]) #> 0.9
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1] rtol=0.3
+    r1 = rootfun(a)
+    r2 = eigsort(eigen(companion(rev(a))).values)
+    @test cosdist(real(r1), real(r2)) > 0.99
+    @test cosdist(real(r1), real(r)) > 0.99
 
-g1 = Zygote.gradient(a -> real(hproots(a)[2]), a)[1]
-g2 = ngradient(a -> real(hproots(a)[2]), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
 
-g1 = Zygote.gradient(a -> imag(hproots(a)[2]), a)[1]
-g2 = ngradient(a -> imag(hproots(a)[2]), a)
-@test real(g1)[1:end-1] ≈ real(g2)[1:end-1]
-##
-a = [1.0, 1]
-for i = 2:10
-    @show i
-    global a
-    a = SpectralDistances.polyconv(a, [1, -i])
-    @show a
-    # a[1] = 1
-    # a[end] = 1
+    ##
+    a = [1.0, 1]
+    for i = 2:10
+        isinteractive() && @show i
+        # global a
+        a = SpectralDistances.polyconv(a, [1, -i])
+        isinteractive() && @show a
+        # a[1] = 1
+        # a[end] = 1
 
-    g1 = Zygote.gradient(a -> sum(abs2, eigsort(hproots(rev(a)))), a)[1]
-    g2 = ngradient(a -> sum(abs2, eigsort(hproots(rev(a)))), a)
+        g1 = Zygote.gradient(a -> sum(abs2, rootfun(a)), a)[1]
+        g2 = ngradient(a -> sum(abs2, rootfun(a)), a)
+        @test real(g1)[2:end] ≈ real(g2)[2:end]
+
+        g1 = Zygote.gradient(a -> real(rootfun(a)[2]), a)[1]
+        g2 = ngradient(a -> real(rootfun(a)[2]), a)
+        @test (g1)[2:end] ≈ (g2)[2:end] atol = 1e-4
+        #
+        g1 = Zygote.gradient(a -> imag(rootfun(a)[2]), a)[1]
+        g2 = ngradient(a -> imag(rootfun(a)[2]), a)
+        @test real(g1)[2:end] ≈ real(g2)[2:end]
+    end
+
+    # NOTE: eigsort is improtant
+    g1 = Zygote.gradient(a -> sum(abs2, rootfun((a))), (a))[1]
+    g2 = ngradient(a -> sum(abs2, rootfun((a))), a)
+    @test cosdist(real(g1)[2:end], real(g2)[2:end]) > 0.9
+    @test real(g1)[2:end] ≈ real(g2)[2:end] rtol = 0.3
+
+    g1 = Zygote.gradient(a -> real(rootfun(a)[2]), a)[1]
+    g2 = ngradient(a -> real(rootfun(a)[2]), a)
+    @test cosdist(g1[2:end], g2[2:end]) > 0.9
+    @test g1[2:end] ≈ g2[2:end] rtol = 1e-3
+
+    g1 = Zygote.gradient(a -> imag(rootfun(a)[2]), a)[1]
+    g2 = ngradient(a -> imag(rootfun(a)[2]), a)
     @test real(g1)[2:end] ≈ real(g2)[2:end]
-
-    g1 = Zygote.gradient(a->real(eigsort(hproots(rev(a)))[2]), a)[1]
-    g2 = ngradient(a->real(eigsort(hproots(rev(a)))[2]), a)
-    @test (g1)[2:end] ≈ (g2)[2:end] atol=1e-4
-#
-    g1 = Zygote.gradient(a -> imag(eigsort(hproots(rev(a)))[2]), a)[1]
-    g2 = ngradient(a -> imag(eigsort(hproots(rev(a)))[2]), a)
-    @test real(g1)[2:end] ≈ real(g2)[2:end]
 end
 
 
 
 
 ##
+using FiniteDifferences
+fdm = central_fdm(5, 1)
 t = 0:100
 x1 = sin.(0.70 .* t) .+ sin.(0.50 .* t) .+ 0.1 .* randn.()
 x2 = sin.(0.50 .* t) .+ sin.(0.30 .* t) .+ 0.1 .* randn.()
 fm = LS(na = 10)
 m1, m2 = fm.((x1, x2))
 
-fdm = central_fdm(5, 1)
 testfun1(x1) = sum(abs2, fm(x1).a)
 @test Zygote.gradient(testfun1, x1)[1] ≈ grad(fdm, testfun1, x1)[1] rtol = 1e-3
-testfun2(x1) = sum(abs2, eigsort(fm(x1).p))
+testfun2(x1) = sum(abs2, (fm(x1).p))
 g1 = Zygote.gradient(testfun2, x1)[1]
-# g2 = grad(fdm, testfun2, x1)[1]
-g2 = ngradient(testfun2, x1)
-@test cosdist(g1, g2) > 0.9
+g2 = ngradient(testfun2, x1, δ=1e-4)
+g3 = grad(fdm, testfun2, x1)[1]
+@test cosdist(g1, g2) > 0.95
+cosdist(g3, g2)
 
 testfun3(x1) = sum(abs2, fm(x1).pc)
 g1 = Zygote.gradient(testfun3, x1)[1]
-# g2 = grad(fdm, testfun3, x1)[1]
 g2 = ngradient(testfun3, x1)
-@test cosdist(g1, g2) > 0.9
+g3 = grad(fdm, testfun3, x1)[1]
+@test cosdist(g1, g2) > 0.95
+cosdist(g3, g2)
 
 dist = ModelDistance(fm, OptimalTransportRootDistance(domain = Continuous(), β = 0.1))
 Zygote.@nograd rand
@@ -397,24 +408,24 @@ end
 
 using Optim
 res = Optim.optimize(
-    df,
-    df',
-    x1,
-    GradientDescent(),
-    Optim.Options(
-        store_trace = true,
-        show_trace = true,
-        show_every = 1,
-        iterations = 40,
-        allow_f_increases = true,
-        time_limit = 100,
-        x_tol = 0,
-        f_tol = 0,
-        g_tol = 1e-8,
-        f_calls_limit = 0,
-        g_calls_limit = 0,
-    ),
-    inplace = false,
+df,
+df',
+x1,
+GradientDescent(),
+Optim.Options(
+store_trace = true,
+show_trace = true,
+show_every = 1,
+iterations = 40,
+allow_f_increases = true,
+time_limit = 100,
+x_tol = 0,
+f_tol = 0,
+g_tol = 1e-8,
+f_calls_limit = 0,
+g_calls_limit = 0,
+),
+inplace = false,
 )
 
 # @btime Zygote.gradient(x->real(evaluate(dist.distance,x,$m2)), $m1)
@@ -446,17 +457,17 @@ shift1(x) = x .+ x[2]
 # plot3d(fill(0,length(P.power)), log10.(shift1(P.freq)), log10.(P.power), colorbar=false)
 
 lossobj = (
-    ModelDistance(
-        LS(na = 10),
-        OptimalTransportRootDistance(
-            domain = Continuous(),
-            β = 0.1,
-            p = 1,
-            weight = unitweight,
-        ),
-        # EuclideanRootDistance(domain = Continuous()),
-    ),
-    EnergyDistance(),
+ModelDistance(
+LS(na = 10),
+OptimalTransportRootDistance(
+domain = Continuous(),
+β = 0.1,
+p = 1,
+weight = unitweight,
+),
+# EuclideanRootDistance(domain = Continuous()),
+),
+EnergyDistance(),
 )
 
 using Distances
@@ -471,7 +482,7 @@ using Distances
 # lossobj =
 #     ModelDistance(LS(na = 10), OptimalTransportRootDistance(domain = Continuous(), β = 0.1))
 
-loss = (X, Xp) -> evaluate(lossobj,X, Xp, tol=1e-4)
+loss = (X, Xp) -> evaluate(lossobj, X, Xp, tol = 1e-4)
 gs = gradient(Xp -> real(loss(X, Xp)), Xp)
 loss(X, Xp)
 lossobj[1](X, Xp)
@@ -515,3 +526,12 @@ plot(losses, yscale = :log10)
 #       @test Zygote.gradient(v->sort(v,by=x->x%10)[i], [11,2,99])[1][correct[3][i]] == 1
 #       @test Zygote.gradient(v->sort(v,by=x->x%10)[i], [2,11,99])[1][correct[4][i]] == 1
 # end
+
+
+
+
+a = randn(5)
+p = sortperm(a)
+as = a[p]
+a2 = as[invperm(p)]
+@test a == a2

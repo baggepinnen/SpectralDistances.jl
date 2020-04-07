@@ -36,13 +36,24 @@ isderiving() = false
 
 @adjoint isderiving() = true, _ -> nothing
 
-ZygoteRules.@adjoint sortperm(args...; kwargs...) = sortperm(args...; kwargs...), x->nothing
+# ZygoteRules.@adjoint sortperm(args...; kwargs...) = sortperm(args...; kwargs...), x->nothing
 
-ZygoteRules.@adjoint ContinuousRoots(r) = ContinuousRoots(r), x->(x,)
-ZygoteRules.@adjoint DiscreteRoots(r) = DiscreteRoots(r), x->(x,)
+ZygoteRules.@adjoint function ContinuousRoots(r)
+    p = sortperm(r; by=imageigsortby)
+    ContinuousRoots(r), x->(x[invperm(p)],)
+end
+ZygoteRules.@adjoint function ContinuousRoots(r::DiscreteRoots)
+    _,f = Zygote.pullback(r->log.(r), r.r)
+    ContinuousRoots(r), f
+end
+ZygoteRules.@adjoint function DiscreteRoots(r)
+    p = sortperm(r; by=angle)
+    DiscreteRoots(r), x->(x[invperm(p)],)
+end
 
 @adjoint function sort(x::AbstractArray; by=identity) # can be removed when https://github.com/FluxML/Zygote.jl/pull/586 is merged
   p = sortperm(x; by=by)
+
   return x[p], x̄ -> (x̄[invperm(p)],)
 end
 
@@ -132,29 +143,30 @@ function companion(r)
     A
 end
 
-function rootadjoint(eV)
+function rootadjoint(eV, perm)
     function rootadjoint_inner(Δ)
+        iperm = invperm(perm)
         eltype(Δ) == Nothing && return (nothing,)
         e,V = eV
-        p = sortperm(e,by=imageigsortby)
-        V = V[:,p]
+        # V = V[:,perm]
         # V = transpose(V)
         # V = conj.(V)
-        # V = V'
-        d = [-(inv(V)'*Diagonal(Δ)*V')[:,end]; 0]
-        # d = (-(inv(V)'*Diagonal(Δ)*V'))[:,end]
+        V = V'
+        d = [-(inv(V)*Diagonal(Δ[iperm])*V)[:,end]; 0]
         (d, )
     end
 end
 
 ZygoteRules.@adjoint function roots(p)
     eV = LinearAlgebra.eigen(companion((p)))
-    eV.values, rootadjoint(eV)
+    perm = sortperm(eV.values, by=imageigsortby)
+    eV.values[perm], rootadjoint(eV, perm)
 end
 
 ZygoteRules.@adjoint function hproots(p)
     eV = LinearAlgebra.eigen(companion((p)))
-    eV.values, rootadjoint(eV)
+    perm = sortperm(eV.values, by=imageigsortby)
+    eV.values[perm], rootadjoint(eV, perm)
 end
 
 # ZygoteRules.@adjoint function svd(A)
