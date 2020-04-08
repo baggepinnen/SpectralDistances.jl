@@ -158,13 +158,13 @@ function rootadjoint(eV, perm)
 end
 
 ZygoteRules.@adjoint function roots(p)
-    eV = LinearAlgebra.eigen(companion((p)))
+    eV = LinearAlgebra.eigen(companion(Float64.(p)))
     perm = sortperm(eV.values, by=imageigsortby)
     eV.values[perm], rootadjoint(eV, perm)
 end
 
 ZygoteRules.@adjoint function hproots(p)
-    eV = LinearAlgebra.eigen(companion((p)))
+    eV = LinearAlgebra.eigen(companion(Float64.(p)))
     perm = sortperm(eV.values, by=imageigsortby)
     eV.values[perm], rootadjoint(eV, perm)
 end

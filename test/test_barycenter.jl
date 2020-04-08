@@ -299,10 +299,10 @@ end
     Xe = @inferred barycenter(d, models)
     # models = change_precision.(Float64, models)
     # Xe = change_precision(Float64, Xe)
-    λ = @inferred barycentric_coordinates(d,models, Xe)
+    λ = barycentric_coordinates(d,models, Xe)
     @test λ ≈ s1(ones(length(λ))) atol=0.02
 
-    λ = @inferred barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
+    λ = barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
     isinteractive() && bar(λ)
     @test λ[1] > 0.5
     @test sum(λ) ≈ 1

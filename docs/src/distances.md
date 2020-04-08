@@ -91,8 +91,21 @@ dist(x1,x2)
 The differentiation takes some time, but it should be fast enough to be generally useful for gradient-based learning of autoencoders etc. The following is a benchmark performed on an old laptop without GPU (the distances are not yet tested on GPUs)
 ```julia
 @btime Zygote.gradient(x->evaluate($dist,x,$x2), $x1);
-#  180.208 ms (253201 allocations: 140.29 MiB)
+#  134.965 ms (107566 allocations: 134.77 MiB)
 ```
+with a precomputed reference model, it goes even faster
+```julia
+m2 = fm(x2)
+m2 = change_precision(Float64, m2) # Tihs step is important for performance
+@btime Zygote.gradient(x->(evaluate($dist,x,$m2)), $x1);
+#  80.200 ms (103437 allocations: 69.62 MiB)
+```
+
+The same benchmarks performed on a 2019 desktop computer yields the following timings
+```julia
+# coming up
+```
+
 
 ## Function reference
 

@@ -31,21 +31,21 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     # end
 end
 function AR(a::AbstractVector, σ²=nothing)
-    a = isderiving() ? complex.(a) : a # SVector{length(a)}(a)
+    a = real.(a) # SVector{length(a)}(a)# This is a zygote workaround
     r = DiscreteRoots(hproots(rev(a)))
     rc = ContinuousRoots(r)
     ac = roots2poly(rc)
-    ac = isderiving() ? complex.(ac) : ac
+    ac = real.(ac)
     b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
 function AR(::Continuous, ac::AbstractVector, σ²=nothing)
-    ac = isderiving() ? complex.(ac) : ac # SVector{length(ac)}(ac)
+    ac = real.(ac) # This is a zygote workaround
     rc = ContinuousRoots(hproots(rev(ac)))
     r = DiscreteRoots(rc)
     a = roots2poly(r)
-    a = isderiving() ? complex.(a) : a
+    a = real.(a)
     b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
@@ -105,7 +105,7 @@ struct ARMA{T1,T2,T3,T4,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractM
         r = DiscreteRoots(hproots(rev(a)))
         rc = ContinuousRoots(r)
         ac = roots2poly(rc)
-        ac = isderiving() ? complex.(ac) : ac
+        ac = real.(ac) # This is a zygote workaround
         z  = DiscreteRoots(hproots(rev(b)))
         zc = ContinuousRoots(z)
         b   = roots2poly(z)
@@ -312,7 +312,7 @@ function _ls(A,y,λ)
     # end
     # @show size(A2), size(y), size(A)
    # (A2'A2)\(A'y)
-   (A'A + λ*I)\A'y
+   (A'A + λ*I)\(A'y)
 end
 
 
@@ -599,12 +599,12 @@ Returns a vector of residues for the system represented by denominator polynomia
 Ref: slide 21 https://stanford.edu/~boyd/ee102/rational.pdf
 Tihs methid is numerically sensitive. Note that if two poles are on top of each other, the residue is infinite.
 """
-function residues(a::AbstractVector, b, r::AbstractVector{CT} = hproots(rev(a)))::Vector{CT} where CT
+function residues(a::AbstractVector, b, r::AbstractVector{CT} = hproots(rev(a))) where CT
     # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that
     n = length(a)-1
     ap = polyderivative(a)
     res = map(r) do r
-        polyval(b, r)/polyval(ap, r)
+        CT(polyval(b, r)/polyval(ap, r))
     end
 end
 
