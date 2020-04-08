@@ -367,12 +367,13 @@ function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
     d1 + d2
 end
 
-function evaluate(d::HungarianRootDistance, e1::AbstractRoots, e2::AbstractRoots; kwargs...)
+function evaluate(d::HungarianRootDistance, e1::AbstractRoots{CT}, e2::AbstractRoots{CT}; kwargs...)::real(CT) where CT
     e1,e2 = toreim(e1), toreim(e2)
     n     = length(e1[1])
     dist  = d.distance
     dm    = [dist(e1[1][i],e2[1][j]) + dist(e1[2][i],e2[2][j]) for i = 1:n, j=1:n]
-    c     = hungarian(dm)[2]
+    _,c   = hungarian(dm)
+    c
 end
 
 # function kernelsum(e1,e2,λ)
@@ -412,7 +413,7 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots;
     #     i2 = I2[i]
     #     (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
     # end # below is workaround for zygote #314
-    l = 0.
+    l = zero(real(eltype(e1)))
     for i in 1:length(e1)
         i1 = I1[i]
         i2 = I2[i]

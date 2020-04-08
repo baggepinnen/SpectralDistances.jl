@@ -85,12 +85,12 @@ dist = ModelDistance(fm,OptimalTransportRootDistance(domain = Continuous()))    
 ```
 ```@repl dist
 dist(x1,x2)
-∇x1 = Zygote.gradient(x->real(evaluate(dist,x,x2)), x1)[1] # the call to real is a workaround due to Zygote bug
+∇x1 = Zygote.gradient(x->evaluate(dist,x,x2), x1)[1]
 ```
 
 The differentiation takes some time, but it should be fast enough to be generally useful for gradient-based learning of autoencoders etc. The following is a benchmark performed on an old laptop without GPU (the distances are not yet tested on GPUs)
 ```julia
-@btime Zygote.gradient(x->real(evaluate($dist,x,$x2)), $x1);
+@btime Zygote.gradient(x->evaluate($dist,x,$x2), $x1);
 #  180.208 ms (253201 allocations: 140.29 MiB)
 ```
 

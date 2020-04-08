@@ -28,7 +28,7 @@ end
 function embedding(r::AbstractRoots)
     realpoles = any(any(iszero ∘ imag, r) for r in r)
     realpoles && @error("Model contained real poles, this produces weird results when used in an embedding")
-    @views [real(r[1:end÷2]); imag(r[1:end÷2])]
+    @views [real.(r[1:end÷2]); imag.(r[1:end÷2])]
 end
 
 """
@@ -432,7 +432,7 @@ Algorithm 1 from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.o
 - `iters`: DESCRIPTION
 - `solver`: any of [`IPOT`](@ref) (default), [`sinkhorn`](@ref), [`sinkhorn_log`](@ref)
 """
-function alg1(X,Y,â,b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT, weights=nothing)
+function alg1(X,Y,â::AbstractVector{T},b;β=1, printerval=typemax(Int), tol=1e-5, iters=10000, solver=IPOT, weights=nothing)::Vector{T} where T
     N = length(Y)
     â = copy(â)
     a = copy(â)

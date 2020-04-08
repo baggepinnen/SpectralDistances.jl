@@ -20,38 +20,38 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
         C = Float64.(Matrix(I(2)))
         a = [1., 0]
         b = [0, 1.]
-        Γ,u,v = sinkhorn(C,a,b,β=0.01)
+        Γ,u,v = @inferred sinkhorn(C,a,b,β=0.01)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = sinkhorn(C,a,b,β=0.1)
+        Γ,u,v = @inferred sinkhorn(C,a,b,β=0.1)
         @test Γ ≈ [0 0.5; 0 0.5]
 
         a = [1., 0]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = sinkhorn_log(C,a,b,β=0.01)
+        Γ,u,v = @inferred sinkhorn_log(C,a,b,β=0.01)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = sinkhorn_log(C,a,b,β=0.01)
+        Γ,u,v = @inferred sinkhorn_log(C,a,b,β=0.01)
         @test Γ ≈ [0 0.5; 0 0.5]
 
 
         a = [1., 0]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = IPOT(C,a,b,β=1)
+        Γ,u,v = @inferred IPOT(C,a,b,β=1)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = SpectralDistances.IPOT(C,a,b)
+        Γ,u,v = @inferred SpectralDistances.IPOT(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
     end
@@ -69,7 +69,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
         @info "testing Energy"
         for σ² = [0.1, 1., 2., 3]
             m = AR(ContinuousRoots([-1.]), σ²)
-            e = spectralenergy(Continuous(),m)
+            e = @inferred spectralenergy(Continuous(),m)
             @test e ≈ σ²
             x = sqrt(σ²)randn(10000)
             m = LS(na=10)(x)
@@ -83,15 +83,15 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
 
     @testset "Model estimation" begin
         y = sin.(0:0.1:100)
-        fm = LS(na=2, λ=0)
-        m = fm(y)
+        fm = @inferred LS(na=2, λ=0)
+        m = @inferred fm(y)
         @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
-        mc = SpectralDistances.change_precision(Float32, m)
+        mc = @inferred SpectralDistances.change_precision(Float32, m)
         @test m ≈ mc
         @test eltype(mc.a) == Float32
 
-        fm = TLS(na=2)
-        m = fm(y)
+        fm = @inferred TLS(na=2)
+        m  = @inferred fm(y)
         @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
 
         fm = IRLS(na=2)
@@ -105,8 +105,8 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
 
 
         y = sin.(0:0.1:100) .+ sin.(2 .* (0:0.1:100) .+ 0.3)
-        fm = LS(na=4, λ=0)
-        m = fm(y)
+        fm = @inferred LS(na=4, λ=0)
+        m = @inferred fm(y)
         @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-1
 
         fm = TLS(na=4)
@@ -116,11 +116,11 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
 
         fm = IRLS(na=4)
         m = fm(y)
-        @test spectralenergy(Continuous(), m) ≈ var(y) rtol=1e-3
+        @test @inferred(spectralenergy(Continuous(), m)) ≈ var(y) rtol=1e-3
         @test_broken imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=1e-4
 
         y = sin.(0:0.1:1000) .+ sin.(2 .* (0:0.1:1000)) .+ 0.001 .*randn.()
-        fm = PLR(na=4, nc=1, λ=0.0)
+        fm = @inferred PLR(na=4, nc=1, λ=0.0)
         m = fm(y)
         @test imag.(m.pc) ≈ [-0.2, -0.1, 0.1, 0.2] rtol=0.6
 
@@ -135,7 +135,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
     for fitmethod in [LS, TLS]
         @info "Testing fitmethod $(string(fitmethod))"
         ls_loss = ModelDistance(fitmethod(na=2), EuclideanRootDistance(domain=Discrete()))
-        @test ls_loss(sin.(t), sin.(t)) < ϵ
+        @test @inferred(ls_loss(sin.(t), sin.(t))) < ϵ
         @test ls_loss(sin.(t), -sin.(t)) < ϵ # phase flip invariance
         @test ls_loss(sin.(t), sin.(t .+ 1)) < ϵ # phase shift invariance
         @test ls_loss(sin.(t), sin.(t .+ 0.1)) < ϵ # phase shift invariance
@@ -145,7 +145,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
 
         @test ls_loss(sin.(t), sin.(1.1 .* t)) ≈ ls_loss(sin.(0.1t), sin.(0.2t)) rtol=1e-2  # frequency shifts of relative size should result in the same error, probably only true for p=1
         ls_loss = ModelDistance(fitmethod(na=10), OptimalTransportRootDistance(domain=Discrete()))
-        @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < 0.1 # Filtered through same filter, this test is very non-robust for TLS
+        @test @inferred(ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000)))) < 0.1 # Filtered through same filter, this test is very non-robust for TLS
         @test ls_loss(filtfilt(ones(10),[10], randn(1000)), filtfilt(ones(10),[10], randn(1000))) < ls_loss(filtfilt(ones(4),[4], randn(1000)), filtfilt(ones(10),[10], randn(1000))) # Filtered through different filters, this test is not robust
     end
     @testset "PLR" begin
@@ -175,7 +175,7 @@ end
     x = [1.,0,0]
     y = [0,0.5,0.5]
 
-    g = SpectralDistances.discrete_grid_transportplan(x,y)
+    g = @inferred SpectralDistances.discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] == y
     @test sum(g,dims=2)[:] == x
 
@@ -211,12 +211,12 @@ end
 # end, p)
 
 @testset "eigenvalue manipulations" begin
-    @test SpectralDistances.reflectd(2) ≈ 0.5 + 0.0im
-    @test SpectralDistances.reflectd(complex(0,2)) ≈ 0 + 0.5im
-    @test SpectralDistances.reflectd(complex(0,-2)) ≈ 0 - 0.5im
+    @test @inferred(SpectralDistances.reflectd(2)) ≈ 0.5 + 0.0im
+    @test @inferred(SpectralDistances.reflectd(complex(0,2))) ≈ 0 + 0.5im
+    @test @inferred(SpectralDistances.reflectd(complex(0,-2))) ≈ 0 - 0.5im
 
-    e = SpectralDistances.hproots(randn(7))
-    ed = DiscreteRoots(e)
+    e = @inferred SpectralDistances.hproots(randn(7))
+    ed = @inferred DiscreteRoots(e)
     @test real(e) == real.(e)
     @test real(ed) == real.(ed)
     @test issorted(ed.r, by=angle)
@@ -224,9 +224,9 @@ end
     ec = log(ed)
     @test issorted(ec, by=SpectralDistances.imageigsortby)
     @test all(<(0) ∘ real, ec)
-    @test domain_transform(Continuous(), ed) isa ContinuousRoots
+    @test @inferred(domain_transform(Continuous(), ed)) isa ContinuousRoots
     @test domain_transform(Continuous(), ed) ≈ SpectralDistances.eigsort(SpectralDistances.reflectc.(log.(ed))) ≈ ContinuousRoots(ed)
-    @test domain_transform(Discrete(), ed) == ed
+    @test @inferred(domain_transform(Discrete(), ed)) == ed
     @test domain(ed) isa Discrete
     @test domain(ContinuousRoots(ed)) isa Continuous
     @test log(ed) isa ContinuousRoots
@@ -242,8 +242,8 @@ end
 
     @testset "weight functions" begin
         @info "Testing weight functions"
-        r = ContinuousRoots(randn(ComplexF64, 4))
-        m = AR(r, 2.0)
+        r = @inferred ContinuousRoots(randn(ComplexF64, 4))
+        m = @inferred AR(r, 2.0)
         @test sum(unitweight(r)) == 1
         @test sum(unitweight(m)) == 1
         @test length(unitweight(r)) == 4
@@ -259,13 +259,13 @@ end
 
 @testset "ControlSystems interoperability" begin
     @info "Testing ControlSystems interoperability"
-    m = AR(ContinuousRoots([-1]))
+    m = @inferred AR(ContinuousRoots([-1]))
     g = tf(1,[1.,1])
     @test tf(m) == g
     @test m*g == g*g
-    @test denvec(Continuous(), m) == denvec(g)[1]
+    @test @inferred(denvec(Continuous(), m)) == denvec(g)[1]
     @test numvec(Continuous(), m) == numvec(g)[1]
-    @test pole(Continuous(), m) == pole(g)
+    @test @inferred(pole(Continuous(), m)) == pole(g)
     @test all(ControlSystems.bode(m) .≈ bode(g))
     @test all(ControlSystems.nyquist(m) .≈ nyquist(g))
     @test ControlSystems.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
@@ -280,7 +280,7 @@ end
 @testset "polynomial acrobatics" begin
     a = randn(5)
     b = randn(5)
-    @test polyconv(a,b) ≈ DSP.conv(a,b)
+    @test @inferred(polyconv(a,b)) ≈ DSP.conv(a,b)
 
     a = randn(5)
     b = randn(10)
@@ -288,16 +288,16 @@ end
     @test polyconv(b,a) ≈ DSP.conv(b,a)
 
     a[1] = 1
-    @test roots2poly(roots(reverse(a))) ≈ a
+    @test @inferred(roots2poly(roots(reverse(a)))) ≈ a
 
 
 end
 
 @testset "preprocess roots with residue weight" begin
-    rd  = EuclideanRootDistance(domain=Continuous(), weight=residueweight)
-    m = AR([1., -0.1])
-    @test rd(m,m) == 0
-    @test SpectralDistances.preprocess_roots(rd, m)[] ≈ -2.3025850929940455
+    rd  = @inferred EuclideanRootDistance(domain=Continuous(), weight=residueweight)
+    m = @inferred AR([1., -0.1])
+    @test @inferred(rd(m,m)) == 0
+    @test @inferred(SpectralDistances.preprocess_roots(rd, m))[] ≈ -2.3025850929940455
 end
 
 @testset "residues and roots" begin
@@ -313,7 +313,7 @@ end
 
     b,a = 1,0.1randn(5)
     a[1] = 1
-    r   = SpectralDistances.hproots(reverse(a))
+    r   = @inferred SpectralDistances.hproots(reverse(a))
     G   = tf(b,a)
     w   = im
     F = evalfr(G,w)[]
@@ -327,7 +327,7 @@ end
         evalfr(G,r)[] *1/(w - r)
     end ≈ F
 
-    res = residues(a,1)
+    res = @inferred residues(a,1)
     @test sum(eachindex(r)) do i
         res[i]/(w-r[i])
     end ≈ F
@@ -340,16 +340,16 @@ end
     a1 = randn(n+1); a1[1] = 1
     r1 = SpectralDistances.reflectc.(hproots(reverse(a1)))
     r1 = complex.(0.01real.(r1), imag.(r1))
-    r1 = SpectralDistances.normalize_energy(ContinuousRoots(r1))
+    r1 = @inferred SpectralDistances.normalize_energy(ContinuousRoots(r1))
 
     a2 = randn(n+1); a2[1] = 1
     r2 = SpectralDistances.reflectc.(hproots(reverse(a2)))
     r2 = complex.(0.01real.(r2), imag.(r2))
-    r2o = SpectralDistances.normalize_energy(ContinuousRoots(r2))
+    r2o = @inferred SpectralDistances.normalize_energy(ContinuousRoots(r2))
 
     m1,m2 = AR(a1), AR(a2)
 
-    dist2 = RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-20.,20.))
+    dist2 = @inferred RationalOptimalTransportDistance(domain=Continuous(), p=2, interval=(-20.,20.))
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m1)
     @test SpectralDistances.c∫(f,dist2.interval...)[end] ≈ spectralenergy(Continuous(), m1) rtol=1e-3
     f    = w -> evalfr(SpectralDistances.domain(dist2), SpectralDistances.magnitude(dist2), w, m2)
@@ -375,9 +375,9 @@ end
                 subtypes(SpectralDistances.AbstractRootDistance);
                 subtypes(SpectralDistances.AbstractCoefficientDistance)]
         (!isempty(methods(D)) && (:domain ∈ fieldnames(D))) || continue
-        d = D(domain=Continuous())
+        d = @inferred D(domain=Continuous())
         println(D)
-        @test d(m,m) < eps() + 0.001*(d isa OptimalTransportRootDistance)
+        @test @inferred(d(m,m)) < eps() + 0.001*(d isa OptimalTransportRootDistance)
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
         println(D)
@@ -387,7 +387,7 @@ end
 
 @testset "d(m,m̃)" begin
     a1 = [1,-0.1,0.8]
-    m1 = AR(a1)
+    m1 = @inferred AR(a1)
     a2 = [1,-0.1,0.801]
     m2 = AR(a2)
     for D in [  subtypes(SpectralDistances.AbstractDistance);
@@ -397,7 +397,7 @@ end
         d = D(domain=Continuous())
         println(D)
         # @show d(m1,m2)
-        @test d(m1,m2) > 1e-10
+        @test @inferred(d(m1,m2)) > 1e-10
         d isa Union{RationalOptimalTransportDistance, RationalCramerDistance} && continue
         d = D(domain=Discrete())
         println(D)
@@ -406,33 +406,32 @@ end
     end
 end
 
-
 @testset "distmat" begin
     e = complex.(randn(3), randn(3))
-    D = SpectralDistances.distmat(SqEuclidean(), e)
+    D = @inferred SpectralDistances.distmat(SqEuclidean(), e)
     @test issymmetric(D)
     @test tr(D) == 0
-    @test SpectralDistances.distmat_euclidean(e,e) ≈ D
+    @test @inferred(SpectralDistances.distmat_euclidean(e,e)) ≈ D
 end
 
 
 @testset "Welch" begin
-    x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
+    x1 = @inferred SpectralDistances.bp_filter(randn(3000), (0.01,0.1))
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12))
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))
-    dist = WelchOptimalTransportDistance(p=1)
-    @test dist(x1,x2) < dist(x1,x3)
+    dist = @inferred WelchOptimalTransportDistance(p=1)
+    @test @inferred(dist(x1,x2)) < dist(x1,x3)
     dist = WelchOptimalTransportDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
     @test_throws ErrorException dist(NaN*x1,x3)
 
-    dist = WelchLPDistance(p=1)
-    @test dist(x1,x2) < dist(x1,x3)
+    dist = @inferred WelchLPDistance(p=1)
+    @test @inferred(dist(x1,x2)) < dist(x1,x3)
     dist = WelchLPDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
 
-    dist = EnergyDistance()
-    @test dist(x1,x2) < dist(x1,x3)
+    dist = @inferred EnergyDistance()
+    @test @inferred(dist(x1,x2)) < dist(x1,x3)
 end
 
 @testset "Bures" begin
@@ -449,8 +448,8 @@ end
     x1 = SpectralDistances.bp_filter(randn(3000), (0.01,0.1))  |> fm
     x2 = SpectralDistances.bp_filter(randn(3000), (0.01,0.12)) |> fm
     x3 = SpectralDistances.bp_filter(randn(3000), (0.01,0.3))  |> fm
-    dist = KernelWassersteinRootDistance(domain=Continuous())
-    @test dist(x1,x2) < dist(x1,x3)
+    dist = @inferred KernelWassersteinRootDistance(domain=Continuous())
+    @test @inferred(dist(x1,x2)) < dist(x1,x3)
 end
 
 @testset "ClosedForm" begin

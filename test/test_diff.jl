@@ -209,7 +209,7 @@ fd = central_fdm(5, 1)
 a = randn(30)
 a[1] = 1
 r = roots(reverse(a)) |> ContinuousRoots
-residues(a, 1, r)
+@inferred residues(a, 1, r)
 f = a -> sum(abs2, residues(a, 1, r))
 g = a -> real(residues(complex.(a), 1, r)[2])
 @test sum(abs, f'(complex.(a))[2:end] - grad(fd, f, a)[1][2:end]) < sqrt(eps())
@@ -313,8 +313,8 @@ using SpectralDistances, Zygote
     end
     a, r = getpoly(9)
 
-    r1 = rootfun(a)
-    r2 = eigsort(eigen(companion(rev(a))).values)
+    r1 = @inferred rootfun(a)
+    r2 = @inferred eigsort(eigen(companion(rev(a))).values)
     @test cosdist(real(r1), real(r2)) > 0.99
     @test cosdist(real(r1), real(r)) > 0.99
 

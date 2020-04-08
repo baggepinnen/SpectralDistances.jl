@@ -59,19 +59,19 @@ end
 
     d = EuclideanRootDistance(domain=Continuous(), weight=unitweight)
     models = [AR(ContinuousRoots([-1])), AR(ContinuousRoots([-3]))]
-    bc = barycenter(d,models)
+    bc = @inferred barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc)[1] ≈ -2
 
     models = [AR(ContinuousRoots([-1.0im,+im])), AR(ContinuousRoots([-3.0im,+3im]))]
-    bc = barycenter(d,models)
+    bc = @inferred barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc) ≈ [-2.0im,+2im]
 
 
-    d = EuclideanRootDistance(domain=Continuous())
+    d = @inferred EuclideanRootDistance(domain=Continuous())
     models = [AR(ContinuousRoots([-1.0])), AR(ContinuousRoots([-3.0]))]
-    bc = barycenter(d,models)
+    bc = @inferred barycenter(d,models)
     @test bc isa AR
     @test roots.(Continuous(), bc)[1] ≈ -2
 
@@ -104,20 +104,20 @@ end
     X = [1.1 1.01]
     a = ones(2) ./ 2
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=190, γ=0.01, iters=50000, inneriters=50000, uniform=true)
+    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=190, γ=0.01, iters=50000, inneriters=50000, uniform=true) # TODO: there are type instabilities in this function but Cthulhu is not working at the time of writing.
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [0. 0.1]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3,θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3,θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [1. 3.]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
     X = [0. 4.]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
@@ -125,13 +125,13 @@ end
     X = [2.0 3]
     a = ones(2) |> s1
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
+    a1 = @inferred SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
     @test a1[1] == a1[2]
 
     X = [2.1 3]
-    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
+    a1 = @inferred SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
     @test a1[1] < a1[2]
-    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3, inneriters=50000, uniform=true)
+    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3, inneriters=50000, uniform=true)
     @test Xo ≈ [2 3] rtol=5e-1
     # @test ao ≈ b[1] rtol=0.1
 
@@ -191,14 +191,14 @@ end
     r6(x) = x#round.(x, digits=6)
     ip(x,y) = x'y/norm(x)/norm(y)
 
-    M = SpectralDistances.distmat_euclidean(X,Y[1])
+    M = @inferred SpectralDistances.distmat_euclidean(X,Y[1])
     M2 = similar(M)
-    SpectralDistances.distmat_euclidean!(M2,X,Y[1])
+    @inferred SpectralDistances.distmat_euclidean!(M2,X,Y[1])
     @test M == M2
 
-    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r6
-    g2,a2,b2 = sinkhorn_log!(M,a,b[1], β=0.0001, iters=1000000, tol=1e-8) .|> r6
-    g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=100000) .|> r6
+    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1])
+    g2,a2,b2 = @inferred sinkhorn_log!(M,a,b[1], β=0.0001, iters=1000000, tol=1e-8)
+    g3,a3,b3 = @inferred IPOT(M,a,b[1], β=0.5, iters=100000)
     @test ip(a1,a2) ≈ 1 atol=1e-1
     @test ip(a1,a3) ≈ 1 atol=1e-1
 
@@ -280,18 +280,29 @@ end
 
 end
 
+# using DoubleFloats
+# df(v) = reduce(hcat, v)
+# v = [[Double64(1) for _ in 1:2] for _ in 1:2]
+# Test.@inferred df(v)
+
+# v = randn(ComplexF64, 3)
+# tv(v) = @views [real(v[1:2]); imag(v[1:2])]
+# @inferred tv(v)
+
 
 @testset "barycentric coordinates with models" begin
     @info "Testing barycentric coordinates with models"
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
 
-    models = examplemodels(10)
-    d = EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
-    Xe = barycenter(d, models)
-    λ = barycentric_coordinates(d,models, Xe)
-    @test λ ≈ s1(ones(length(λ))) atol=0.01
+    models = @inferred examplemodels(10)
+    d = @inferred EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
+    Xe = @inferred barycenter(d, models)
+    # models = change_precision.(Float64, models)
+    # Xe = change_precision(Float64, Xe)
+    λ = @inferred barycentric_coordinates(d,models, Xe)
+    @test λ ≈ s1(ones(length(λ))) atol=0.02
 
-    λ = barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
+    λ = @inferred barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
     isinteractive() && bar(λ)
     @test λ[1] > 0.5
     @test sum(λ) ≈ 1
@@ -303,8 +314,8 @@ end
         pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
     end
     ##
-    d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
-    Xe = barycenter(d, models, solver=sinkhorn_log!)
+    d = @inferred OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+    Xe = @inferred barycenter(d, models, solver=sinkhorn_log!)
 
     G = tf.(models)
     if isinteractive()
@@ -313,24 +324,26 @@ end
         pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
     end
 
-    options = Optim.Options(store_trace    = true,
-    show_trace        = false,
-    show_every        = 1,
-    iterations        = 50,
+options = Optim.Options(
+    store_trace = true,
+    show_trace = false,
+    show_every = 1,
+    iterations = 50,
     allow_f_increases = true,
-    time_limit        = 100,
-    x_tol             = 1e-7,
-    f_tol             = 1e-7,
-    g_tol             = 1e-7,
-    f_calls_limit     = 0,
-    g_calls_limit     = 0)
+    time_limit = 100,
+    x_tol = 1e-7,
+    f_tol = 1e-7,
+    g_tol = 1e-7,
+    f_calls_limit = 0,
+    g_calls_limit = 0,
+)
 
 
     using Optim
     method = LBFGS()
     method=ParticleSwarm()
     # d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
-    λ = barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
+    λ = @inferred barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
     isinteractive() && bar(λ)
 
     @test median(λ) > 0.02
@@ -372,9 +385,9 @@ end
 
     ##
 
-    C = SpectralDistances.distmat_euclidean(X[1], X[5])
-    c1 = SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=IPOT, tol=1e-5, β=0.5, printerval=1, iters=200)
-    c2 = SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=sinkhorn_log, β=0.01)
+    C = @inferred SpectralDistances.distmat_euclidean(X[1], X[5])
+    c1 = @inferred SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=IPOT, tol=1e-5, β=0.5, printerval=1, iters=200)
+    c2 = @inferred SpectralDistances.kwcostfun(C,X[1], X[5],p[1],p[1],solver=sinkhorn_log, β=0.01)
     @test c1 ≈ c2 rtol=0.01
 
 end

@@ -31,36 +31,36 @@ struct AR{T,Rt <: DiscreteRoots,Ct <: ContinuousRoots} <: AbstractModel
     # end
 end
 function AR(a::AbstractVector, σ²=nothing)
-    a = isderiving() ? complex.(a) : SVector{length(a)}(a)
+    a = isderiving() ? complex.(a) : a # SVector{length(a)}(a)
     r = DiscreteRoots(hproots(rev(a)))
     rc = ContinuousRoots(r)
     ac = roots2poly(rc)
     ac = isderiving() ? complex.(ac) : ac
-    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
 function AR(::Continuous, ac::AbstractVector, σ²=nothing)
-    ac = isderiving() ? complex.(ac) : SVector{length(ac)}(ac)
+    ac = isderiving() ? complex.(ac) : ac # SVector{length(ac)}(ac)
     rc = ContinuousRoots(hproots(rev(ac)))
     r = DiscreteRoots(rc)
     a = roots2poly(r)
     a = isderiving() ? complex.(a) : a
-    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 function AR(rc::ContinuousRoots, σ²=nothing)
     r = DiscreteRoots(rc)
     a = roots2poly(r)
     ac = roots2poly(rc)
-    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 function AR(r::DiscreteRoots, σ²=nothing)
     rc = ContinuousRoots(r)
     a = roots2poly(r)
     ac = roots2poly(rc)
-    b = σ² === nothing ? 1 : scalefactor(Continuous(), ac, σ²)
+    b = σ² === nothing ? one(eltype(a)) : scalefactor(Continuous(), ac, σ²)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
@@ -530,13 +530,13 @@ end
 
 Accepts a vector of complex roots and returns the polynomial with those roots
 """
-function roots2poly(roots)
+function roots2poly(roots::AbstractVector{CT})::Vector{real(CT)} where CT
     isderiving() && return roots2poly_zygote(roots)
     p = @MVector [1.]
     for r in 1:length(roots)
         p = _roots2poly_kernel(p, roots[r])
     end
-    SVector(real(p))
+    Vector{real(CT)}(real(p))
 end
 
 function _roots2poly_kernel(a::StaticVector{N,T},b) where {N,T}
