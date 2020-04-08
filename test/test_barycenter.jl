@@ -104,20 +104,20 @@ end
     X = [1.1 1.01]
     a = ones(2) ./ 2
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=190, γ=0.01, iters=50000, inneriters=50000, uniform=true) # TODO: there are type instabilities in this function but Cthulhu is not working at the time of writing.
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=190, γ=0.01, iters=50000, inneriters=50000, uniform=true) # TODO: there are type instabilities in this function but Cthulhu is not working at the time of writing.
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [0. 0.1]
-    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3,θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3,θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
     X = [1. 3.]
-    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/10.0, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
     X = [0. 4.]
-    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, γ=0.01, inneriters=50000, uniform=true)
     @test Xo ≈ [2 2] rtol=1e-2
 
 
@@ -125,13 +125,13 @@ end
     X = [2.0 3]
     a = ones(2) |> s1
     b = [ones(2) ./2 for _ in eachindex(Y)]
-    a1 = @inferred SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
+    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
     @test a1[1] == a1[2]
 
     X = [2.1 3]
-    a1 = @inferred SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
+    a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
     @test a1[1] < a1[2]
-    Xo,ao = @inferred SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3, inneriters=50000, uniform=true)
+    Xo,ao = SpectralDistances.alg2(X,Y,a,b;β=1/3, θ=0.5, printerval=100, iters=500, tol=1e-3, γ=0.01, innertol=1e-3, inneriters=50000, uniform=true)
     @test Xo ≈ [2 3] rtol=5e-1
     # @test ao ≈ b[1] rtol=0.1
 
