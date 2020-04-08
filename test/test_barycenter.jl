@@ -315,7 +315,7 @@ end
     end
     ##
     d = @inferred OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
-    Xe = @inferred barycenter(d, models, solver=sinkhorn_log!)
+    Xe = barycenter(d, models, solver=sinkhorn_log!)
 
     G = tf.(models)
     if isinteractive()
