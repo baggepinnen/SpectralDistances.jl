@@ -305,13 +305,14 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
         λl = res.minimizer
     end
     local λh
-    # try
+    try
         res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
         λh = softmax(res.minimizer)
-    # catch err
-        # @error("Barycentric coordinates: optimization failed: ", err)
-        # λh = softmax(λl)
-    # end
+    catch err
+        @error("Barycentric coordinates: optimization failed, retrying with robust options: ", err)
+        res = Optim.optimize(costfun, λl, NelderMead(), options)
+        λh = softmax(res.minimizer)
+    end
 
     # cost,P,∇ℰ = sinkhorn_diff(pl,ql,p,q,C,λh; kwargs...)
     λh

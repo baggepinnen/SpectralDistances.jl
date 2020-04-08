@@ -226,7 +226,7 @@ end
     S = 3
     X0 = [1 1 2 2; 1 2 1 2]
 
-    res = map(1:5) do _
+    res = map(1:10) do _
         X = [X0[:,randperm(k)] .+ 0.01.*randn.() .+ 10rand(d) for _ in 1:S]
         λ0 = randn(S) |> SpectralDistances.softmax
         p = [ones(k) |> s1 for _ in 1:S]
@@ -235,7 +235,7 @@ end
         β = 0.1
         ql = barycenter(X, λ0, inneriters=200000, tol=1e-9, innertol=1e-8, β=β, solver=sinkhorn_log!)
 
-        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true, tol=1e-10)
+        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=false, tol=1e-10)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="initial bc")
@@ -261,7 +261,7 @@ end
         λ0 = [1,0,0]
 
         β = 1/10.0
-        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=true)
+        λh = barycentric_coordinates(X,ql,p,q, ParticleSwarm(), β=β, solver=sinkhorn_log!, robust=false)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="ql")
