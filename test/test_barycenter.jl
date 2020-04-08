@@ -261,7 +261,7 @@ end
         λ0 = [1,0,0]
 
         β = 1/10.0
-        λh = barycentric_coordinates(X,ql,p,q, ParticleSwarm(), β=β, solver=sinkhorn_log!, robust=false)
+        λh = barycentric_coordinates(X,ql,p,q, β=β, solver=sinkhorn_log!, robust=false)
         if isinteractive()
             scatter(eachrow(reduce(hcat,X))..., lab="X")
             scatter!(eachrow(ql)..., lab="ql")
