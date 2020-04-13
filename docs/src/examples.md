@@ -151,5 +151,5 @@ savefig("cumulative.html"); nothing # hide
 ```
 
 ```@raw html
-<object type="text/html" data="cumulative.html" style="width:100%;height:450px;"></object>
+<object type="text/html" data="../cumulative.html" style="width:100%;height:450px;"></object>
 ```

@@ -86,7 +86,7 @@ savefig("chirps.html"); nothing # hide
 ```
 
 ```@raw html
-<object type="text/html" data="chirps.html" style="width:100%;height:450px;"></object>
+<object type="text/html" data="../chirps.html" style="width:100%;height:450px;"></object>
 ```
 
 We then define the fit method and the distance, similar to previous examples
@@ -132,7 +132,7 @@ savefig("chirp_dists.html"); nothing # hide
 ```
 The results are shown below. The figure indicates the cost `log10(c)` using the color scale. We can see that the distance between the signals is smallest at `onset=1`, which was the onset for the base signal. We also see that for small values of `c`, it's cheap to transport along time. After increasing `c` for a while it stops getting more expensive, indicating that it's now cheaper to transport along the frequency axis instead.
 ```@raw html
-<object type="text/html" data="chirp_dists.html" style="width:100%;height:450px;"></object>
+<object type="text/html" data="../chirp_dists.html" style="width:100%;height:450px;"></object>
 ```
 
 In this example, we chose the weight function `simplex_residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.

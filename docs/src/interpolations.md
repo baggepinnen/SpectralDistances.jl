@@ -52,7 +52,7 @@ savefig("interpolation.html"); nothing # hide
 ```
 
 ```@raw html
-<object type="text/html" data="interpolation.html" style="width:100%;height:450px;"></object>
+<object type="text/html" data="../interpolation.html" style="width:100%;height:450px;"></object>
 ```
 
 ## Barycenters
@@ -80,7 +80,7 @@ bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:gre
 savefig("barycenter.html"); nothing # hide
 ```
 ```@raw html
-<object type="text/html" data="barycenter.html" style="width:100%;height:450px;"></object>
+<object type="text/html" data="../barycenter.html" style="width:100%;height:450px;"></object>
 ```
 
 ## K-Barycenters
