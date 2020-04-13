@@ -63,7 +63,7 @@ bc = barycenter(distance, models)
 It can be useful to provide some options to the solvers:
 ```julia
 options = (solver=sinkhorn_log!, tol=1e-8, iters=1_000_000, γ=0.0, uniform=true, inneriters=500_000, innertol=1e-6)
-distance = OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01, weight=s1∘residueweight)
+distance = OptimalTransportRootDistance(domain=Continuous(), p=2, β=0.01, weight=simplex_residueweight)
 bc = barycenter(distance, models; options...)
 ```
 We can plot the barycenters:
@@ -93,7 +93,7 @@ G = tf.(models) # Convert to transfer functions for visualization etc.
 
 ##
 using Clustering
-dist = OptimalTransportRootDistance(domain=Continuous(), β=0.01, weight=s1∘residueweight)
+dist = OptimalTransportRootDistance(domain=Continuous(), β=0.01, weight=simplex_residueweight)
 @time clusterresult = SpectralDistances.kbarycenters(
     dist,
     models,

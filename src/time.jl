@@ -5,7 +5,7 @@ dist = TimeDistance(
     inner = OptimalTransportRootDistance(
         domain = Continuous(),
         p      = 2,
-        weight = s1 ∘ residueweight,
+        weight = simplex_residueweight,
     ),
     tp = 2,
     c  = 0.1,
