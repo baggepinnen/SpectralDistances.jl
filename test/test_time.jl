@@ -83,11 +83,11 @@ m2 = signal(2,1) |> fm
 # Mess with c such that it becomes cheap to transport in time
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=simplex_residueweight), tp=1, c=1.0)
 d = evaluate(dist, m, m2, iters=10000, tol=1e-3)
-@test d ≈ 0.1 rtol=1e-2
+@test d ≈ 0.1 rtol=3e-2
 
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=simplex_residueweight, β=0.001), tp=1, c=0.01)
 d = evaluate(dist, m, m2, iters=10000, tol=1e-5)
-@test d ≈ 0.01 rtol=2e-2
+@test d ≈ 0.01 rtol=3e-2
 
 
 ## Test chirps
