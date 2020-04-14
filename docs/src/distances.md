@@ -143,11 +143,11 @@ Currently, only distance calculations using unbalanced transport is supported. B
 
 Below is an example in which the unbalanced transport between two systems is computed. The two systems do not have the same number of poles, and if destruction of mass is made cheap, not all mass is transported. The thickness of the lines indicate mass flow.
 ```@example dist
-m1 = AR(Continuous(), [1, 0.1, 1.2]) |> change_precision(Float64)
-m2 = AR(Continuous(), polyconv([1, 0.1, 1], [1, 0.1, 1.1])) |> change_precision(Float64)
+m1 = AR(Continuous(), [1, 0.1, 1.3])                        |> change_precision(Float64)
+m2 = AR(Continuous(), polyconv([1, 0.1, 1], [1, 0.1, 1.2])) |> change_precision(Float64)
 D  = SpectralDistances.distmat_euclidean(m1.pc, m2.pc)
 w1, w2 = unitweight.((m1, m2))
-figs = map([0.0001, 0.001, 0.01]) do tv
+figs = map([0.001, 0.01, 0.1]) do tv
     divergence = TV(tv)
     Γ, a, b = sinkhorn_unbalanced(D, w1, w2, divergence, β = 0.01)
     lineS   = 20Γ
