@@ -92,6 +92,7 @@ Changes the precision of all fields in `m` to `F`, e.g., `F=Float64`. This can b
 """
 change_precision(F, r::ContinuousRoots) = ContinuousRoots(Complex{F}.(r.r))
 change_precision(F, r::DiscreteRoots) = DiscreteRoots(Complex{F}.(r.r))
+change_precision(F) = r->change_precision(F,r)
 
 
 imageigsortby(λ::Real) = λ

@@ -17,7 +17,7 @@ Pages = ["distances.md"]
 Order   = [:type]
 ```
 ```@setup dist
-using SpectralDistances, InteractiveUtils
+using SpectralDistances, InteractiveUtils, DSP
 ```
 Some of these distances operate directly on signals, these are
 
@@ -109,6 +109,72 @@ julia> @btime Zygote.gradient(x->real(evaluate($dist,x,$x2)), $x1);
 julia> @btime Zygote.gradient(x->real(evaluate($dist,x,$m2)), $x1);
   25.120 ms (103619 allocations: 71.03 MiB)
 ```
+
+
+## Unbalanced transport
+There are situations in which one would like to avoid fully transporting all mass between two measures. A few such cases are
+- The two measures do not have the same mass. In this case, the standard, balanced, optimal-transport problem is unfeasible.
+- Energy is somehow lost or added to one spectra in a way that should not be accounted for by transport. This would be the case if
+  - Spectral energy is absorbed by a channel through which a signal is propagated. In this case it would not make sense to try to transport mass from the other spectrum away from the absorbed (dampended) frequency.
+  - Spectral energy is added by a noise source. This energy should ideally not be considered for transport and should rather be destroyed.
+
+For situations like this, an `AbstractDivergence` can be supplied to the `OptimalTransportRootDistance`. This divergence specifies how expensive it is to create or destroy mass in the spectra. The available divergences are listed in [the docs of UnbalancedOptimalTransport.jl](https://ericphanson.github.io/UnbalancedOptimalTransport.jl/stable/public_api/#Divergences-1), to which we outsource the solving of the unbalanced problem. For convenience, the wrapper [`sinkhorn_unbalanced`](@ref) is available to interface the unbalanced solver in the same way as the solvers from this package are interfaced.
+
+```@repl dist
+using DSP
+fm = LS(na = 10)
+m1 = fm(filtfilt(ones(10), [10], randn(1000)))
+m2 = fm(filtfilt(ones(5), [5], randn(1000)))
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=Balanced())
+d1 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0))
+d2 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0))
+d3 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01))
+d4 = evaluate(dist,m1,m2)
+d1 > d3 > d2 > d4
+```
+When the distance is evaluated the second time, unbalanced transport is used. The `d2` should be equal to or smaller than `d1`. If we make the `KL` term larger, the distance approaches the balanced cost, and if we make it smaller, it becomes very cheap to create/destroy mass and less mass is transported.
+
+The first case, where `divergence=Balanced()` was supplied, should be equivalent to not providing any divergence at all. In pratice results might differ slightly since a different solver implementation is used.
+
+Currently, only distance calculations using unbalanced transport is supported. Barycenter calculations will currently ignore the divergence.
+
+Below is an example in which the unbalanced transport between two systems is computed. The two systems do not have the same number of poles, and if destruction of mass is made cheap, not all mass is transported. The thickness of the lines indicate mass flow.
+```@example dist
+m1 = AR(Continuous(), [1, 0.1, 1.2]) |> change_precision(Float64)
+m2 = AR(Continuous(), polyconv([1, 0.1, 1], [1, 0.1, 1.1])) |> change_precision(Float64)
+D  = SpectralDistances.distmat_euclidean(m1.pc, m2.pc)
+w1, w2 = unitweight.((m1, m2))
+figs = map([0.0001, 0.001, 0.01]) do tv
+    divergence = TV(tv)
+    Γ, a, b = sinkhorn_unbalanced(D, w1, w2, divergence, β = 0.01)
+    lineS   = 20Γ
+    lineS[lineS.<0.1] .= 0
+    alphaS  = lineS ./ maximum(lineS)
+    f       = scatter(m1.pc, legend = false, ms = 10, title = "TV=$tv")
+    scatter!(m2.pc, ms = 10)
+    for (i, p1) in enumerate(m1.pc), (j, p2) in enumerate(m2.pc)
+        coords = [p1, p2]
+        plot!(
+            real(coords),
+            imag(coords),
+            linewidth = lineS[i, j],
+            alpha     = alphaS[i, j],
+            color     = :black,
+        )
+    end
+    f
+end
+plot(figs..., layout = (1, 3), ylims = (0.9, 1.2))
+savefig("unbalanced_poles.html"); nothing # hide
+```
+
+```@raw html
+<object type="text/html" data="../unbalanced_poles.html" style="width:100%;height:450px;"></object>
+```
+
 
 
 ## Function reference

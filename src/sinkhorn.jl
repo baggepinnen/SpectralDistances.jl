@@ -1,5 +1,5 @@
 """
-    γ, u, v = sinkhorn(C, a, b; β=1e-1, iters=1000)
+    Γ, u, v = sinkhorn(C, a, b; β=1e-1, iters=1000)
 
 The Sinkhorn algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. This function is relatively slow, see also [`sinkhorn_log!`](@ref) [`IPOT`](@ref) and [`sinkhorn_log`](@ref) for faster algorithms.
 """
@@ -22,7 +22,7 @@ function sinkhorn(C, a, b; β=1e-1, iters=1000, kwargs...)
 end
 
 """
-    γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000, tol=1e-8)
+    Γ, u, v = sinkhorn_log(C, a, b; β=1e-1, iters=1000, tol=1e-8)
 
 The Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn_log!`](@ref) for a faster implementation operating in-place, and [`IPOT`](@ref) for a potentially more exact solution.
 
@@ -143,7 +143,7 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
 end
 
 """
-    γ, u, v = IPOT(C, a, b; β=1, iters=1000)
+    Γ, u, v = IPOT(C, a, b; β=1, iters=1000)
 
 The Inexact Proximal point method for exact Optimal Transport problem (IPOT) (Sinkhorn-like) algorithm. `C` is the cost matrix and `a,b` are vectors that sum to one. Returns the optimal plan and the dual potentials. See also [`sinkhorn`](@ref). `β` does not have to go to 0 for this alg to return the optimal distance, in fact, if β is set too low, this alg will encounter numerical problems.
 
@@ -330,4 +330,30 @@ function sinkhorn_cost(pl,ql, p, q::AbstractVector, λ::AbstractVector{T}; β=0.
     M = distmat_euclidean(bc,ql)
     Γ = solver(M,bcp,q; β=β, kwargs...)[1]
     sqrt(sum(M.*Γ))
+end
+
+
+"""
+    Γ, u, v = sinkhorn_unbalanced(C, a, b, divergence; β=1e-1, iters=1000, tol=1e-8)
+
+The Unbalanced Sinkhorn algorithm (log-stabilized). `C` is the cost matrix and `a,b` are vectors that *are not required to sum to one*.
+
+Ref: "Sinkhorn Divergences for Unbalanced Optimal Transport" https://arxiv.org/abs/1910.12958
+Makes use of [UnbalancedOptimalTransport.jl](https://github.com/ericphanson/UnbalancedOptimalTransport.jl)
+"""
+function sinkhorn_unbalanced(
+    C,
+    a,
+    b,
+    divergence;
+    β = 1e-1,
+    iters = 1000,
+    tol = 1e-8,
+    printerval = typemax(Int),
+    kwargs...,
+)
+    a = UnbalancedOptimalTransport.DiscreteMeasure(a)
+    b = UnbalancedOptimalTransport.DiscreteMeasure(b)
+    Γ = optimal_coupling!(divergence, C, a, b, β; max_iters = iters, tol = tol, warn = true)
+    return Γ, a.dual_potential, b.dual_potential
 end
