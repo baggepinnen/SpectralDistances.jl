@@ -88,24 +88,31 @@ EuclideanRootDistance
 end
 
 """
-    OptimalTransportRootDistance{D, F1, F2} <: AbstractRootDistance
+    OptimalTransportRootDistance{D, F1, F2, S} <: AbstractRootDistance
 
 The Sinkhorn distance between roots. The weights are provided by `weight`, which defaults to [`residueweight`](@ref).
 
 # Arguments:
 - `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `transform::F1 = identity`: Probably not needed.
-- `weight::F2 = `[`s1`](@ref) `∘` [`residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
+- `weight::F2 = `[`simplex_residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
 - `β::Float64 = 0.01`: Amount of entropy regularization
 - `p::Int = 2` : Order of the distance
+- `divergence::S = nothing`: A divergence that penalizes creation and destruction of mass.
 """
 OptimalTransportRootDistance
-@kwdef struct OptimalTransportRootDistance{D,F1,F2} <: AbstractRootDistance
+@kwdef struct OptimalTransportRootDistance{
+    D,
+    F1,
+    F2,
+    S<:Union{UnbalancedOptimalTransport.AbstractDivergence,Nothing},
+} <: AbstractRootDistance
     domain::D
     transform::F1 = identity
     weight::F2 = simplex_residueweight
     β::Float64 = 0.01
     p::Int = 2
+    divergence::S = nothing
 end
 
 @deprecate SinkhornRootDistance(args...;kwargs...) OptimalTransportRootDistance(args...;kwargs...)
@@ -422,19 +429,40 @@ function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots;
     real(l) # Workaround for expanding to complex for Zygote support
 end
 
-function evaluate(d::OptimalTransportRootDistance, e1::AbstractRoots,e2::AbstractRoots; solver=sinkhorn_log!, kwargs...)
-    D     = distmat_euclidean(e1,e2,d.p)
-    w1    = d.weight(e1)
-    w2    = d.weight(e2)
+function evaluate(
+    d::OptimalTransportRootDistance,
+    e1::AbstractRoots,
+    e2::AbstractRoots;
+    solver = sinkhorn_log!,
+    kwargs...,
+)
+    D = distmat_euclidean(e1, e2, d.p)
+    w1 = d.weight(e1)
+    w2 = d.weight(e2)
     # C     = solver(D,SVector{length(w1)}(w1),SVector{length(w2)}(w2); β=d.β, kwargs...)[1]
-    C     = solver(D,w1,w2; β=d.β, kwargs...)[1]
+
+    if d.divergence !== nothing
+        return OT!(
+            d.divergence,
+            D,
+            DiscreteMeasure(w1),
+            DiscreteMeasure(w2),
+            d.β;
+            max_iters = get(kwargs, :iters, 100_000),
+            tol = get(kwargs, :tol, 1e-8),
+            warn = true
+        )
+    end
+
+    C = solver(D, w1, w2; β = d.β, kwargs...)[1]
     if any(isnan, C) && !isderiving()
         println("Nan in OptimalTransportRootDistance, increasing precision")
-        C     = solver(big.(D),big.(w1),big.(w2); β=d.β, kwargs...)[1]
-        any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
+        C = solver(big.(D), big.(w1), big.(w2); β = d.β, kwargs...)[1]
+        any(isnan, C) &&
+        error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         C = eltype(D).(C)
     end
-    sum(C.*D)
+    sum(C .* D)
 end
 
 function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real}; kwargs...)

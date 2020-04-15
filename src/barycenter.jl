@@ -21,14 +21,27 @@ function barycenter_matrices(d, models, normalize=true; allow_shortcut=true)
     X, w, realpoles
 end
 
-function embedding(model::AR)
-    embedding(roots(SpectralDistances.Continuous(), model))
+function embedding(model::AR,args...)
+    embedding(roots(SpectralDistances.Continuous(), model), args...)
 end
 
-function embedding(r::AbstractRoots)
-    realpoles = any(any(iszero ∘ imag, r) for r in r)
-    realpoles && @error("Model contained real poles, this produces weird results when used in an embedding")
-    @views [real.(r[1:end÷2]); imag.(r[1:end÷2])]
+"""
+    embedding([::Type{Vector}], m, [full=true])
+
+Returns a `Vector/Matrix` containing the roots of `m`.
+`full` indicates whether or not to use all poles or only one half-plane. 
+"""
+embedding(::Type{Vector}, model, args...) = embedding(model, args...)
+embedding(::Type{Matrix}, model, args...) = reshape(embedding(model, args...), :, 2)
+
+function embedding(r::AbstractRoots, full::Bool=true)
+    if full
+        [real.(r); imag.(r)]
+    else
+        realpoles = any(any(iszero ∘ imag, r) for r in r)
+        realpoles && @error("Model contained real poles, this produces weird results when used in an embedding")
+        @views [real.(r[1:end÷2]); imag.(r[1:end÷2])]
+    end
 end
 
 """

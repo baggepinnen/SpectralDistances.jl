@@ -7,11 +7,62 @@ $(EXPORTS)
 module SpectralDistances
 
 using LinearAlgebra, Statistics, Printf
-using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions, Optim
+using DSP,
+    ControlSystems,
+    Distances,
+    DocStringExtensions,
+    DoubleFloats,
+    Hungarian,
+    Lazy,
+    Optim,
+    OrdinaryDiffEq,
+    PolynomialRoots,
+    QuadGK,
+    RecipesBase,
+    Roots,
+    StaticArrays,
+    StatsBase,
+    ThreadTools,
+    TotalLeastSquares,
+    ZygoteRules,
+    UnbalancedOptimalTransport
 
 import Base.@kwdef
 
-export ls, plr, polar, toreim, reflect, hungariansort, coefficients, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, simplex_residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots, change_precision
+export ls,
+    plr,
+    polar,
+    toreim,
+    reflect,
+    hungariansort,
+    coefficients,
+    s1,
+    v1,
+    n1,
+    roots,
+    pole,
+    twoD,
+    threeD,
+    precompute,
+    assignmentplot,
+    roots2poly,
+    evalfr,
+    Log,
+    Identity,
+    residues,
+    residueweight,
+    simplex_residueweight,
+    unitweight,
+    normalize_energy,
+    spectralenergy,
+    normalization_factor,
+    polyconv,
+    domain,
+    fitmodel,
+    move_real_poles,
+    checkroots,
+    change_precision,
+    embedding
 
 export evaluate,
 AbstractDistance,
@@ -40,7 +91,11 @@ export sinkhorn,
 sinkhorn_log,
 sinkhorn_log!,
 IPOT,
-sinkhorn_diff
+sinkhorn_diff,
+sinkhorn_unbalanced
+
+using UnbalancedOptimalTransport: KL, TV, Balanced, RG
+export KL, TV, Balanced, RG
 
 export FitMethod,
 AbstractModel,
