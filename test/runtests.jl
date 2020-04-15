@@ -2,8 +2,7 @@
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances, DoubleFloats
-
-using JuMP, Convex, GLPK
+import Convex, JuMP, GLPK
 
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 

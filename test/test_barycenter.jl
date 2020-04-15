@@ -197,7 +197,7 @@ end
     @inferred SpectralDistances.distmat_euclidean!(M2,X,Y[1])
     @test M == M2
 
-    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1])
+    g1,a1,b1 = ot_jump(M,a,b[1])
     g2,a2,b2 = @inferred sinkhorn_log!(M,a,b[1], β=0.0001, iters=1000000, tol=1e-7)
     g3,a3,b3 = @inferred IPOT(M,a,b[1], β=0.5, iters=100000)
     g4,a4,b4 = ot_convex(M,a,b[1])
@@ -210,7 +210,7 @@ end
     a = ones(k) |> s1
     b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
     M = SpectralDistances.distmat_euclidean(X,Y[1])
-    g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1]) .|> r6
+    g1,a1,b1 = ot_jump(M,a,b[1]) .|> r6
     g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=5000, tol=1e-9) .|> r6
     g3,a3,b3 = IPOT(M,a,b[1], β=0.5, iters=10000, printerval=5000, tol=1e-9) .|> r6
     @test isapprox(ip(a1,a2), 1, atol=1e-1) || isapprox(ip(a1,a3), 1, atol=1e-1)
