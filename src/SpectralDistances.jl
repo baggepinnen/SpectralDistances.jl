@@ -8,23 +8,24 @@ module SpectralDistances
 
 using LinearAlgebra, Statistics, Printf
 using DSP,
-    Distances,
-    PolynomialRoots,
     ControlSystems,
-    Hungarian,
-    ZygoteRules,
-    Lazy,
-    RecipesBase,
-    StatsBase,
-    Roots,
-    QuadGK,
-    OrdinaryDiffEq,
-    ThreadTools,
-    DoubleFloats,
-    StaticArrays,
-    TotalLeastSquares,
+    Distances,
     DocStringExtensions,
-    Optim
+    DoubleFloats,
+    Hungarian,
+    Lazy,
+    Optim,
+    OrdinaryDiffEq,
+    PolynomialRoots,
+    QuadGK,
+    RecipesBase,
+    Roots,
+    StaticArrays,
+    StatsBase,
+    ThreadTools,
+    TotalLeastSquares,
+    ZygoteRules,
+    UnbalancedOptimalTransport
 
 import Base.@kwdef
 
@@ -90,7 +91,11 @@ export sinkhorn,
 sinkhorn_log,
 sinkhorn_log!,
 IPOT,
-sinkhorn_diff
+sinkhorn_diff,
+sinkhorn_unbalanced
+
+using UnbalancedOptimalTransport: KL, TV, Balanced, RG
+export KL, TV, Balanced, RG
 
 export FitMethod,
 AbstractModel,

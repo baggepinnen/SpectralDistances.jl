@@ -54,6 +54,12 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
         Γ,u,v = @inferred SpectralDistances.IPOT(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,Balanced())
+        @test Γ ≈ [0 0.5; 0 0.5]
+
     end
 
 
@@ -590,32 +596,27 @@ end
 
 end
 
+
+
+@testset "Unbalanced transport" begin
+    @info "Testing Unbalanced transport"
+
+fm = LS(na = 10)
+m1 = fm(filtfilt(ones(10), [10], randn(1000)))
+m2 = fm(filtfilt(ones(5), [5], randn(1000)))
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=Balanced())
+d1 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0))
+d2 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0))
+d3 = evaluate(dist,m1,m2)
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01))
+d4 = evaluate(dist,m1,m2)
+
+@test d1 > d3 > d2 > d4
+
 end
 
-# x1 = randn(1000)
-# x2 = randn(1000)
-# fm = TLS(na=4)
-# inner = EuclideanRootDistance(domain=Continuous(), p=2)
-# dist = ModelDistance(fm, inner)
-# dist(x1,x2)
-# using Zygote
-# m1,m2 = fm(x1), fm(x2)
-# Zygote.gradient(inner, m1,m2)
-#
-# function di(e1,e2)
-#     w1 = ones(1)
-#     l = 0.
-#     for i in 1:length(e1)
-#         l += abs(w1[1]*e1[i]-e2[i])
-#     end
-#     l
-# end
-#
-# Zygote.gradient(di, [complex(1.2)], [complex(1.2)])
-#
-# function g(v)
-#     z = complex(v[1],v[2])
-#     sum(eachindex(z)) do i
-#         abs2(1*z)
-#     end
-# end
+end
+
+##
