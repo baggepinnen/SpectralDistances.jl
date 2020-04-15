@@ -3,10 +3,69 @@ using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances, DoubleFloats
 
-using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
+using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
 
 @testset "SpectralDistances.jl" begin
+
+
+
+    @testset "Model creation" begin
+        @info "Testing Model creation"
+
+        @testset "AR" begin
+            @info "Testing AR"
+
+            a = randn(3)
+            m = AR(a)
+            @test m.a == a
+            @test length(m.p) == 2
+
+            m = AR(Continuous(), a)
+            @test m.ac == a
+            @test length(m.pc) == 2
+
+            r = ContinuousRoots(hproots(rev(a)))
+            m = AR(r)
+            @test m.pc == r
+
+            r = DiscreteRoots(hproots(rev(a)))
+            m = AR(r)
+            @test m.p == r
+        end
+
+
+        @testset "ARMA" begin
+            @info "Testing ARMA"
+
+            a = randn(3)
+            b = [1, 0.1]
+            m = ARMA(b,a)
+            @test s1(m.a) == s1(a)
+            @test length(m.p) == 2
+            @test m.b == b
+            @test length(m.z) == 1
+
+            m = ARMA(Continuous(), b,a)
+            @test s1(m.ac) == s1(a)
+            @test length(m.pc) == 2
+            @test m.bc == b
+            @test length(m.zc) == 1
+
+            r = ContinuousRoots(hproots(rev(a)))
+            z = ContinuousRoots(hproots(rev(b)))
+            m = ARMA(z,r)
+            @test m.pc == r
+            @test m.zc == z
+
+            r = DiscreteRoots(hproots(rev(a)))
+            z = DiscreteRoots(hproots(rev(b)))
+            m = ARMA(z,r)
+            @test m.p == r
+            @test m.z == z
+        end
+
+    end
 
 
     @testset "time" begin
@@ -96,6 +155,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
         y = sin.(0:0.1:100)
         fm = @inferred LS(na=2, λ=0)
         m = @inferred fm(y)
+        @test fm(m) == m
         @test imag.(m.pc) ≈ [-0.1, 0.1] rtol=1e-4
         mc = @inferred SpectralDistances.change_precision(Float32, m)
         @test m ≈ mc
@@ -284,7 +344,10 @@ end
     m = @inferred AR(ContinuousRoots([-1]))
     g = tf(1,[1.,1])
     @test tf(m) == g
+    @test_broken tf(m,1) == c2d(g,1)
     @test m*g == g*g
+    @test ARMA(g).ac == [1,1]
+    @test ARMA(g).bc == [1]
     @test @inferred(denvec(Continuous(), m)) == denvec(g)[1]
     @test numvec(Continuous(), m) == numvec(g)[1]
     @test @inferred(pole(Continuous(), m)) == pole(g)

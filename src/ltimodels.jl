@@ -68,17 +68,6 @@ end
 checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn("Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.", maxlog=5)
 
 """
-    AR(X::AbstractArray, order::Int)
-
-Fit an AR model using [`TLS`](@ref) as `fitmethod`
-
-# Arguments:
-- `X`: a signal
-- `order`: number of roots
-"""
-AR(X::AbstractArray,order::Int) = fitmodel(TLS(na=order), X, var(X))
-
-"""
     struct ARMA{T} <: AbstractModel
 
 Represents an ARMA model, i.e., transfer function
