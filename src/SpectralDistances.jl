@@ -7,11 +7,61 @@ $(EXPORTS)
 module SpectralDistances
 
 using LinearAlgebra, Statistics, Printf
-using DSP, Distances, PolynomialRoots, ControlSystems, Hungarian, ZygoteRules, Lazy, RecipesBase, StatsBase, Roots, QuadGK, OrdinaryDiffEq, ThreadTools, DoubleFloats, StaticArrays, TotalLeastSquares, DocStringExtensions, Optim
+using DSP,
+    Distances,
+    PolynomialRoots,
+    ControlSystems,
+    Hungarian,
+    ZygoteRules,
+    Lazy,
+    RecipesBase,
+    StatsBase,
+    Roots,
+    QuadGK,
+    OrdinaryDiffEq,
+    ThreadTools,
+    DoubleFloats,
+    StaticArrays,
+    TotalLeastSquares,
+    DocStringExtensions,
+    Optim
 
 import Base.@kwdef
 
-export ls, plr, polar, toreim, reflect, hungariansort, coefficients, s1, v1, n1, roots, pole, twoD, threeD, precompute, assignmentplot, roots2poly, evalfr, Log, Identity, residues, residueweight, simplex_residueweight, unitweight, normalize_energy, spectralenergy, normalization_factor, polyconv, domain, fitmodel, move_real_poles, checkroots, change_precision
+export ls,
+    plr,
+    polar,
+    toreim,
+    reflect,
+    hungariansort,
+    coefficients,
+    s1,
+    v1,
+    n1,
+    roots,
+    pole,
+    twoD,
+    threeD,
+    precompute,
+    assignmentplot,
+    roots2poly,
+    evalfr,
+    Log,
+    Identity,
+    residues,
+    residueweight,
+    simplex_residueweight,
+    unitweight,
+    normalize_energy,
+    spectralenergy,
+    normalization_factor,
+    polyconv,
+    domain,
+    fitmodel,
+    move_real_poles,
+    checkroots,
+    change_precision,
+    embedding
 
 export evaluate,
 AbstractDistance,
