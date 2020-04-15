@@ -3,7 +3,7 @@
 ```@example
 using SpectralDistances, Plots; plotly() # hide
 models = examplemodels(2)
-assignmentplot(models[1], models[2])
+assignmentplot(models[1], models[2], d=Discrete(), p=2)
 savefig("assignment.html"); nothing # hide
 ```
 ```@raw html
