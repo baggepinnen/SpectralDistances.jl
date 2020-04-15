@@ -122,16 +122,16 @@ For situations like this, an `AbstractDivergence` can be supplied to the `Optima
 
 ```@repl dist
 using DSP
-fm = LS(na = 10)
-m1 = fm(filtfilt(ones(10), [10], randn(1000)))
-m2 = fm(filtfilt(ones(5), [5], randn(1000)))
+fm = LS(na = 10);
+m1 = fm(filtfilt(ones(10), [10], randn(1000)));
+m2 = fm(filtfilt(ones(5), [5], randn(1000)));
 dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=Balanced())
 d1 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0))
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0));
 d2 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0))
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0));
 d3 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01))
+dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01));
 d4 = evaluate(dist,m1,m2)
 d1 > d3 > d2 > d4
 ```
@@ -197,6 +197,7 @@ Transport-based distances may require some tuning parameters to be set for the s
 - [`sinkhorn`](@ref): not recommended due to numerical issues, but this is the most commonly cited algorithm.
 - [`sinkhorn_log`](@ref): better numerical stability than the standard.
 - [`sinkhorn_log!`](@ref): in-place version that is faster, but some AD libraries might not like it (often the default if no solver is provided).
+- [`sinkhorn_unbalanced`](@ref): this solver accepts a divergence that penalizes creation/destruction of mass. It thus handles measure of different masses and can choose to create/destroy mass instead of transporting it.
 - [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
 - [`ot_jump`](@ref): exact solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
 
