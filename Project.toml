@@ -43,9 +43,10 @@ Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Clustering", "Test", "FiniteDifferences", "ForwardDiff", "Zygote", "JuMP", "GLPK"]
+test = ["Clustering", "Test", "FiniteDifferences", "ForwardDiff", "Zygote", "JuMP", "GLPK", "Plots"]

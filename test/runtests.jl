@@ -14,6 +14,11 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots
         include("test_time.jl")
     end
 
+    @testset "plot" begin
+        @info "Testing plot"
+        include("test_plotting.jl")
+    end
+
     @testset "Solvers" begin
         @info "Testing Solvers"
 

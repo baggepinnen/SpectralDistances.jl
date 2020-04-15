@@ -33,6 +33,8 @@ Base.showable(::MIME"text/html", agif::Plots.Animation) = true
         seriestype := :scatter
         real.(v), imag.(v)
     end
+    xlabel --> "Re"
+    ylabel --> "Im"
     if circle && d isa Discrete
         t = LinRange(0, 2pi, 100)
         @series begin
@@ -47,6 +49,9 @@ Base.showable(::MIME"text/html", agif::Plots.Animation) = true
 end
 
 @recipe function plot(r::AbstractRoots)
+    title --> "Root map"
+    xlabel --> "Re"
+    ylabel --> "Im"
     r.r, domain(r)
 end
 
