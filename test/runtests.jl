@@ -240,6 +240,17 @@ end
     @test all(<(1) ∘ abs, reflect(ed))
     @test all(<(0) ∘ real, reflect(ec))
 
+    E = embedding(ec)
+    @test length(E) == 12
+    @test E == embedding(Vector, ec)
+    E = embedding(Matrix, ec)
+    @test size(E) == (6,2)
+    E = embedding(Matrix, ec, false)
+    @test size(E) == (3,2)
+
+    @test_logs (:error, r"real poles") embedding(ContinuousRoots([0,1]), false)
+
+
 
     @test SpectralDistances.determine_domain(0.1randn(10)) isa Discrete
     @test SpectralDistances.determine_domain(randn(10).-4) isa Continuous
