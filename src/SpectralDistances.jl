@@ -144,7 +144,7 @@ function __init__()
             export ot_jump
             include("jump.jl")
         end
-        Requires.@require Convex = "4076af6c-e467-56ae-b986-b466b2749572" begin
+        Requires.@require Convex = "f65535da-76fb-5f13-bab9-19810c17039a" begin
             export ot_convex
             include("convex.jl")
         end

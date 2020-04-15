@@ -2,7 +2,7 @@ import .Convex
 using .GLPK
 
 """
-ot_convex(D, P1, P2)
+    ot_convex(D, P1, P2)
 
 Solve the optimal transport problem using Convex.jl. This function is only available if `using Convex.jl, GLPK`.
 

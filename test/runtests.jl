@@ -2,7 +2,7 @@
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances, DoubleFloats
-import Convex, JuMP, GLPK
+import GLPK, Convex, JuMP
 
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
@@ -120,7 +120,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         a = [1., 0]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,β=0.01)
+        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,Balanced(),β=0.01)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
@@ -132,13 +132,13 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         a = [1., 0]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred ot_jump(C,a,b)
+        Γ,u,v = ot_jump(C,a,b)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred ot_jump(C,a,b)
+        Γ,u,v = ot_jump(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
         a = [1., 0]
