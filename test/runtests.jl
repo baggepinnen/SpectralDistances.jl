@@ -3,12 +3,12 @@ using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
 using DSP, Distances, DoubleFloats
 
+using JuMP, Convex, GLPK
+
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
 
 @testset "SpectralDistances.jl" begin
-
-
 
     @testset "Model creation" begin
         @info "Testing Model creation"
@@ -118,10 +118,40 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         Γ,u,v = @inferred SpectralDistances.IPOT(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,β=0.01)
+        @test Γ ≈ [0 1; 0 0]
+
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
         Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,Balanced())
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = @inferred ot_jump(C,a,b)
+        @test Γ ≈ [0 1; 0 0]
+
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = @inferred ot_jump(C,a,b)
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+        a = [1., 0]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = ot_convex(C,a,b)
+        @test Γ ≈ [0 1; 0 0]
+
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = ot_convex(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
     end

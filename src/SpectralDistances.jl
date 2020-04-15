@@ -144,6 +144,10 @@ function __init__()
             export ot_jump
             include("jump.jl")
         end
+        Requires.@require Convex = "4076af6c-e467-56ae-b986-b466b2749572" begin
+            export ot_convex
+            include("convex.jl")
+        end
     end
 
     Requires.@require Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5" begin

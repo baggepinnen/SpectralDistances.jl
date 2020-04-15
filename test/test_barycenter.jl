@@ -200,8 +200,11 @@ end
     g1,a1,b1 = SpectralDistances.ot_jump(M,a,b[1])
     g2,a2,b2 = @inferred sinkhorn_log!(M,a,b[1], β=0.0001, iters=1000000, tol=1e-7)
     g3,a3,b3 = @inferred IPOT(M,a,b[1], β=0.5, iters=100000)
+    g4,a4,b4 = ot_convex(M,a,b[1])
     @test isapprox(ip(a1,a2), 1, atol=1e-1) || isapprox(ip(a1,a3), 1, atol=1e-1)
     @test isapprox(ip(b1,b2), 1, atol=1e-1) || isapprox(ip(b1,b3), 1, atol=1e-1)
+    @test isapprox(ip(a1,a4), 1, atol=1e-1) || isapprox(ip(a2,a4), 1, atol=1e-1)
+    @test isapprox(ip(b1,b4), 1, atol=1e-1) || isapprox(ip(b2,b4), 1, atol=1e-1)
 
 
     a = ones(k) |> s1

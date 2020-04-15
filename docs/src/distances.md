@@ -189,7 +189,7 @@ Order   = [:function, :macro, :constant]
 ```@autodocs
 Modules = [SpectralDistances]
 Private = false
-Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl"]
+Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl", "convex.jl"]
 ```
 
 ## Details
@@ -200,6 +200,7 @@ Transport-based distances may require some tuning parameters to be set for the s
 - [`sinkhorn_unbalanced`](@ref): this solver accepts a divergence that penalizes creation/destruction of mass. It thus handles measure of different masses and can choose to create/destroy mass instead of transporting it.
 - [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
 - [`ot_jump`](@ref): exact solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
+- [`ot_convex`](@ref): exact solution using [Convex.jl](https://www.juliaopt.org/Convex.jl/stable/), requires `using Convex, GLPK` before it becomes available.
 
 ### Providing solver and options
 ```julia
