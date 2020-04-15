@@ -29,7 +29,7 @@ end
     embedding([::Type{Vector}], m, [full=true])
 
 Returns a `Vector/Matrix` containing the roots of `m`.
-`full` indicates whether or not to use all poles or only one half-plane. 
+`full` indicates whether or not to use all poles or only one half-plane.
 """
 embedding(::Type{Vector}, model, args...) = embedding(model, args...)
 embedding(::Type{Matrix}, model, args...) = reshape(embedding(model, args...), :, 2)
@@ -61,9 +61,8 @@ models = examplemodels(10)
 d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
 Xe = barycenter(d, models, solver=sinkhorn_log!)
 
-G = tf.(models)
 plot()
-pzmap!.(G)
+pzmap!.(models)
 pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
 current()
 ```
