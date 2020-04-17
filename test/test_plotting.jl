@@ -3,6 +3,7 @@ m = examplemodels(2)
 
 plot(m[1])
 assignmentplot(m...)
+flowplot(OptimalTransportRootDistance(domain=Continuous()), m...)
 
 y = randn(10000)
 plot(spectrogram(y))

@@ -94,6 +94,50 @@ assignmentplot
     end
 end
 
+"""
+    flowplot(dist,m1, m2)
+
+Plots the poles of two models and the optimal mass flow between them
+"""
+flowplot
+@userplot FlowPlot
+
+@recipe function flowplot(h::FlowPlot)
+    dist,m1,m2 = h.args[1:3]
+
+    Γ = transport_plan(dist,m1,m2;d=d)
+    e1,e2 = roots.(domain(dist), (m1,m2))
+    display(Γ)
+
+    @series begin
+        markerstrokealpha --> 0.1
+        label --> "m1"
+        seriestype := :scatter
+        real.(e1), imag.(e1)
+    end
+    @series begin
+        markerstrokealpha --> 0.1
+        label --> "m2"
+        seriestype := :scatter
+        real.(e2), imag.(e2)
+    end
+    for i in eachindex(e1), j in eachindex(e2)
+        @series begin
+            primary := false
+            seriestype := :path
+            coords = [e1[i], e2[j]]
+            linewidth --> 10Γ[i,j]
+            linealpha --> sqrt(10Γ[i,j])
+            real(coords), imag(coords)
+        end
+    end
+    domain(dist) isa Discrete && @series begin
+        l := (:dash, :black)
+        primary := false
+        cos.(0:0.1:2pi),sin.(0:0.1:2pi)
+    end
+end
+
 
 @recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)); rad=true)
     mag = evalfr.(Continuous(), Identity(), w, m)

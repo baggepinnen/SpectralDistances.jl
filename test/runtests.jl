@@ -153,6 +153,17 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         Γ,u,v = ot_convex(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = ot_convex(C,a,b)
+        @test Γ ≈ [0 0.5; 0 0.5]
+
+        models = examplemodels(2)
+        Γ = transport_plan(OptimalTransportRootDistance(domain=Continuous(), weight=unitweight), models...; tol=1e-4)
+        @test sum(Γ) ≈ 1 atol=0.001
+
+
     end
 
 

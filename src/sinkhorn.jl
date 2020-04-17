@@ -370,17 +370,17 @@ function unbalanced_solver_closure(distance::AbstractDistance)
 end
 
 
-function transport_plan(dist,m1::AbstractModel,m2::AbstractModel;d=Continuous())
-    rf(a) = roots(d, a)
+function transport_plan(dist,m1::AbstractModel,m2::AbstractModel; kwargs...)
+    rf(a) = roots(domain(dist), a)
     e1 = rf(m1)
     e2 = rf(m2)
-    transport_plan(dist,e1,e2;d=d)
+    transport_plan(dist,e1,e2; kwargs...)
 end
 
-function transport_plan(dist,e1,e2;d=Continuous())
+function transport_plan(dist,e1,e2; kwargs...)
     D = distmat_euclidean(e1, e2, dist.p)
     w1 = dist.weight(e1)
     w2 = dist.weight(e2)
     solver = dist.divergence === nothing ? sinkhorn_log! : unbalanced_solver_closure(dist)
-    Γ = solver(D, w1, w2; β = 0.01)[1]
+    Γ = solver(D, w1, w2; β = 0.01, kwargs...)[1]
 end
