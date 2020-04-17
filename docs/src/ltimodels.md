@@ -5,7 +5,7 @@ using SpectralDistances, InteractiveUtils, Plots, ControlSystems
 
 ## Overview
 
-Most distances available in this package require operate on linear models estimated from a time-domain signal.
+Most distances available in this package operate on linear models estimated from a time-domain signal.
 This package supports two kind of LTI models, [`AR`](@ref) and [`ARMA`](@ref).
 [`AR`](@ref) represents a model with only poles whereas [`ARMA`](@ref) has zeros as well.
 These types are subtypes of `ControlSystems.LTISystem`, so many of the functions from the [ControlSystems.jl](https://github.com/JuliaControl/ControlSystems.jl) toolbox work on these models as well. When acting like a `ControlSystems.LTISystem`, the default is to use the continuous-time representation of the model. The discrete-time representation can be obtained by `tf(m, 1)` where `1` is the sample time. More on the time-domain representation below.
@@ -43,7 +43,7 @@ Sometimes you may get a message saying "Roots on the negative real axis, no cont
 To reduce the likelihood of this occurring, you may try to bandpass filter the signal before estimating the model, reduce the regularization factor if regularization was used, change the model order, or consider using the [`TLS`](@ref) fit method.
 
 The difference between the pole locations in continuous and discrete time is vizualized in the pole diagrams below
-```@example
+```@example lti
 pzmap(model, layout=2, sp=1, xlabel="Re", ylabel="Im", title="Continuous")
 vline!([0], primary=false, l=(:black, :dash), sp=1)
 pzmap!(tf(model,1),    sp=2, xlabel="Re", ylabel="Im", title="Discrete")
