@@ -64,6 +64,17 @@ function AR(r::DiscreteRoots, σ²=nothing)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
+function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
+    println(io,"AR{coeff type: $(eltype(T)), root type: $(eltype(Ct))}(")
+    println(io,"b: ", m.b)
+    printstyled(io,"Cont. poles: ", bold=true)
+    display(m.pc)
+    println(io, real.(abs.(m.pc)))
+    printstyled(io,"Cont. coeffs: ", bold=true)
+    display(m.ac)
+    print(io,"Spectral energy: ", spectralenergy(Continuous(), m))
+end
+
 "`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."
 checkroots(r::DiscreteRoots) = any(imag(r) == 0 && real(r) < 0 for r in r) && @warn("Roots on negative real axis, no corresponding continuous time representation exists. Consider prefiltering the signal or decreasing the regularization factor.", maxlog=5)
 

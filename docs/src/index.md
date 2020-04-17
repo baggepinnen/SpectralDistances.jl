@@ -6,7 +6,7 @@
 
 # SpectralDistances
 
-This package facilitates the calculation of distances between signals, primarily in the frequency domain. The main functionality revolves around *rational spectra*, i.e., the spectrum of a rational function, commonly known as a transfer function.
+This package facilitates the calculation of distances between signals, primarily in the frequency domain. The main functionality revolves around *rational spectra*, i.e., the spectrum of a rational function, known as a transfer function, an autoregressive model or an autoregressive moving-average model.
 
 This repository implements all optimal-transport based distances between spectra detailed in the following pre-pre print
 
