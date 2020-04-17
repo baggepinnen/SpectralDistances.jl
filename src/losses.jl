@@ -80,7 +80,7 @@ Simple euclidean distance between roots of transfer functions
 """
 EuclideanRootDistance
 @kwdef struct EuclideanRootDistance{D,A,F1,F2} <: AbstractRootDistance
-    domain::D
+    domain::D = Continuous()
     assignment::A = SortAssignement(imag)
     transform::F1 = identity
     weight::F2 = unitweight
@@ -93,7 +93,7 @@ end
 The Sinkhorn distance between roots. The weights are provided by `weight`, which defaults to [`residueweight`](@ref).
 
 # Arguments:
-- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `domain::D = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `transform::F1 = identity`: Probably not needed.
 - `weight::F2 = `[`simplex_residueweight`](@ref): A function used to calculate weights for the induvidual root distances.
 - `β::Float64 = 0.01`: Amount of entropy regularization
@@ -107,7 +107,7 @@ OptimalTransportRootDistance
     F2,
     S<:Union{UnbalancedOptimalTransport.AbstractDivergence,Nothing},
 } <: AbstractRootDistance
-    domain::D
+    domain::D = Continuous()
     transform::F1 = identity
     weight::F2 = simplex_residueweight
     β::Float64 = 0.01
@@ -123,13 +123,13 @@ end
 Similar to [`EuclideanRootDistance`](@ref) but does the pole assignment using the Hungarian method.
 
 # Arguments:
-- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `domain::D = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `distance::ID = SqEuclidean()`: Inner distance
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
 """
 HungarianRootDistance
 @kwdef struct HungarianRootDistance{D,ID <: Distances.PreMetric,F} <: AbstractRootDistance
-    domain::D
+    domain::D = Continuous()
     distance::ID = SqEuclidean()
     transform::F = identity
 end
@@ -140,14 +140,14 @@ end
 A kernel version of the root distance
 
 # Arguments:
-- `domain::D`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `domain::D = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `λ::Float64 = 1.0`: Kernel precision, lower value means wider kernel.
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
 - `distance::DI = SqEuclidean()`: Inner distance
 """
 KernelWassersteinRootDistance
 @kwdef struct KernelWassersteinRootDistance{D,F,DI} <: AbstractRootDistance
-    domain::D
+    domain::D = Continuous()
     λ::Float64   = 1.
     transform::F = identity
     distance::DI = SqEuclidean()
@@ -227,14 +227,14 @@ end
 calculates the Wasserstein distance using the closed-form solution based on integrals and inverse cumulative functions.
 
 # Arguments:
-- `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `domain::DT = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `p::Int = 1`: order
 - `magnitude::MT = Identity()`:
 - `interval = (-(float(π)), float(π))`: Integration interval
 """
 RationalOptimalTransportDistance
 @kwdef struct RationalOptimalTransportDistance{DT,MT} <: AbstractRationalDistance
-    domain::DT
+    domain::DT = Continuous()
     p::Int = 1
     magnitude::MT = Identity()
     interval = (-float(π,),float(π))
@@ -247,13 +247,13 @@ magnitude(d::RationalOptimalTransportDistance) = d.magnitude
 Similar to `RationalOptimalTransportDistance` but does not use inverse functions.
 
 # Arguments:
-- `domain::DT`: [`Discrete`](@ref) or [`Continuous`](@ref)
+- `domain::DT = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `p::Int = 2`: order
 - `interval = (-(float(π)), float(π))`: Integration interval
 """
 RationalCramerDistance
 @kwdef struct RationalCramerDistance{DT} <: AbstractRationalDistance
-    domain::DT
+    domain::DT = Continuous()
     p::Int = 2
     interval = (-float(π,),float(π))
 end
