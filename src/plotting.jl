@@ -140,7 +140,7 @@ end
 
 
 @recipe function plot(m::AbstractModel, w=exp10.(LinRange(-2, log10(pi), 200)); rad=true)
-    mag = evalfr.(Continuous(), Identity(), w, m)
+    mag = evalfr.(Continuous(), Identity(), w, m, m.b)
     yscale --> :log10
     xscale --> :log10
     rad || (w = w .* 2π)
