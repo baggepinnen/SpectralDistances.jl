@@ -68,10 +68,10 @@ function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
     println(io,"AR{coeff type: $(eltype(T)), root type: $(eltype(Ct))}(")
     println(io,"b: ", m.b)
     printstyled(io,"Cont. poles: ", bold=true)
-    display(m.pc)
-    println(io, real.(abs.(m.pc)))
+    println(io, repr("text/plain", m.pc))
+    println(io, "Abs disc: ", repr(real.(abs.(m.p))))
     printstyled(io,"Cont. coeffs: ", bold=true)
-    display(m.ac)
+    println(io, repr("text/plain", m.ac))
     print(io,"Spectral energy: ", spectralenergy(Continuous(), m))
 end
 
