@@ -139,7 +139,6 @@ When the distance is evaluated the second time, unbalanced transport is used. Th
 
 The first case, where `divergence=Balanced()` was supplied, should be equivalent to not providing any divergence at all. In pratice results might differ slightly since a different solver implementation is used.
 
-Currently, only distance calculations using unbalanced transport is supported. Barycenter calculations will currently ignore the divergence.
 
 Below is an example in which the unbalanced transport between two systems is computed. The two systems do not have the same number of poles, and if destruction of mass is made cheap, not all mass is transported. The thickness of the lines indicate mass flow.
 ```@example dist

@@ -347,7 +347,15 @@ function barycentric_coordinates(d::OptimalTransportRootDistance,models, qmodel,
     @assert sum(q) ≈ 1
     @assert all(sum(p) ≈ 1 for p in p)
 
-    λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; β=d.β, kwargs...)
+    if d.divergence !== nothing
+        if :solver ∈ keys(kwargs)
+            throw(ArgumentError("Solver choice not available for unbalanced distances, solver `sinkhorn_unbalanced` will be used."))
+        end
+        solver, kwargs = unbalanced_solver_closure(d, kwargs...)
+    else
+        solver = get(kwargs, :solver, IPOT)
+    end
+    λ = barycentric_coordinates(pl, ql[1], p, vec(q), method; solver=solver, β=d.β, kwargs...)
     return λ
 end
 

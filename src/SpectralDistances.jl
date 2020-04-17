@@ -92,7 +92,8 @@ sinkhorn_log,
 sinkhorn_log!,
 IPOT,
 sinkhorn_diff,
-sinkhorn_unbalanced
+sinkhorn_unbalanced,
+transport_plan
 
 using UnbalancedOptimalTransport: KL, TV, Balanced, RG
 export KL, TV, Balanced, RG

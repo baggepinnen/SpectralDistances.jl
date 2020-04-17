@@ -357,3 +357,30 @@ function sinkhorn_unbalanced(
     Γ = optimal_coupling!(divergence, C, a, b, β; max_iters = iters, tol = tol, warn = true)
     return Γ, a.dual_potential, b.dual_potential
 end
+
+unbalanced_solver_closure(divergence::UnbalancedOptimalTransport.AbstractDivergence) =
+    (C,a,b; kwargs...)->sinkhorn_unbalanced(C,a,b,divergence;kwargs...)
+
+function unbalanced_solver_closure(distance::AbstractDistance, solver = nothing, kwargs...)
+    (C,a,b; kwargs...)->sinkhorn_unbalanced(C,a,b,distance.divergence;kwargs...), kwargs
+end
+
+function unbalanced_solver_closure(distance::AbstractDistance)
+    (C,a,b; kwargs...)->sinkhorn_unbalanced(C,a,b,distance.divergence;kwargs...)
+end
+
+
+function transport_plan(dist,m1::AbstractModel,m2::AbstractModel;d=Continuous())
+    rf(a) = roots(d, a)
+    e1 = rf(m1)
+    e2 = rf(m2)
+    transport_plan(dist,e1,e2;d=d)
+end
+
+function transport_plan(dist,e1,e2;d=Continuous())
+    D = distmat_euclidean(e1, e2, dist.p)
+    w1 = dist.weight(e1)
+    w2 = dist.weight(e2)
+    solver = dist.divergence === nothing ? sinkhorn_log! : unbalanced_solver_closure(dist)
+    Γ = solver(D, w1, w2; β = 0.01)[1]
+end
