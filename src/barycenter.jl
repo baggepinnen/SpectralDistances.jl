@@ -59,12 +59,11 @@ Uses the algorithms from ["Fast Computation of Wasserstein Barycenters"](https:/
 models = examplemodels(10)
 
 d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
-Xe = barycenter(d, models, solver=sinkhorn_log!)
+Xe = barycenter(d, models, solver=sinkhorn_log!, uniform=true)
 
 plot()
 pzmap!.(models)
 pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
-current()
 ```
 
 # Arguments:
@@ -97,7 +96,7 @@ end
 
 
 """
-    barycenter(d::EuclideanRootDistance, models::AbstractVector)
+    barycenter(d::EuclideanRootDistance, models::AbstractVector, [λ])
 
 # Example:
 ```julia
@@ -117,6 +116,16 @@ function barycenter(d::EuclideanRootDistance,models::AbstractVector;kwargs...)
     w = d.weight.(r)
     bc = map(1:length(r[1])) do pi
         sum(w[pi]*r[pi] for (w,r) in zip(w,r))/sum(w[pi] for w in w)
+    end
+    AR(ContinuousRoots(bc))
+end
+
+function barycenter(d::EuclideanRootDistance,models::AbstractVector, λ;kwargs...)
+    N = length(models)
+    r = roots.(SpectralDistances.Continuous(), models)
+    w = d.weight.(r)
+    bc = map(1:length(r[1])) do pi
+        sum(λ[i]*w[pi]*r[pi] for (i,w,r) in zip(1:N,w,r))/sum(λ[i]*w[pi] for (i,w) in enumerate(w))
     end
     AR(ContinuousRoots(bc))
 end

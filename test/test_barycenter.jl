@@ -1,5 +1,6 @@
 using Test, SpectralDistances, ControlSystems, Optim
 import SpectralDistances: softmax
+ip(x,y) = x'y/norm(x)/norm(y)
 # const Continuous = SpectralDistances.Continuous
 
 @testset "ISA" begin
@@ -190,7 +191,7 @@ end
     using JuMP, GLPK
 
     r6(x) = x#round.(x, digits=6)
-    ip(x,y) = x'y/norm(x)/norm(y)
+
 
     M = @inferred SpectralDistances.distmat_euclidean(X,Y[1])
     M2 = similar(M)
@@ -292,13 +293,29 @@ end
     @info "Testing barycentric coordinates with models"
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
 
-    models = @inferred examplemodels(10)
+    models = @inferred examplemodels(8)
     d = @inferred EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
     Xe = @inferred barycenter(d, models)
     # models = change_precision.(Float64, models)
     # Xe = change_precision(Float64, Xe)
     λ = barycentric_coordinates(d,models, Xe)
     @test λ ≈ s1(ones(length(λ))) atol=0.02
+
+    λ = s1(rand(8))
+    Xe = @inferred barycenter(d, models, λ)
+    # models = change_precision.(Float64, models)
+    # Xe = change_precision(Float64, Xe)
+    λ2 = barycentric_coordinates(d,models, Xe)
+    @test ip(λ2,λ) > 0.85
+
+    models = @inferred examplemodels(5) # When the number of models is smaller than the number of poles it's very exact
+    λ = s1(rand(5))
+    Xe = @inferred barycenter(d, models, λ)
+    # models = change_precision.(Float64, models)
+    # Xe = change_precision(Float64, Xe)
+    λ2 = barycentric_coordinates(d,models, Xe)
+    @test λ2 ≈ λ atol=1e-6
+
 
     λ = barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
     isinteractive() && bar(λ)
