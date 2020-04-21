@@ -293,8 +293,8 @@ end
     @info "Testing barycentric coordinates with models"
     # The example below is likely to mix up the two lightly damped poles with euclidean root distance, making the bc poles end up inbetween the two clusters. The SRD should fix it
 
-    models = @inferred examplemodels(8)
     d = @inferred EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2)
+    models = @inferred examplemodels(8)
     Xe = @inferred barycenter(d, models)
     # models = change_precision.(Float64, models)
     # Xe = change_precision(Float64, Xe)
@@ -303,20 +303,36 @@ end
 
     λ = s1(rand(8))
     Xe = @inferred barycenter(d, models, λ)
-    # models = change_precision.(Float64, models)
-    # Xe = change_precision(Float64, Xe)
     λ2 = barycentric_coordinates(d,models, Xe)
     @test ip(λ2,λ) > 0.85
 
     models = @inferred examplemodels(5) # When the number of models is smaller than the number of poles it's very exact
     λ = s1(rand(5))
     Xe = @inferred barycenter(d, models, λ)
-    # models = change_precision.(Float64, models)
-    # Xe = change_precision(Float64, Xe)
     λ2 = barycentric_coordinates(d,models, Xe)
     @test λ2 ≈ λ atol=1e-6
 
+    # Change weighting function
+    d = @inferred EuclideanRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=simplex_residueweight)
+    models = @inferred examplemodels(8)
+    Xe = @inferred barycenter(d, models)
+    λ = barycentric_coordinates(d,models, Xe)
+    @test λ ≈ s1(ones(length(λ))) atol=0.1
 
+    λ = s1(rand(8))
+    Xe = @inferred barycenter(d, models, λ)
+    λ2 = barycentric_coordinates(d,models, Xe)
+    @test ip(λ2,λ) > 0.85
+
+    models = @inferred examplemodels(5) # When the number of models is smaller than the number of poles it's very exact
+    λ = s1(rand(5))
+    Xe = @inferred barycenter(d, models, λ)
+    λ2 = barycentric_coordinates(d,models, Xe)
+    @test λ2 ≈ λ atol=0.01
+
+
+
+    models = examplemodels(8)
     λ = barycentric_coordinates(d,models, models[1], verbose=false, iters=5000, α0=20)
     isinteractive() && bar(λ)
     @test λ[1] > 0.5
@@ -339,22 +355,22 @@ end
         pzmap!(tf(Xe), m=:c, title="Barycenter OptimalTransportRootDistance", lab="BC")
     end
 
-options = Optim.Options(
-    store_trace = true,
-    show_trace = false,
-    show_every = 1,
-    iterations = 50,
-    allow_f_increases = true,
-    time_limit = 100,
-    x_tol = 1e-7,
-    f_tol = 1e-7,
-    g_tol = 1e-7,
-    f_calls_limit = 0,
-    g_calls_limit = 0,
-)
-
-
     using Optim
+    options = Optim.Options(
+        store_trace = true,
+        show_trace = false,
+        show_every = 1,
+        iterations = 50,
+        allow_f_increases = true,
+        time_limit = 100,
+        x_tol = 1e-7,
+        f_tol = 1e-7,
+        g_tol = 1e-7,
+        f_calls_limit = 0,
+        g_calls_limit = 0,
+    )
+
+
     method = LBFGS()
     method=ParticleSwarm()
     # d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)

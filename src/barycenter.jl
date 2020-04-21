@@ -371,14 +371,36 @@ end
 
 function barycentric_coordinates(d::EuclideanRootDistance, models, qmodel, args...; kwargs...)
     d.p == 2 || throw(ArgumentError("p must be 2"))
-    d.weight == unitweight || throw(ArgumentError("Barycentric coordinates only implemented for root distance with weight function `unitweight`"))
     N = length(models)
     pl = embedding.(models)
     ql = embedding(qmodel)
+    if d.weight != unitweight
+        return _wrd_barycentric_coordinates(d,models,pl,ql)
+    end
     ⅅ  = reduce(hcat, pl) # Dictionary matrix
     TotalLeastSquares.sls(Float64.(ⅅ), Float64.(ql); kwargs...)
 end
 
+function _wrd_barycentric_coordinates(d,models,pl,ql)
+    N = length(models)
+
+    R = roots.(domain(d), models)
+    w = map(d.weight, R)
+    w2 = [Float64.(getindex.(w, i)) for i in 1:length(w[1])]
+    w2 = [w2;w2]
+
+    P = [Float64.(getindex.(pl, i)) for i in 1:length(pl[1])]
+    n = length(ql)
+
+    function scostfun(λ)
+        λ = softmax(λ)
+        sum(abs2(dot(λ,Diagonal(P[j]),w2[j])/dot(λ,w2[j]) - ql[j]) for j in 1:n)
+    end
+
+    res = Optim.optimize(scostfun, zeros(N), LBFGS(m=20), Optim.Options(store_trace=false, show_trace=false, show_every=1, iterations=100, allow_f_increases=false, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0), autodiff=:forward)
+
+    softmax(res.minimizer)
+end
 
 
 ##
