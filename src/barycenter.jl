@@ -529,16 +529,16 @@ end
 
 """
     alg2(X, Y, a, b;
-            β = 1/10,
-            θ = 0.5,
+            β          = 1/10,
+            θ          = 0.5,
             printerval = typemax(Int),
-            tol = 1.0e-6,
-            innertol = 1.0e-5,
-            iters = 500,
+            tol        = 1.0e-6,
+            innertol   = 1.0e-5,
+            iters      = 500,
             inneriters = 1000,
-            atol = 1.0e-32,
-            solver = IPOT,
-            γ = 1,
+            atol       = 1.0e-32,
+            solver     = IPOT,
+            γ          = 1,
         )
 
 Algorithm 2 from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.org/pdf/1310.4375.pdf) Notation is the same as in the paper.
