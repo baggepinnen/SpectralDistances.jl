@@ -102,8 +102,8 @@ function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
     D     = distmat_euclidean(m1, m2, d.p, od.tp, od.c)
-    w1    = s1(reduce(vcat,d.weight.(m1.models)))
-    w2    = s1(reduce(vcat,d.weight.(m2.models)))
+    w1    = s1(reduce(vcat,map(d.weight, m1.models)))
+    w2    = s1(reduce(vcat,map(d.weight, m2.models)))
     C     = solver(D,w1,w2; β=d.β, kwargs...)[1]
     if any(isnan, C)
         @info("Nan in OptimalTransportRootDistance, increasing precision")
