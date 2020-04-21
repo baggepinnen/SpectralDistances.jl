@@ -6,7 +6,7 @@ This repository implements all optimal-transport based distances between spectra
 
 ["New Metrics Between Rational Spectra and their Connection to Optimal Transport", Bagge Carlson and Chitre 2020](http://arxiv.org/abs/2004.09152)
 
-Supplamentary material to the paper is provided in a [separate repository](https://github.com/baggepinnen/SpectralDistances_supplementary_material).
+**Supplementary material** to the paper is provided in a [separate repository](https://github.com/baggepinnen/SpectralDistances_supplementary_material).
 
 The package also contains a number of generic solvers for optimal transport problems:
 - Fixed support in 1d (histograms)
