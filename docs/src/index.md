@@ -10,7 +10,7 @@ This package facilitates the calculation of distances between signals, primarily
 
 This repository implements all optimal-transport based distances between spectra detailed in the following pre-pre print
 
-[New Metrics Between Rational Spectra and their Connection to Optimal Transport, Bagge Carlson 2019](https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view?usp=sharing)
+["New Metrics Between Rational Spectra and their Connection to Optimal Transport", Bagge Carlson and Chitre 2020](http://arxiv.org/abs/2004.09152)
 
 ## High-level overview
 The main workflow is as follows
