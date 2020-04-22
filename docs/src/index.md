@@ -12,6 +12,13 @@ This repository implements all optimal-transport based distances between spectra
 
 ["New Metrics Between Rational Spectra and their Connection to Optimal Transport", Bagge Carlson and Chitre 2020](http://arxiv.org/abs/2004.09152)
 
+## Installation
+The package is registered and you may install it by
+```julia
+using Pkg
+pkg"add SpectralDistances"
+```
+
 ## High-level overview
 The main workflow is as follows
 1. Define a distance

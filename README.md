@@ -17,6 +17,12 @@ The package also contains a number of generic solvers for optimal transport prob
 
 See the [documentation](https://baggepinnen.github.io/SpectralDistances.jl/latest) for instructions.
 
+### Installation
+```julia
+using Pkg
+pkg"add SpectralDistances"
+```
+
 ![window](figs/spec.svg)
 > Interpolation between two rational spectra under four different metrics.
 
