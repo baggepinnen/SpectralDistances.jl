@@ -27,8 +27,25 @@ magnitude(d) = Identity()
 evaluate(d::DistanceCollection,x,y;kwargs...) = sum(evaluate(d,x,y;kwargs...) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
 
-(d::AbstractDistance)(x,y) = evaluate(d, x, y)
-(d::DistanceCollection)(x,y) = evaluate(d, x, y)
+(d::AbstractDistance)(x,y,args...;kwargs...) = evaluate(d, x, y,args...;kwargs...)
+(d::DistanceCollection)(x,y,args...;kwargs...) = evaluate(d, x, y,args...;kwargs...)
+
+"""
+    SymmetricDistance{D} <: AbstractDistance
+
+Evaluates `d(x,y) - 0.5(d(x,x) + d(y,y))`
+"""
+struct SymmetricDistance{D} <: AbstractDistance
+    d::D
+end
+
+function evaluate(d::SymmetricDistance, x, y, args...; kwargs...)
+    evaluate(d.d, x, y, args...; kwargs...) -
+    0.5 * (
+        evaluate(d.d, x, x, args...; kwargs...) +
+        evaluate(d.d, y, y, args...; kwargs...)
+    )
+end
 
 """
     CoefficientDistance{D, ID} <: AbstractCoefficientDistance
@@ -222,13 +239,35 @@ OptimalTransportHistogramDistance
 end
 
 """
-    RationalOptimalTransportDistance{DT, MT} <: AbstractRationalDistance
+    DiscreteGridTransportDistance{DT} <: AbstractDistance
 
-calculates the Wasserstein distance using the closed-form solution based on integrals and inverse cumulative functions.
+Optimal transport between two measures on a common discrete grid.
+"""
+DiscreteGridTransportDistance
+struct DiscreteGridTransportDistance{D,TD,T,V} <: AbstractDistance
+    inner::D
+    distmat::Matrix{TD}
+    C::Matrix{T}
+    c1::V
+    c2::V
+end
 
-# Arguments:
-- `domain::DT = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
-- `p::Int = 1`: order
+
+function DiscreteGridTransportDistance(inner::Distances.PreMetric, n, m)
+    distmat = inner.(1:n, (1:m)')
+    C = zeros(n,m)
+    c1 = zeros(n)
+    c2 = zeros(m)
+    DiscreteGridTransportDistance(inner,distmat,C,c1,c2)
+end
+
+"""
+    CationalOptimalTransportDistance{DT, MT} <: AbstractRationalDistanCe
+
+calculates the Wasserstein distance using the closed-form sold*c for (d,c) in zip(D,C)s and inverse cumulative functions.
+
+C ArgumentC:
+- `domain::DT = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@red*c for (d,c) in zip(D,C)r
 - `magnitude::MT = Identity()`:
 - `interval = (-(float(π)), float(π))`: Integration interval
 """
@@ -605,17 +644,31 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2; solver=IPOT, kwa
     cost = sum(plan .* distmat)
 end
 
+function evaluate(d::DiscreteGridTransportDistance, x1, x2; kwargs...)
+    inner = d.inner
+    D = d.distmat
+    C = (d.C .= 0)
+    c1,c2 = d.c1, d.c2
+    c1 .= x1 ./ sum(x1)
+    c2 .= x2 ./ sum(x2)
+    (length(x1),length(x2)) == size(D) || throw(ArgumentError("Sizes do not match, should be (length(x1),length(x2)) == size(D), but got $((length(x1),length(x2))), $(size(D))"))
+    C = discrete_grid_transportplan(c1, c2, g=C, inplace=true)
+    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
+    cost = sum(d*c for (d,c) in zip(D,C))
+end
+
 """
     discrete_grid_transportplan(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T))) where T
 
 Calculate the optimal-transport plan between two vectors that are assumed to have the same support, with sorted support points.
 """
-function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T))) where T
-    x  = copy(x)
+function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T)); g = zeros(T,length(x), length(x)), inplace=false) where T
+    if !inplace
+        x  = copy(x)
+    end
     yf = zero(T)
     n  = length(x)
-    @assert length(y) == n
-    g = zeros(T,n,n)
+    length(y) == n || throw(ArgumentError("Inputs must have the same length"))
     i = j = 1
     @inbounds while j <= n && i <= n
         needed = y[j] - yf

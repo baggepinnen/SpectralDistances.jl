@@ -165,7 +165,7 @@ function barycenter(X::Vector{<:AbstractArray}, λ; uniform=true, solver=sinkhor
 end
 
 function perturb!(X0,X)
-    m = 0.1minimum(x->std(x), X)
+    m = 0.1minimum(std, X)
     X0 .+= m .* randn.()
 end
 
@@ -173,7 +173,7 @@ function barycenter(X::Vector{<:AbstractArray}, p, λ; uniform=true, solver=sink
     N = length(X)
     n = size(X[1],2)
     w = s1(ones(n))
-    m = 0.1minimum(x->std(x), X)
+    m = 0.1minimum(std, X)
     # X0 = mean(X)
     ind = rand(1:length(X))
     X0 = X[ind] .- mean(X[ind],dims=2) .+ mean(mean.(X, dims=2))
