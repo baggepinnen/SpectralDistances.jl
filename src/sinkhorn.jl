@@ -115,7 +115,7 @@ The workspace `w` is created linke this: `w = SinkhornLogWorkspace(FloatType, le
 """
 function sinkhorn_log!(C, a, b; kwargs...)
     T = promote_type(eltype(a), eltype(b), eltype(C))
-    w = SinkhornLogWorkspace(T,a,b)
+    w = SinkhornLogWorkspace(T, length(a), length(b))
     sinkhorn_log!(w, C, a, b; kwargs...)
 end
 
