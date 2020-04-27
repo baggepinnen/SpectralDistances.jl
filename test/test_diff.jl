@@ -249,7 +249,7 @@ end
 #         ai = s1(a)
 #         bi = s1(a+b)
 #         P,u,v = sinkhorn(D,ai,bi, iters=1000, β=0.1)
-#         sum(P.*D)
+#         dot(P, D)
 #     end
 #     a,b = abs.(randn(6)),abs.(randn(6))
 #     D = SpectralDistances.distmat_euclidean(1:length(a), 1:length(a))

@@ -604,12 +604,23 @@ function residues(a::AbstractVector, b, r::AbstractVector{CT} = hproots(rev(a)))
     # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that
     n = length(a)-1
     ap = polyderivative(a)
-    res = map(r) do r
+    map(r) do r
         CT(polyval(b, r)/polyval(ap, r))
     end
 end
 
+function abs2residues!(rw, a::AbstractVector, b, r::AbstractVector{CT} = hproots(rev(a))) where CT
+    # a[1] ≈ 1 || println("Warning: a[1] is ", a[1]) # This must not be @warn because Zygote can't differentiate that
+    n = length(a)-1
+    ap = polyderivative(a)
+    map!(rw, r) do r
+        abs2(polyval(b, r)/polyval(ap, r))
+    end
+end
+
 residues(d::TimeDomain, m::AbstractModel) = residues(denvec(d,m), numvec(d,m), roots(d,m))
+
+abs2residues!(rw, d::TimeDomain, m::AbstractModel) = abs2residues!(rw, denvec(d,m), numvec(d,m), roots(d,m))
 
 
 """
@@ -623,6 +634,7 @@ function residues(r::AbstractRoots)
     residues(a, 1, r)
 end
 
+
 function residueweight(m::AbstractModel)
     res = residues(Continuous(), m)
     e = roots(Continuous(), m)
@@ -630,11 +642,18 @@ function residueweight(m::AbstractModel)
     isderiving() ? complex.(rw) : rw
 end
 
+function residueweight!(rw, m::AbstractModel)
+    abs2residues!(rw, Continuous(), m)
+    e = roots(Continuous(), m)
+    @. rw = abs(π*rw/ real(e))
+    isderiving() ? complex.(rw) : rw
+end
+
 function unitweight(m::AbstractModel)
     r = roots(Continuous(), m)
     RT = float(real(eltype(r)))
     N = length(r)
-    fill(RT(1/N), N)
+    Fill(RT(1/N), N)
 end
 
 # Base.delete_method.(methods(residues))

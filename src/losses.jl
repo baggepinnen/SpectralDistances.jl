@@ -343,14 +343,14 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 The euclidean distance matrix between two vectors of complex numbers
 """
-distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p # Do not replace with call to mutating version, Zygote limitation
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = @avx abs.(e1 .- transpose(e2)).^p # Do not replace with call to mutating version, Zygote limitation
 
 """
     distmat_euclidean!(D, e1::AbstractVector, e2::AbstractVector, p = 2) = begin
 
 In-place version
 """
-distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 .- transpose(e2)).^p
+distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = @avx D .= abs.(e1 .- transpose(e2)).^p
 
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
@@ -501,7 +501,7 @@ function evaluate(
         error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         C = eltype(D).(C)
     end
-    sum(C .* D)
+    dot(C,D)
 end
 
 function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real}; kwargs...)
@@ -616,7 +616,7 @@ end
 function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
-    cost = sum(C .* D)
+    cost = dot(C, D)
     if !isfinite(cost)
         @show count(!isfinite, w1.power), count(!isfinite, w2.power), count(!isfinite, C), count(!isfinite, D)
         error("WelchOptimalTransportDistance failed")

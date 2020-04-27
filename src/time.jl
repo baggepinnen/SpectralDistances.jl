@@ -39,11 +39,17 @@ end
     m.models[j].pc[i]
 end
 
+
+@inline function divmod(a,b)
+    c = a÷b
+    d = a - c*b
+    c,d
+end
+
 @inline function mi2ij(m,i)
     r,c = size(m)
-    j = (i-1) ÷ r + 1
-    i = (i-1) % r + 1
-    i,j
+    j, i = divmod((i-1), r)
+    i+1, j+1
 end
 
 @inline function Base.getindex(m::TimeVaryingAR, i::Int)
@@ -88,13 +94,20 @@ preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 
 distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
-function distmat_euclidean!(D, m1::TimeVaryingAR,m2::TimeVaryingAR, p, tp, c)
+function distmat_euclidean!(D, m1::TimeVaryingAR, m2::TimeVaryingAR, p, tp, c)
     @assert size(D) == (length(m1), length(m2))
+    _distmat_kernel!( D, m1, m2, c,
+        p == 1 ? Base.FastMath.abs_fast : Base.FastMath.abs2_fast,
+        tp == 1 ? Base.FastMath.abs_fast : Base.FastMath.abs2_fast,
+    )
+end
+
+function _distmat_kernel!(D,m1,m2,c,f1::F1,f2::F2) where {F1,F2}
     @fastmath @inbounds for j in 1:length(m2)
         for i in 1:length(m1)
             _,t1 = mi2ij(m1,i)
             _,t2 = mi2ij(m2,j)
-            D[i,j] = abs(m1[i]-m2[j])^p + c*abs(t1-t2)^tp
+            D[i,j] = f1(m1[i]-m2[j]) + c*f2(t1-t2)
         end
     end
     D
@@ -114,7 +127,7 @@ function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=
         any(isnan, C) && error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         eltype(D).(C)
     end
-    sum(C.*D)
+    dot(C, D)
 end
 
 
@@ -124,14 +137,14 @@ function evaluate_nn(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; solve
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
 
-    T = eltype(q.models[1].a)
-    N = length(q)
+    T  = eltype(q.models[1].a)
+    N  = length(q)
     na = length(q.models[1].pc)
     nq = length(q.models)
     ny = length(y.models)
     w1 = s1(reduce(vcat,map(d.weight, q.models)))
     w2 = similar(w1)
-    C = Matrix{T}(undef, N, N)
+    C  = Matrix{T}(undef, N, N)
 
     workspace = SinkhornLogWorkspace(T,N,N)
 
@@ -140,11 +153,13 @@ function evaluate_nn(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; solve
         distmat_euclidean!(C, q, Y, d.p, od.tp, od.c)
         inds = (1:na)
         for i in eachindex(Y.models)
-            w2[inds] .= d.weight(Y.models[i])
+            residueweight!(@view(w2[inds]), Y.models[i])
+            @views w2[inds] ./= sum(w2[inds])
+            # w2[inds] .= d.weight(Y.models[i])
             inds = inds .+ na
         end
         w2  ./= sum(w2)
         Γ = solver(workspace,C,w1,w2; β=d.β, kwargs...)[1]
-        sum(Γ .* C)
+        dot(Γ,C)
     end
 end
