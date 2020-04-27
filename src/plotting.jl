@@ -146,3 +146,22 @@ end
     rad || (w = w .* 2π)
     w, sqrt.(mag)
 end
+
+
+@recipe function plot(
+    m::TimeVaryingAR,
+    w = exp10.(LinRange(-2, log10(pi), 200));
+    rad = true,
+)
+    rad || (w = w .* 2π)
+    mag =
+        evalfr.(
+            Continuous(),
+            Identity(),
+            w,
+            reshape(m.models, 1, :),
+            getfield.(m.models, :b)',
+        )
+    seriestype --> :heatmap
+    log.(mag)
+end

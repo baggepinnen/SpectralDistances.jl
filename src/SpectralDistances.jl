@@ -12,8 +12,10 @@ using DSP,
     Distances,
     DocStringExtensions,
     DoubleFloats,
+    FillArrays,
     Hungarian,
     Lazy,
+    LoopVectorization,
     Optim,
     OrdinaryDiffEq,
     PolynomialRoots,
@@ -62,7 +64,10 @@ export ls,
     move_real_poles,
     checkroots,
     change_precision,
-    embedding
+    embedding,
+    distmat,
+    distmat_euclidean,
+    distmat_euclidean!
 
 export evaluate,
 AbstractDistance,
@@ -129,11 +134,11 @@ include("ltimodels.jl")
 include("losses.jl")
 include("interpolations.jl")
 include("utils.jl")
-include("plotting.jl")
 include("sinkhorn.jl")
 include("barycenter.jl")
-include("adjoints.jl")
 include("time.jl")
+include("plotting.jl")
+include("adjoints.jl")
 
 import Requires
 function __init__()

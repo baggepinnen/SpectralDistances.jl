@@ -1,3 +1,22 @@
+abstract type SolverWorkspace end
+struct SinkhornLogWorkspace{T, MT <: AbstractMatrix{T}, VT <: AbstractVector{T}} <: SolverWorkspace
+    K::MT
+    Γ::MT
+    u::VT
+    v::VT
+    alpha::VT
+    beta::VT
+end
+
+function SinkhornLogWorkspace(T,n,m)
+    alpha,beta = zeros(T, n), zeros(T, m)
+    K = Matrix{T}(undef, n, m)
+    Γ = similar(K)
+    u = ones(T, n)
+    v = ones(T, m)
+    SinkhornLogWorkspace(K,Γ,u,v,alpha,beta)
+end
+
 """
     Γ, u, v = sinkhorn(C, a, b; β=1e-1, iters=1000)
 
@@ -86,37 +105,55 @@ end
 
 """
 Same as [`sinkhorn_log`](@ref) but operates in-place to save memory allocations. This function has higher performance than `sinkhorn_log`, but might not work as well with AD libraries.
+
+This function can be made completely allocation free with the interface
+    sinkhorn_log(w::SinkhornLogWorkspace{T}, C, a, b; kwargs...)
+
+The `sinkhorn_log!` solver also accepts a keyword argument `check_interval = 20` that determines how often the convergence criteria is checked. If `β` is large, the algorithm might converge very fast and you can save some iterations by reducing the check interval. If `β` is small and the algorithm requires many iterations, a larger number saves you from computing the check too often.
+
+The workspace `w` is created linke this: `w = SinkhornLogWorkspace(FloatType, length(a), length(b))`
 """
-function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int), kwargs...)
+function sinkhorn_log!(C, a, b; kwargs...)
+    T = promote_type(eltype(a), eltype(b), eltype(C))
+    w = SinkhornLogWorkspace(T,a,b)
+    sinkhorn_log!(w, C, a, b; kwargs...)
+end
+
+using LoopVectorization
+
+function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
+    check_interval = 20, kwargs...) where T
     @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
-    T = promote_type(eltype(a), eltype(b), eltype(C))
-    alpha,beta = (zeros(T, size(a)) .= 0), (zeros(T, size(b)) .= 0)
     ϵ = eps()
-    K = @. exp(-C / β)
-    Γ = zeros(T, size(K))
-    u = ones(T, size(a))
-    v = ones(T, size(b))
+    K, Γ, u, v, alpha, beta = w.K, w.Γ, w.u, w.v, w.alpha, w.beta
+    @avx @. K = exp(-C / β)
+    u .= 1
+    v .= 1
+    alpha .= 0
+    beta  .= 0
     local v, iter
     iter = 0
     for outer iter = 1:iters
         mul!(v,K',u)
-        v .= b ./ (v .+ ϵ)
+        @avx v .= b ./ (v .+ ϵ)
         mul!(u,K,v)
-        u .= a ./ (u .+ ϵ)
+        @avx u .= a ./ (u .+ ϵ)
 
         if maximum(abs, u) > τ || maximum(abs, v) > τ
-            @. alpha += β * log(u)
-            @. beta  += β * log(v)
+            @avx @. alpha += β * log(u)
+            @avx @. beta  += β * log(v)
             u .= 1
             v .= 1
-            @. K = exp(-(C-alpha-beta') / β)
+            @avx @. K = exp(-(C-alpha-beta') / β)
         end
         if any(!isfinite, u) || any(!isfinite, u)
             error("Got NaN in sinkhorn_log")
         end
-        if iter % 20 == 0 || iter % printerval == 0
-            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+        # @show lowerbound(a,b,u,v,alpha,beta,β)
+
+        if iter % check_interval == 0 || iter % printerval == 0
+            @avx @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
             err = +(ot_error(Γ, a, b)...)
             iter % printerval == 0 && @info "Iter: $iter, err: $err"
             if err < tol
@@ -125,13 +162,13 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
         end
 
     end
-    @. Γ = exp(-(C-alpha-beta') / β + log(u + ϵ) + log(v' + ϵ))
-    @. u = -β*log(u + ϵ) - alpha
-    u .-= mean(u)
-    @. v = -β*log(v + ϵ) - beta
-    v .-= mean(v)
+    @avx @. Γ = exp(-(C-alpha-beta') / β + log(u + ϵ) + log(v' + ϵ))
+    @avx @. u = -β*log(u + ϵ) - alpha
+    @avx u .-= mean(u)
+    @avx @. v = -β*log(v + ϵ) - beta
+    @avx v .-= mean(v)
 
-    @assert isapprox(sum(u), 0, atol=1e-10length(u)) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    @assert isapprox(sum(u), 0, atol=sqrt(eps(T))*length(u)) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
     iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
 
     ea, eb = ot_error(Γ, a, b)
@@ -140,6 +177,15 @@ function sinkhorn_log!(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerva
     end
 
     Γ, u, v
+end
+
+function lowerbound(a,b,u,v,alpha,beta,β)
+        ϵ = 1e-16
+        u = @.  -β*log(u + ϵ) - alpha
+        # u .-= mean(u)
+        v = @.  -β*log(v + ϵ) - beta
+        # v .-= mean(v)
+        u'a + v'b
 end
 
 """
@@ -164,12 +210,12 @@ function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int),
     local a
     iter = 0
     for outer iter = 1:iters
-        Q .= G .* Γ
+        @avx Q .= G .* Γ
         mul!(a, Q, b)
-        a .= μ ./ (a .+ ϵ)
+        @avx a .= μ ./ (a .+ ϵ)
         mul!(b, Q', a)
-        b .= ν ./ (b .+ ϵ)
-        Γ .= a .* Q .* b'
+        @avx b .= ν ./ (b .+ ϵ)
+        @avx Γ .= a .* Q .* b'
 
         if iter % 20 == 0 || iter % printerval == 0
             err = +(ot_error(Γ, μ, ν)...)
@@ -183,10 +229,10 @@ function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int),
     end
     printerval < iters && iter == iters && @info "IPOT: maximum number of iterations reached: $iters"
 
-    @. a = -β*log(a + ϵ)
-    a .-= mean(a)
-    @. b = -β*log(b + ϵ)
-    b .-= mean(b)
+    @avx @. a = -β*log(a + ϵ)
+    @avx a .-= mean(a)
+    @avx @. b = -β*log(b + ϵ)
+    @avx b .-= mean(b)
     eμ,eν = ot_error(Γ, μ, ν)
     if eμ > tol || eν > tol
         @error "IPOT: iter: $iter Inaccurate solution - eμ: $eμ, eν: $eν, tol: $tol"
@@ -194,7 +240,28 @@ function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int),
     Γ, a, b
 end
 
-ot_error(Γ, μ, ν) = norm(vec(sum(Γ, dims=2)) - μ)/norm(μ), norm(vec(sum(Γ, dims=1)) - ν)/norm(ν)
+@fastmath @inbounds @inline function ot_error(Γ, μ, ν)
+    T = eltype(Γ)
+    s1 = n1 = s2 = n2 = zero(T)
+    for i = 1:length(μ)
+        sg = zero(T)
+        @simd for j = 1:length(ν)
+            sg += Γ[i,j]
+        end
+        s1 += abs2(μ[i] - sg)
+        n1 += μ[i]
+    end
+    for i = 1:length(ν)
+        sg = zero(T)
+        @simd for j = 1:length(μ)
+            sg += Γ[j,i]
+        end
+        s2 += abs2(ν[i] - sg)
+        n2 += ν[i]
+    end
+
+    s1 / sqrt(n1), s2 / sqrt(n2)
+end
 
 
 # function IPOT(C, μ, ν; β=1, iters=2)

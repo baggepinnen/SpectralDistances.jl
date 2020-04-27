@@ -27,8 +27,8 @@ This model represents a rational spectrogram, i.e., a rational spectrum that cha
 
 Internally, this model stores a vector of [`AR`](@ref).
 """
-struct TimeVaryingAR{T<:AR} <: AbstractModel
-    models::Vector{T}
+struct TimeVaryingAR{MT<:AR, VT <: AbstractVector{MT}} <: AbstractModel
+    models::VT
 end
 
 @inline Base.length(m::TimeVaryingAR) = sum(length, m.models)-length(m.models) # the length of a model is 1 more than the number of poles due to the numerator
@@ -89,10 +89,13 @@ preprocess_roots(d, e::Vector{<:AbstractRoots}) = e
 distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclidean!(zeros(length(m1),length(m2)), m1, m2, p, tp, c)
 
 function distmat_euclidean!(D, m1::TimeVaryingAR,m2::TimeVaryingAR, p, tp, c)
-    for i in 1:length(m1), j in 1:length(m2)
-        _,t1 = mi2ij(m1,i)
-        _,t2 = mi2ij(m2,j)
-        D[i,j] = abs(m1[i]-m2[j])^p + c*abs(t1-t2)^tp
+    @assert size(D) == (length(m1), length(m2))
+    @fastmath @inbounds for j in 1:length(m2)
+        for i in 1:length(m1)
+            _,t1 = mi2ij(m1,i)
+            _,t2 = mi2ij(m2,j)
+            D[i,j] = abs(m1[i]-m2[j])^p + c*abs(t1-t2)^tp
+        end
     end
     D
 end
@@ -112,4 +115,36 @@ function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=
         eltype(D).(C)
     end
     sum(C.*D)
+end
+
+
+
+
+function evaluate_nn(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; solver::F=sinkhorn_log!, kwargs...) where F
+    d     = od.inner
+    @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
+
+    T = eltype(q.models[1].a)
+    N = length(q)
+    na = length(q.models[1].pc)
+    nq = length(q.models)
+    ny = length(y.models)
+    w1 = s1(reduce(vcat,map(d.weight, q.models)))
+    w2 = similar(w1)
+    C = Matrix{T}(undef, N, N)
+
+    workspace = SinkhornLogWorkspace(T,N,N)
+
+    map(1:ny-nq) do i
+        @views Y = TimeVaryingAR(y.models[i:i+nq-1])
+        distmat_euclidean!(C, q, Y, d.p, od.tp, od.c)
+        inds = (1:na)
+        for i in eachindex(Y.models)
+            w2[inds] .= d.weight(Y.models[i])
+            inds = inds .+ na
+        end
+        w2  ./= sum(w2)
+        Γ = solver(workspace,C,w1,w2; β=d.β, kwargs...)[1]
+        sum(Γ .* C)
+    end
 end

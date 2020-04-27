@@ -207,3 +207,19 @@ options = (solver=sinkhorn_log!, tol=1e-6, iters=100_000)
 distance = OptimalTransportRootDistance(domain=Continuous(), p=1, β=0.001)
 SpectralDistances.evaluate(distance, model1, model2; options...)
 ```
+
+### Maximum performance
+This solver [`sinkhorn_log!`](@ref) can be made completely allocation free with the interface
+```julia
+sinkhorn_log(w::SinkhornLogWorkspace{T}, C, a, b; kwargs...)
+```
+The workspace `w` is created linke this:
+```julia
+w = SinkhornLogWorkspace(eltype(a), length(a), length(b))
+```
+This will save you both allocations and time if called multiple times, especially important if you intend to make use of multiple threads. For multiple threads, make sure to create one workspace for each thread.
+
+The [`sinkhorn_log!`](@ref) solver also accepts a keyword argument `check_interval = 20` that determines how often the convergence criteria is checked. If `β` is large, the algorithm might converge very fast and you can save some iterations by reducing the check interval. If `β` is small and the algorithm requires many iterations, a larger number saves you from computing the check too often.
+
+See also inplace functions
+- [`distmat_euclidean!`](@ref)
