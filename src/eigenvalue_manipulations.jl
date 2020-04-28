@@ -209,7 +209,7 @@ function residueweight(e::AbstractRoots)
     isderiving() ? complex.(rw) : rw
 end
 
-function residueweight!(rw,e::AbstractRoots)
+function residueweight(rw,e::AbstractRoots)
     # @warn "This method disregards the numerator"
     abs2residues!(rw,ContinuousRoots(e))
     @. rw = abs(π*rw/ real(e))
@@ -222,8 +222,8 @@ end
 Returns a vector where each entry is roughly corresponding to the amount of energy contributed to the spectrum be each pole, normalized to sum to 1. See [`residueweight`](@ref) for a non-normalized version.
 """
 simplex_residueweight(x) = s1(residueweight(x))
-function simplex_residueweight!(rw, x)
-    residueweight!(rw, x)
+function simplex_residueweight(rw, x)
+    residueweight(rw, x)
     rw ./= sum(rw)
     rw
 end
@@ -240,7 +240,7 @@ function unitweight(e::AbstractArray{T}) where T
     isderiving() ? complex.(Fill(RT(1/N),size(e))) : Fill(RT(1/N),size(e))
 end
 
-unitweight(s, e::AbstractArray{T}) = s .= unitweight(e) # support inplace version
+unitweight(s, e::AbstractArray) = s .= unitweight(e) # support inplace version
 
 toreim(x::AbstractVector{<:Complex}) = (real.(x), imag.(x))
 toreim(x::Tuple) = x

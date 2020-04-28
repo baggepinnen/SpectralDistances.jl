@@ -83,9 +83,14 @@ TimeWindow
 end
 
 function fitmodel(fm::TimeWindow, x)
-    n,noverlap = fm.n, fm.noverlap
-    models = map(arraysplit(x,n,noverlap)) do slice
-        fitmodel(fm.inner, slice)
+    @show n,na,noverlap = fm.n, fm.inner.na, fm.noverlap
+    if fm.inner.λ > 0
+        AS = similar(x, n, na+1)
+    else
+        AS = similar(x, n-na, na+1)
+    end
+    models = @showprogress 0.8 "Model estimation" map(arraysplit(x,n,noverlap)) do slice
+        fitmodel!(AS, fm.inner, slice)
     end
     TimeVaryingAR(models)
 end
@@ -97,8 +102,10 @@ distmat_euclidean(m1::AbstractModel,m2::AbstractModel,p, tp, c) = distmat_euclid
 function distmat_euclidean!(D, m1::TimeVaryingAR, m2::TimeVaryingAR, p, tp, c)
     @assert size(D) == (length(m1), length(m2))
     _distmat_kernel!( D, m1, m2, c,
-        p == 1 ? Base.FastMath.abs_fast : Base.FastMath.abs2_fast,
-        tp == 1 ? Base.FastMath.abs_fast : Base.FastMath.abs2_fast,
+        p == 1 ? Base.FastMath.abs_fast :
+        p == 2 ? Base.FastMath.abs2_fast : error("p must be 1 or 2"),
+        tp == 1 ? Base.FastMath.abs_fast :
+        tp == 2 ? Base.FastMath.abs2_fast : error("tp must be 1 or 2"),
     )
 end
 
@@ -133,9 +140,12 @@ end
 
 
 
-function evaluate_nn(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; solver::F=sinkhorn_log!, kwargs...) where F
+function distance_profile(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...) where F
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
+    any(methods(d.weight).ms) do m
+        m.nargs == 3
+    end || throw(ArgumentError("distance_profile requires the weight function of the distance to support in-place update on the form `weightfun(weights, roots)`. See simplex_residueweight, residueweight, unitweight"))
 
     T  = eltype(q.models[1].a)
     N  = length(q)
@@ -148,18 +158,63 @@ function evaluate_nn(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; solve
 
     workspace = SinkhornLogWorkspace(T,N,N)
 
-    map(1:ny-nq) do i
+    @showprogress 1 "Distance profile" map(1:ny-nq) do i
         @views Y = TimeVaryingAR(y.models[i:i+nq-1])
         distmat_euclidean!(C, q, Y, d.p, od.tp, od.c)
         inds = (1:na)
         for i in eachindex(Y.models)
-            residueweight!(@view(w2[inds]), Y.models[i])
-            @views w2[inds] ./= sum(w2[inds])
-            # w2[inds] .= d.weight(Y.models[i])
+            d.weight(@view(w2[inds]), Y.models[i])
+            if normalize_each_timestep
+                w2[inds] ./= sum(@view(w2[inds]))
+            end
             inds = inds .+ na
         end
         w2  ./= sum(w2)
-        Γ = solver(workspace,C,w1,w2; β=d.β, kwargs...)[1]
+        Γ = sinkhorn_log!(workspace,C,w1,w2; β=d.β, kwargs...)[1]
         dot(Γ,C)
     end
+end
+
+
+
+function distance_profile(d::AbstractDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...) where F
+    T  = eltype(q.models[1].a)
+    N  = length(q)
+    na = length(q.models[1].pc)
+    nq = length(q.models)
+    ny = length(y.models)
+    w1 = s1(reduce(vcat,map(d.weight, q.models)))
+    w2 = s1(reduce(vcat,map(d.weight, y.models)))
+    C  = Matrix{T}(undef, N, N)
+
+    any(methods(d.weight).ms) do m
+        m.nargs == 3
+    end || throw(ArgumentError("distance_profile requires the weight function of the distance to support in-place update on the form `weightfun(weights, roots)`. See simplex_residueweight, residueweight, unitweight"))
+
+    # workspace = SinkhornLogWorkspace(T,N,N)
+
+    @showprogress 1 "Distance profile"  map(1:ny-nq) do i
+        @views Y = TimeVaryingAR(y.models[i:i+nq-1])
+        inds = (1:na)
+        for i in eachindex(Y.models)
+            if normalize_each_timestep
+                w2[inds] ./= sum(@view(w2[inds]))
+            end
+            inds = inds .+ na
+        end
+        w2  ./= sum(w2)
+        evaluate(d,e1,e2,w1,w2)
+    end
+end
+
+
+struct PrimitiveModel{R <: AbstractVector,W <: AbstractVector} <: AbstractModel
+    roots::R
+    weights::W
+end
+
+function PrimitiveModel(d::AbstractDistance, m::AbstractModel)
+    r = roots(domain(d), m)
+    w = d.weight(r)
+    PrimitiveModel(r.r,w)
 end

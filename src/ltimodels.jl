@@ -283,6 +283,12 @@ function fitmodel(fm::LS,X::AbstractArray)
     AR(a, var(X))
 end
 
+function fitmodel!(AS, fm::LS, X::AbstractArray)
+    y,A = getARregressor!(AS, X, fm.na)
+    a = ls(A, y, fm.λ, true) |> polyvec
+    AR(a, var(X))
+end
+
 
 # diffpol(n) = [(-1)^k*binomial(n,k) for k in 1:n]
 diffpol(n) = diagm(0=>ones(n), 1=>-ones(n))[:,1:n]
@@ -292,12 +298,17 @@ diffpol(n) = diagm(0=>ones(n), 1=>-ones(n))[:,1:n]
 
 Regularized Least-squares
 """
-function ls(A, y, λ=0)
+function ls(A, y, λ=0, regspace=false)
     isderiving() && (return _ls(A,y,λ))
     n = size(A,2)
     if λ > 0
-        A = [A; sqrt(λ)*I]
-        y = [y;zeros(n)]
+        if regspace # There's room for the regularization
+            A[end-n+1:end, :] .= (sqrt(λ)*I)(n)
+            y[end-n+1:end]    .= 0
+        else
+           A = [A; sqrt(λ)*I]
+           y = [y;zeros(n)]
+        end
     end
     # @show size(A2), size(y)
     # svd(A2)\y
@@ -447,15 +458,14 @@ end
 
 Returns a toepliz matrix with first column and row specified (c[1] == r[1]).
 """
-function toeplitz(c,r)
+function toeplitz(c,r, A = similar(c, length(c), length(r)))
     @assert c[1] == r[1]
     nc = length(c)
     nr = length(r)
-    A  = similar(c, nc, nr)
-    A[:,1] = c
+    A[1:nc,1] = c
     A[1,:] = r
     for i in 2:nr
-        A[2:end,i] = A[1:end-1,i-1]
+        A[2:nc,i] = @view A[1:nc-1,i-1]
     end
     A
 end
@@ -463,10 +473,20 @@ end
 function getARregressor(y, na)
     m    = na+1 # Start of yr
     n    = length(y) - m + 1 # Final length of yr
-    A    = toeplitz(y[m:m+n-1],y[m:-1:m-na])
+    A    = @views toeplitz(y[m:m+n-1],y[m:-1:m-na])
     @assert size(A,2) == na+1
     y    = A[:,1] # extract yr
     A    = A[:,2:end]
+    return y,A
+end
+
+function getARregressor!(AS, y, na)
+    m    = na+1 # Start of yr
+    @assert size(AS,2) == m "Expected size(A,2) == m got size(A,2) == $((size(AS,2), m))"
+    n    = length(y) - m + 1 # Final length of yr
+    A    = @views toeplitz(y[m:m+n-1],y[m:-1:m-na], AS)
+    y    = @view A[:,1] # extract yr
+    A    = @view A[:,2:end]
     return y,A
 end
 
@@ -642,7 +662,7 @@ function residueweight(m::AbstractModel)
     isderiving() ? complex.(rw) : rw
 end
 
-function residueweight!(rw, m::AbstractModel)
+function residueweight(rw, m::AbstractModel)
     abs2residues!(rw, Continuous(), m)
     e = roots(Continuous(), m)
     @. rw = abs(π*rw/ real(e))

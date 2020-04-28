@@ -19,6 +19,7 @@ using DSP,
     Optim,
     OrdinaryDiffEq,
     PolynomialRoots,
+    ProgressMeter,
     QuadGK,
     RecipesBase,
     Roots,
@@ -70,6 +71,7 @@ export ls,
     distmat_euclidean!
 
 export evaluate,
+distance_profile,
 AbstractDistance,
 AbstractRationalDistance,
 AbstractSignalDistance,
@@ -161,6 +163,10 @@ function __init__()
     Requires.@require Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5" begin
         export kbarycenters
         include("kbarycenters.jl")
+    end
+
+    Requires.@require DynamicAxisWarping = "aaaaaaaa-4a10-5553-b683-e707b00e83ce" begin
+        include("dtw.jl")
     end
 end
 end # module
