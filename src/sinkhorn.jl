@@ -115,10 +115,10 @@ The workspace `w` is created linke this: `w = SinkhornLogWorkspace(FloatType, le
 """
 function sinkhorn_log!(C, a, b; kwargs...)
     T = promote_type(eltype(a), eltype(b), eltype(C))
-    if T <: Double64
-        T = Float64
-        a,b = Float64.(a), Float64.(b)
-    end
+    # if T <: Double64
+    #     T = Float64
+    #     C,a,b = Float64.(C), Float64.(a), Float64.(b)
+    # end
     w = SinkhornLogWorkspace(T, length(a), length(b))
     sinkhorn_log!(w, C, a, b; kwargs...)
 end
@@ -127,6 +127,65 @@ using LoopVectorization
 
 function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
     check_interval = 20, kwargs...) where T
+    @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
+    @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
+    ϵ = eps()
+    K, Γ, u, v, alpha, beta = w.K, w.Γ, w.u, w.v, w.alpha, w.beta
+    @. K = exp(-C / β)
+    u .= 1
+    v .= 1
+    alpha .= 0
+    beta  .= 0
+    local v, iter
+    iter = 0
+    for outer iter = 1:iters
+        mul!(v,K',u)
+        v .= b ./ (v .+ ϵ)
+        mul!(u,K,v)
+        u .= a ./ (u .+ ϵ)
+
+        if maximum(abs, u) > τ || maximum(abs, v) > τ
+            @. alpha += β * log(u)
+            @. beta  += β * log(v)
+            u .= 1
+            v .= 1
+            @. K = exp(-(C-alpha-beta') / β)
+        end
+        if any(!isfinite, u) || any(!isfinite, u)
+            error("Got NaN in sinkhorn_log")
+        end
+        # @show lowerbound(a,b,u,v,alpha,beta,β)
+
+        if iter % check_interval == 0 || iter % printerval == 0
+            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
+            err = +(ot_error(Γ, a, b)...)
+            iter % printerval == 0 && @info "Iter: $iter, err: $err"
+            if err < tol
+               break
+            end
+        end
+
+    end
+    @. Γ = exp(-(C-alpha-beta') / β + log(u + ϵ) + log(v' + ϵ))
+    @. u = -β*log(u + ϵ) - alpha
+    u .-= mean(u)
+    @. v = -β*log(v + ϵ) - beta
+    v .-= mean(v)
+
+    @assert isapprox(sum(u), 0, atol=sqrt(eps(T))*length(u)) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
+    iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
+
+    ea, eb = ot_error(Γ, a, b)
+    if ea > tol || eb > tol
+        @error "sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
+    end
+
+    Γ, u, v
+end
+
+# This is just the same as the one above, but with @avx so it only supports simple types
+function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C::Matrix{T}, a::Vector{T}, b::Vector{T}; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
+    check_interval = 20, kwargs...) where T <: Base.HWReal
     @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
     ϵ = eps()
@@ -140,7 +199,7 @@ function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, ite
     iter = 0
     for outer iter = 1:iters
         mul!(v,K',u)
-        @avx v .= b ./ (v .+ ϵ)
+        @avx v .= b ./ (v .+ ϵ) # Some tests fail due to https://github.com/chriselrod/LoopVectorization.jl/issues/103
         mul!(u,K,v)
         @avx u .= a ./ (u .+ ϵ)
 

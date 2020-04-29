@@ -144,7 +144,7 @@ struct ARMA{T1,T2,T3,T4,Rt <: DiscreteRoots,Crt <: ContinuousRoots} <: AbstractM
 end
 
 
-hproots(a::AbstractVector{T}) where T = eigsort(roots(Double64.(a)))
+hproots(a::AbstractVector{T}) where T = eigsort(Complex{float(T)}.(roots(Double64.(a))))
 hproots(a::AbstractVector{<:Double64}) = eigsort(roots(a))
 """
     ControlSystems.tf(m::AR, ts)

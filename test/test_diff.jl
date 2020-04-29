@@ -1,4 +1,4 @@
-using SpectralDistances
+using SpectralDistances, Zygote
 using SpectralDistances:
     ngradient, nhessian, njacobian, polyconv, eigsort, hproots, rev, companion
 
@@ -276,8 +276,8 @@ using SpectralDistances, Zygote
     @test SpectralDistances.roots(a) ≈ [-1.1, -1]
     @test SpectralDistances.roots(b) ≈ [-2, -1]
 
-    @test hproots(a) ≈ [-1.1, -1]
-    @test hproots(b) ≈ [-2, -1]
+    @test hproots(a) ≈ eigsort(Complex.([-1.1, -1]))
+    @test hproots(b) ≈ eigsort(Complex.([-2, -1]))
 
     g1 = Zygote.gradient(a -> sum(abs, rootfunnr(a)), a)[1]
     g2 = ngradient(a -> sum(abs, rootfunnr(a)), a)
@@ -331,15 +331,15 @@ using SpectralDistances, Zygote
 
         g1 = Zygote.gradient(a -> sum(abs2, rootfun(a)), a)[1]
         g2 = ngradient(a -> sum(abs2, rootfun(a)), a)
-        @test real(g1)[2:end] ≈ real(g2)[2:end]
+        @test real(g1)[2:end] ≈ real(g2)[2:end] atol=1e-3
 
         g1 = Zygote.gradient(a -> real(rootfun(a)[2]), a)[1]
         g2 = ngradient(a -> real(rootfun(a)[2]), a)
-        @test (g1)[2:end] ≈ (g2)[2:end] atol = 1e-4
+        @test (g1)[2:end] ≈ (g2)[2:end] atol = 1e-4 atol=1e-3
         #
         g1 = Zygote.gradient(a -> imag(rootfun(a)[2]), a)[1]
         g2 = ngradient(a -> imag(rootfun(a)[2]), a)
-        @test real(g1)[2:end] ≈ real(g2)[2:end]
+        @test real(g1)[2:end] ≈ real(g2)[2:end] atol=1e-3
     end
 
     # NOTE: eigsort is improtant

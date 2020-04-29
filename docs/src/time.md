@@ -8,11 +8,13 @@ For non-stationary signals, it is important to consider how the spectrum changes
 
 We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
 ```@repl time
-fitmethod = TimeWindow(TLS(na=2), 1000, 500)
+fitmethod = TimeWindow(LS(na=2), 1000, 500)
 y = sin.(0:0.1:100);
 model = fitmethod(y)
 ```
 This produces a custom model type, [`TimeVaryingAR`](@ref) that internally stores a vector of [`ContinuousRoots`](@ref).
+!!! note "Note"
+    `TimeWindow` currently only supports fitmethod `LS`.
 
 Accompanying this time-varying model is a time-aware distance, [`TimeDistance`](@ref). It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) supported), and some parameters that are specific to the time dimension, example:
 ```@repl time
@@ -32,7 +34,7 @@ Below, we construct a signal that changes frequency after half the time, and mea
 ```@example time
 # Construct a signal that changes freq after half
 signal(f1,f2) = [sin.((0:0.1:49.9).*f1);sin.((50:0.1:99.9).*f2)]
-fm = TimeWindow(TLS(na=2), 500, 0)
+fm = TimeWindow(LS(na=2), 500, 0)
 m = signal(1,2)  |> fm # Signal 1
 m2 = signal(2,1) |> fm # Signal 2 has the reverse frequencies
 

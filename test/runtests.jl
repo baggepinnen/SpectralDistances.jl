@@ -9,6 +9,13 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
 @testset "SpectralDistances.jl" begin
 
+
+
+    @testset "DTW" begin
+        @info "Testing DTW"
+        include("test_dtw.jl")
+    end
+
     @testset "Model creation" begin
         @info "Testing Model creation"
 
@@ -422,7 +429,7 @@ end
 @testset "preprocess roots with residue weight" begin
     rd  = @inferred EuclideanRootDistance(domain=Continuous(), weight=residueweight)
     m = @inferred AR([1., -0.1])
-    @test @inferred(rd(m,m)) == 0
+    @test @inferred(rd(m,m)) < eps()
     @test @inferred(SpectralDistances.preprocess_roots(rd, m))[] ≈ -2.3025850929940455
 end
 
@@ -457,6 +464,8 @@ end
     @test sum(eachindex(r)) do i
         res[i]/(w-r[i])
     end ≈ F
+
+    @test abs2.(res) ≈ SpectralDistances.abs2residues!(zeros(length(a)-1),a,1)
 
     @test prod(eachindex(r)) do i
         1/(w-r[i])

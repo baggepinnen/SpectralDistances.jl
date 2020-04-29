@@ -83,13 +83,13 @@ TimeWindow
 end
 
 function fitmodel(fm::TimeWindow, x)
-    @show n,na,noverlap = fm.n, fm.inner.na, fm.noverlap
+    n,na,noverlap = fm.n, fm.inner.na, fm.noverlap
     if fm.inner.λ > 0
         AS = similar(x, n, na+1)
     else
         AS = similar(x, n-na, na+1)
     end
-    models = @showprogress 0.8 "Model estimation" map(arraysplit(x,n,noverlap)) do slice
+    models = @showprogress 1 "Model estimation" map(arraysplit(x,n,noverlap)) do slice
         fitmodel!(AS, fm.inner, slice)
     end
     TimeVaryingAR(models)
@@ -177,35 +177,35 @@ end
 
 
 
-function distance_profile(d::AbstractDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...) where F
-    T  = eltype(q.models[1].a)
-    N  = length(q)
-    na = length(q.models[1].pc)
-    nq = length(q.models)
-    ny = length(y.models)
-    w1 = s1(reduce(vcat,map(d.weight, q.models)))
-    w2 = s1(reduce(vcat,map(d.weight, y.models)))
-    C  = Matrix{T}(undef, N, N)
-
-    any(methods(d.weight).ms) do m
-        m.nargs == 3
-    end || throw(ArgumentError("distance_profile requires the weight function of the distance to support in-place update on the form `weightfun(weights, roots)`. See simplex_residueweight, residueweight, unitweight"))
-
-    # workspace = SinkhornLogWorkspace(T,N,N)
-
-    @showprogress 1 "Distance profile"  map(1:ny-nq) do i
-        @views Y = TimeVaryingAR(y.models[i:i+nq-1])
-        inds = (1:na)
-        for i in eachindex(Y.models)
-            if normalize_each_timestep
-                w2[inds] ./= sum(@view(w2[inds]))
-            end
-            inds = inds .+ na
-        end
-        w2  ./= sum(w2)
-        evaluate(d,e1,e2,w1,w2)
-    end
-end
+# function distance_profile(d::AbstractDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...) where F
+#     T  = eltype(q.models[1].a)
+#     N  = length(q)
+#     na = length(q.models[1].pc)
+#     nq = length(q.models)
+#     ny = length(y.models)
+#     w1 = s1(reduce(vcat,map(d.weight, q.models)))
+#     w2 = s1(reduce(vcat,map(d.weight, y.models)))
+#     C  = Matrix{T}(undef, N, N)
+#
+#     any(methods(d.weight).ms) do m
+#         m.nargs == 3
+#     end || throw(ArgumentError("distance_profile requires the weight function of the distance to support in-place update on the form `weightfun(weights, roots)`. See simplex_residueweight, residueweight, unitweight"))
+#
+#     # workspace = SinkhornLogWorkspace(T,N,N)
+#
+#     @showprogress 1 "Distance profile"  map(1:ny-nq) do i
+#         @views Y = TimeVaryingAR(y.models[i:i+nq-1])
+#         inds = (1:na)
+#         for i in eachindex(Y.models)
+#             if normalize_each_timestep
+#                 w2[inds] ./= sum(@view(w2[inds]))
+#             end
+#             inds = inds .+ na
+#         end
+#         w2  ./= sum(w2)
+#         evaluate(d,e1,e2,w1,w2)
+#     end
+# end
 
 
 struct PrimitiveModel{R <: AbstractVector,W <: AbstractVector} <: AbstractModel

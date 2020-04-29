@@ -51,6 +51,12 @@ git-tree-sha1 = "9e62e66db34540a0c919d72172cc2f642ac71260"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 version = "0.5.0"
 
+[[BinDeps]]
+deps = ["Libdl", "Pkg", "SHA", "URIParser", "Unicode"]
+git-tree-sha1 = "46cf2c1668ad07aba5a9d331bdeea994a1f13856"
+uuid = "9e28174c-4ba2-5203-b857-d8d62c4213ee"
+version = "1.0.1"
+
 [[BinaryProvider]]
 deps = ["Libdl", "SHA"]
 git-tree-sha1 = "5b08ed6036d9d3f0ee6369410b830f8873d4024c"
@@ -212,6 +218,14 @@ deps = ["GenericSVD", "GenericSchur", "LinearAlgebra", "Polynomials", "Printf", 
 git-tree-sha1 = "91177fa4c6e095b30606ebbdcb143e35ae2835de"
 uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
 version = "1.1.8"
+
+[[DynamicAxisWarping]]
+deps = ["BinDeps", "DelimitedFiles", "Distances", "FillArrays", "LinearAlgebra", "Parameters", "Plots", "ProgressMeter", "Statistics", "StatsBase", "Suppressor", "Test", "UnsafeArrays"]
+git-tree-sha1 = "b8aa9f84d3fecdba44aa6dc4728cb4c3ebc46c4f"
+repo-rev = "master"
+repo-url = "https://github.com/baggepinnen/DynamicAxisWarping.jl"
+uuid = "aaaaaaaa-4a10-5553-b683-e707b00e83ce"
+version = "0.0.0"
 
 [[ExponentialUtilities]]
 deps = ["LinearAlgebra", "Printf", "SparseArrays"]
@@ -777,6 +791,11 @@ version = "0.33.0"
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
+[[Suppressor]]
+git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.0"
+
 [[TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
 git-tree-sha1 = "b1ad568ba658d8cbb3b892ed5380a6f3e781a81e"
@@ -816,6 +835,12 @@ git-tree-sha1 = "8d0d7a3fe2f30d6a7f833a5f19f7c7a5b396eae6"
 uuid = "a2a6695c-b41b-5b7d-aed9-dbfdeacea5d7"
 version = "0.3.0"
 
+[[URIParser]]
+deps = ["Unicode"]
+git-tree-sha1 = "53a9f49546b8d2dd2e688d216421d050c9a31d0d"
+uuid = "30578b45-9adc-5946-b283-645ec420af67"
+version = "0.4.1"
+
 [[UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
@@ -835,6 +860,11 @@ version = "0.2.0"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+
+[[UnsafeArrays]]
+git-tree-sha1 = "9740b414f85ec2fa9135066f81b1fb14212befd6"
+uuid = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
+version = "1.0.1"
 
 [[VectorizationBase]]
 deps = ["CpuId", "LinearAlgebra"]
