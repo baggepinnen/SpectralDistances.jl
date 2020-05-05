@@ -237,7 +237,7 @@ A weighting function that returns a vector of uniform weights that sum to 1.
 function unitweight(e::AbstractArray{T}) where T
     RT = float(real(T))
     N = length(e)
-    isderiving() ? complex.(Fill(RT(1/N),size(e))) : Fill(RT(1/N),size(e))
+    isderiving() ? complex.(fill(RT(1/N),size(e))) : fill(RT(1/N),size(e))
 end
 
 unitweight(s, e::AbstractArray) = s .= unitweight(e) # support inplace version

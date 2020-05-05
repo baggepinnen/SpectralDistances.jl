@@ -746,6 +746,11 @@ git-tree-sha1 = "2bdf3b6300a9d66fe29ee8bb51ba100c4df9ecbc"
 uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
 version = "0.9.1"
 
+[[SlidingDistancesBase]]
+path = "/home/fredrikb/.julia/dev/SlidingDistancesBase"
+uuid = "25b0cc0c-38e4-462f-a11d-8564868c562d"
+version = "0.1.0"
+
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 

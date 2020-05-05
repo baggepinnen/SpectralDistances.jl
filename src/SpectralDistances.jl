@@ -30,6 +30,9 @@ using DSP,
     ZygoteRules,
     UnbalancedOptimalTransport
 
+using SlidingDistancesBase
+import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!
+
 import Base.@kwdef
 
 export ls,

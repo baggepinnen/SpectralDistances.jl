@@ -1,3 +1,30 @@
+## Until a better solution is provided in LoopVectorization ====================
+using MacroTools
+macro maybeavx(ex)
+    def = splitdef(ex)
+    haskey(def,:whereparams) || throw(ArgumentError("Found no type parameter in the function definition"))
+    length(def[:whereparams]) == 1 || throw(ArgumentError("Only a single type parameter supported"))
+    T = def[:whereparams][1] # This is the type parameter
+
+    # Remove @avx annotations
+    ex_noavx = MacroTools.prewalk(ex) do x
+        if x isa Expr && x.head === :macrocall
+            return x.args[3] # This returns the expression inside the macrocall
+        end
+        x
+    end
+    quote
+        # Define method without @avx annotations
+        $(esc(ex_noavx))
+
+        # Define the method that retains the @avx annotations
+        $(esc(def[:name]))($(esc.(def[:args])...)) where $(esc(T)) <: Union{Bool, Base.HWReal} = $(esc(def[:body]))
+    end
+end
+
+## Until a better solution is provided in LoopVectorization ====================
+
+
 abstract type SolverWorkspace end
 struct SinkhornLogWorkspace{T, MT <: AbstractMatrix{T}, VT <: AbstractVector{T}} <: SolverWorkspace
     K::MT
@@ -125,67 +152,9 @@ end
 
 using LoopVectorization
 
-function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
-    check_interval = 20, kwargs...) where T
-    @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
-    @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
-    ϵ = eps()
-    K, Γ, u, v, alpha, beta = w.K, w.Γ, w.u, w.v, w.alpha, w.beta
-    @. K = exp(-C / β)
-    u .= 1
-    v .= 1
-    alpha .= 0
-    beta  .= 0
-    local v, iter
-    iter = 0
-    for outer iter = 1:iters
-        mul!(v,K',u)
-        v .= b ./ (v .+ ϵ)
-        mul!(u,K,v)
-        u .= a ./ (u .+ ϵ)
-
-        if maximum(abs, u) > τ || maximum(abs, v) > τ
-            @. alpha += β * log(u)
-            @. beta  += β * log(v)
-            u .= 1
-            v .= 1
-            @. K = exp(-(C-alpha-beta') / β)
-        end
-        if any(!isfinite, u) || any(!isfinite, u)
-            error("Got NaN in sinkhorn_log")
-        end
-        # @show lowerbound(a,b,u,v,alpha,beta,β)
-
-        if iter % check_interval == 0 || iter % printerval == 0
-            @. Γ = exp(-(C-alpha-beta') / β + log(u) + log(v'))
-            err = +(ot_error(Γ, a, b)...)
-            iter % printerval == 0 && @info "Iter: $iter, err: $err"
-            if err < tol
-               break
-            end
-        end
-
-    end
-    @. Γ = exp(-(C-alpha-beta') / β + log(u + ϵ) + log(v' + ϵ))
-    @. u = -β*log(u + ϵ) - alpha
-    u .-= mean(u)
-    @. v = -β*log(v + ϵ) - beta
-    v .-= mean(v)
-
-    @assert isapprox(sum(u), 0, atol=sqrt(eps(T))*length(u)) "sum(α) should be 0 but was = $(sum(u))" # Normalize dual optimum to sum to zero
-    iter == iters && iters > printerval && @info "Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))"
-
-    ea, eb = ot_error(Γ, a, b)
-    if ea > tol || eb > tol
-        @error "sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol"
-    end
-
-    Γ, u, v
-end
-
 # This is just the same as the one above, but with @avx so it only supports simple types
-function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C::Matrix{T}, a::Vector{T}, b::Vector{T}; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
-    check_interval = 20, kwargs...) where T <: Base.HWReal
+@maybeavx function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C::Matrix{T}, a::Vector{T}, b::Vector{T}; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
+    check_interval = 20, kwargs...) where T
     @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
     ϵ = eps()
@@ -260,10 +229,10 @@ A Fast Proximal Point Method for Computing Exact Wasserstein Distance
 Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
-function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...)
+IPOT
+@maybeavx function IPOT(C::Matrix{T}, μ::Vector{T}, ν::Vector{T}; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...) where T
     @assert sum(μ) ≈ 1 "Input measure not normalized - sum(μ) = $(sum(μ))"
     @assert sum(ν) ≈ 1 "Input measure not normalized - sum(ν) = $(sum(ν))"
-    T = promote_type(eltype(μ), eltype(ν), eltype(C))
     ϵ = eps(T)
     G = exp.(.- C ./ β)
     a = zeros(T, size(μ))
