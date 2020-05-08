@@ -1,30 +1,3 @@
-## Until a better solution is provided in LoopVectorization ====================
-using MacroTools
-macro maybeavx(ex)
-    def = splitdef(ex)
-    haskey(def,:whereparams) || throw(ArgumentError("Found no type parameter in the function definition"))
-    length(def[:whereparams]) == 1 || throw(ArgumentError("Only a single type parameter supported"))
-    T = def[:whereparams][1] # This is the type parameter
-
-    # Remove @avx annotations
-    ex_noavx = MacroTools.prewalk(ex) do x
-        if x isa Expr && x.head === :macrocall
-            return x.args[3] # This returns the expression inside the macrocall
-        end
-        x
-    end
-    quote
-        # Define method without @avx annotations
-        $(esc(ex_noavx))
-
-        # Define the method that retains the @avx annotations
-        $(esc(def[:name]))($(esc.(def[:args])...)) where $(esc(T)) <: Union{Bool, Base.HWReal} = $(esc(def[:body]))
-    end
-end
-
-## Until a better solution is provided in LoopVectorization ====================
-
-
 abstract type SolverWorkspace end
 struct SinkhornLogWorkspace{T, MT <: AbstractMatrix{T}, VT <: AbstractVector{T}} <: SolverWorkspace
     K::MT
@@ -105,7 +78,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
             Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
             err = +(ot_error(Γ, a, b)...)
             iter % printerval == 0 && println("Iter: $iter, err: $err")
-            if err < tol
+            if real(err) < tol
                break
             end
         end
@@ -122,7 +95,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     iter == iters && iters > printerval && println("Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))")
 
     ea, eb = ot_error(Γ, a, b)
-    if (ea > tol || eb > tol) && !isderiving()
+    if (real(ea) > tol || real(eb) > tol) && !isderiving()
         println("sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol")
     end
 
@@ -153,7 +126,7 @@ end
 using LoopVectorization
 
 # This is just the same as the one above, but with @avx so it only supports simple types
-@maybeavx function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C::Matrix{T}, a::Vector{T}, b::Vector{T}; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
+function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
     check_interval = 20, kwargs...) where T
     @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
     @assert sum(b) ≈ 1.0 "Input measure not normalized, expected sum(b) ≈ 1, but got $(sum(b))"
@@ -230,9 +203,10 @@ Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
 IPOT
-@maybeavx function IPOT(C::Matrix{T}, μ::Vector{T}, ν::Vector{T}; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...) where T
+function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...)
     @assert sum(μ) ≈ 1 "Input measure not normalized - sum(μ) = $(sum(μ))"
     @assert sum(ν) ≈ 1 "Input measure not normalized - sum(ν) = $(sum(ν))"
+    T = promote_type(eltype(μ), eltype(ν), eltype(C))
     ϵ = eps(T)
     G = exp.(.- C ./ β)
     a = zeros(T, size(μ))
@@ -277,7 +251,7 @@ end
     s1 = n1 = s2 = n2 = zero(T)
     for i = 1:length(μ)
         sg = zero(T)
-        @simd for j = 1:length(ν)
+        for j = 1:length(ν)
             sg += Γ[i,j]
         end
         s1 += abs2(μ[i] - sg)
@@ -285,7 +259,7 @@ end
     end
     for i = 1:length(ν)
         sg = zero(T)
-        @simd for j = 1:length(μ)
+        for j = 1:length(μ)
             sg += Γ[j,i]
         end
         s2 += abs2(ν[i] - sg)

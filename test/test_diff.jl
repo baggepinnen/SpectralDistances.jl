@@ -276,8 +276,8 @@ using SpectralDistances, Zygote
     @test SpectralDistances.roots(a) ≈ [-1.1, -1]
     @test SpectralDistances.roots(b) ≈ [-2, -1]
 
-    @test hproots(a) ≈ eigsort(Complex.([-1.1, -1]))
-    @test hproots(b) ≈ eigsort(Complex.([-2, -1]))
+    @test all(hproots(a) .∈ Ref(Complex.([-1.1, -1])))
+    @test all(hproots(b) .∈ Ref(Complex.([-2, -1])))
 
     g1 = Zygote.gradient(a -> sum(abs, rootfunnr(a)), a)[1]
     g2 = ngradient(a -> sum(abs, rootfunnr(a)), a)
