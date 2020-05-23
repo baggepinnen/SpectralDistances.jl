@@ -47,6 +47,11 @@ function v1(x, dims=:)
     x .= x./std(x, dims=dims)
 end
 
+function v1!(x, dims=:)
+    x .-= mean(x, dims=dims)
+    x .= x./std(x, dims=dims)
+end
+
 """
     median1(x, dims=:)
 
