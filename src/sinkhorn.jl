@@ -78,7 +78,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
             Γ = @. exp(-(C-alpha-beta') / β + log(u) + log(v'))
             err = +(ot_error(Γ, a, b)...)
             iter % printerval == 0 && println("Iter: $iter, err: $err")
-            if err < tol
+            if real(err) < tol
                break
             end
         end
@@ -95,7 +95,7 @@ function sinkhorn_log(C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval
     iter == iters && iters > printerval && println("Maximum number of iterations reached. Final error: $(norm(vec(sum(Γ, dims=1)) - b))")
 
     ea, eb = ot_error(Γ, a, b)
-    if (ea > tol || eb > tol) && !isderiving()
+    if (real(ea) > tol || real(eb) > tol) && !isderiving()
         println("sinkhorn_log: iter: $iter Inaccurate solution - ea: $ea, eb: $eb, tol: $tol")
     end
 
@@ -115,12 +115,17 @@ The workspace `w` is created linke this: `w = SinkhornLogWorkspace(FloatType, le
 """
 function sinkhorn_log!(C, a, b; kwargs...)
     T = promote_type(eltype(a), eltype(b), eltype(C))
+    # if T <: Double64
+    #     T = Float64
+    #     C,a,b = Float64.(C), Float64.(a), Float64.(b)
+    # end
     w = SinkhornLogWorkspace(T, length(a), length(b))
     sinkhorn_log!(w, C, a, b; kwargs...)
 end
 
 using LoopVectorization
 
+# This is just the same as the one above, but with @avx so it only supports simple types
 function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
     check_interval = 20, kwargs...) where T
     @assert sum(a) ≈ 1.0 "Input measure not normalized, expected sum(a) ≈ 1, but got $(sum(a))"
@@ -136,7 +141,7 @@ function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, ite
     iter = 0
     for outer iter = 1:iters
         mul!(v,K',u)
-        @avx v .= b ./ (v .+ ϵ)
+        @avx v .= b ./ (v .+ ϵ) # Some tests fail due to https://github.com/chriselrod/LoopVectorization.jl/issues/103
         mul!(u,K,v)
         @avx u .= a ./ (u .+ ϵ)
 
@@ -197,6 +202,7 @@ A Fast Proximal Point Method for Computing Exact Wasserstein Distance
 Yujia Xie, Xiangfeng Wang, Ruijia Wang, Hongyuan Zha
 https://arxiv.org/abs/1802.04307
 """
+IPOT
 function IPOT(C, μ, ν; β=1, iters=10000, tol=1e-8, printerval = typemax(Int), kwargs...)
     @assert sum(μ) ≈ 1 "Input measure not normalized - sum(μ) = $(sum(μ))"
     @assert sum(ν) ≈ 1 "Input measure not normalized - sum(ν) = $(sum(ν))"
@@ -245,7 +251,7 @@ end
     s1 = n1 = s2 = n2 = zero(T)
     for i = 1:length(μ)
         sg = zero(T)
-        @simd for j = 1:length(ν)
+        for j = 1:length(ν)
             sg += Γ[i,j]
         end
         s1 += abs2(μ[i] - sg)
@@ -253,7 +259,7 @@ end
     end
     for i = 1:length(ν)
         sg = zero(T)
-        @simd for j = 1:length(μ)
+        for j = 1:length(μ)
             sg += Γ[j,i]
         end
         s2 += abs2(ν[i] - sg)

@@ -9,6 +9,13 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
 @testset "SpectralDistances.jl" begin
 
+
+
+    @testset "DTW" begin
+        @info "Testing DTW"
+        include("test_dtw.jl")
+    end
+
     @testset "Model creation" begin
         @info "Testing Model creation"
 
@@ -115,7 +122,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred SpectralDistances.IPOT(C,a,b)
+        Γ,u,v = @inferred IPOT(C,a,b)
         @test Γ ≈ [0 0.5; 0 0.5]
 
         a = [1., 0]
@@ -422,7 +429,7 @@ end
 @testset "preprocess roots with residue weight" begin
     rd  = @inferred EuclideanRootDistance(domain=Continuous(), weight=residueweight)
     m = @inferred AR([1., -0.1])
-    @test @inferred(rd(m,m)) == 0
+    @test @inferred(rd(m,m)) < eps()
     @test @inferred(SpectralDistances.preprocess_roots(rd, m))[] ≈ -2.3025850929940455
 end
 
@@ -457,6 +464,8 @@ end
     @test sum(eachindex(r)) do i
         res[i]/(w-r[i])
     end ≈ F
+
+    @test abs2.(res) ≈ SpectralDistances.abs2residues!(zeros(length(a)-1),a,1)
 
     @test prod(eachindex(r)) do i
         1/(w-r[i])
@@ -675,6 +684,7 @@ end
     for t = LinRange(0, 1, 7)
         Φ = interp(w,t)
     end
+end
 
 @testset "barycenter" begin
     @info "Testing barycenter"
@@ -712,7 +722,6 @@ end
     @test  var(SpectralDistances.m1(X,1)) ≈ 1 atol=0.2
 
 
-end
 
 end
 
@@ -721,19 +730,19 @@ end
 @testset "Unbalanced transport" begin
     @info "Testing Unbalanced transport"
 
-fm = LS(na = 10)
-m1 = fm(filtfilt(ones(10), [10], randn(1000)))
-m2 = fm(filtfilt(ones(5), [5], randn(1000)))
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=Balanced())
-d1 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0))
-d2 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0))
-d3 = evaluate(dist,m1,m2)
-dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01))
-d4 = evaluate(dist,m1,m2)
+    fm = LS(na = 10)
+    m1 = fm(filtfilt(ones(10), [10], randn(1000)))
+    m2 = fm(filtfilt(ones(5), [5], randn(1000)))
+    dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=Balanced())
+    d1 = evaluate(dist,m1,m2)
+    dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(1.0))
+    d2 = evaluate(dist,m1,m2)
+    dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(10.0))
+    d3 = evaluate(dist,m1,m2)
+    dist = OptimalTransportRootDistance(domain = Continuous(), p=1, divergence=KL(0.01))
+    d4 = evaluate(dist,m1,m2)
 
-@test d1 > d3 > d2 > d4
+    @test d1 > d3 > d2 > d4
 
 end
 

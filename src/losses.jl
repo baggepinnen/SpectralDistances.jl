@@ -252,12 +252,11 @@ struct DiscreteGridTransportDistance{D,TD,T,V} <: AbstractDistance
     c2::V
 end
 
-
-function DiscreteGridTransportDistance(inner::Distances.PreMetric, n, m)
-    distmat = inner.(1:n, (1:m)')
-    C = zeros(n,m)
-    c1 = zeros(n)
-    c2 = zeros(m)
+function DiscreteGridTransportDistance(inner::Distances.PreMetric, T, n, m)
+    distmat = inner.(one(T):n, (one(T):m)')
+    C = zeros(T, n,m)
+    c1 = zeros(T, n)
+    c2 = zeros(T, m)
     DiscreteGridTransportDistance(inner,distmat,C,c1,c2)
 end
 
@@ -343,14 +342,14 @@ transform(d::AbstractRootDistance, x) = d.transform(x)
 
 The euclidean distance matrix between two vectors of complex numbers
 """
-distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = abs.(e1 .- transpose(e2)).^p # Do not replace with call to mutating version, Zygote limitation
+distmat_euclidean(e1::AbstractVector,e2::AbstractVector,p=2) = @fastmath abs.(e1 .- transpose(e2)).^p # Do not replace with call to mutating version, Zygote limitation
 
 """
     distmat_euclidean!(D, e1::AbstractVector, e2::AbstractVector, p = 2) = begin
 
 In-place version
 """
-distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = D .= abs.(e1 .- transpose(e2)).^p
+distmat_euclidean!(D, e1::AbstractVector,e2::AbstractVector,p=2) = @fastmath D .= abs.(e1 .- transpose(e2)).^p
 
 # distmat(dist,e1,e2) = (n = length(e1[1]); [dist(e1[i],e2[j]) for i = 1:n, j=1:n])
 
@@ -450,20 +449,22 @@ end
 
 function evaluate(d::EuclideanRootDistance, e1::AbstractRoots,e2::AbstractRoots; kwargs...)
     length(e1) == 0 && return zero(real(eltype(e1)))
-    I1,I2 = d.assignment(e1, e2)
     w1,w2 = d.weight(e1), d.weight(e2)
-    n,p = length(e1), d.p
-    β = (1-p)/2
     # sum(eachindex(e1)) do i
     #     i1 = I1[i]
     #     i2 = I2[i]
     #     (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
     # end # below is workaround for zygote #314
+    I1,I2 = d.assignment(e1, e2)
+    evaluate(d,e1[I1],e2[I2],w1[I1],w2[I2])
+end
+
+function evaluate(d::EuclideanRootDistance, e1,e2, w1, w2; kwargs...)
+    p = d.p
+    β = (1-p)/2
     l = zero(real(eltype(e1)))
-    for i in 1:length(e1)
-        i1 = I1[i]
-        i2 = I2[i]
-        l += (w1[i1]*w2[i2])^β*abs(w1[i1]*e1[i1]-w2[i2]*e2[i2])^p
+    @inbounds @fastmath for i in 1:length(e1)
+        l += (w1[i]*w2[i])^β*abs(w1[i]*e1[i]-w2[i]*e2[i])^p
     end
     real(l) # Workaround for expanding to complex for Zygote support
 end
@@ -501,7 +502,7 @@ function evaluate(
         error("No solution found by solver $(solver), check your input and consider increasing β ($(d.β)).")
         C = eltype(D).(C)
     end
-    sum(C .* D)
+    dot(C,D)
 end
 
 function evaluate(d::AbstractRootDistance, a1::AbstractVector{<: Real},a2::AbstractVector{<: Real}; kwargs...)
@@ -616,7 +617,7 @@ end
 function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
     D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
     C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
-    cost = sum(C .* D)
+    cost = dot(C, D)
     if !isfinite(cost)
         @show count(!isfinite, w1.power), count(!isfinite, w2.power), count(!isfinite, C), count(!isfinite, D)
         error("WelchOptimalTransportDistance failed")
@@ -647,14 +648,14 @@ end
 function evaluate(d::DiscreteGridTransportDistance, x1, x2; kwargs...)
     inner = d.inner
     D = d.distmat
-    C = (d.C .= 0)
-    c1,c2 = d.c1, d.c2
-    c1 .= x1 ./ sum(x1)
-    c2 .= x2 ./ sum(x2)
     (length(x1),length(x2)) == size(D) || throw(ArgumentError("Sizes do not match, should be (length(x1),length(x2)) == size(D), but got $((length(x1),length(x2))), $(size(D))"))
-    C = discrete_grid_transportplan(c1, c2, g=C, inplace=true)
+    c1,c2 = d.c1, d.c2
+    d.C .= 0
+    @avx c1 .= x1 ./ sum(x1)
+    @avx c2 .= x2 ./ sum(x2)
+    C = discrete_grid_transportplan(c1, c2, g=d.C, inplace=true)
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
-    cost = sum(d*c for (d,c) in zip(D,C))
+    dot(d.C,D)
 end
 
 """
@@ -663,12 +664,12 @@ end
 Calculate the optimal-transport plan between two vectors that are assumed to have the same support, with sorted support points.
 """
 function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T)); g = zeros(T,length(x), length(x)), inplace=false) where T
+    n  = length(x)
+    length(y) == n || throw(ArgumentError("Inputs must have the same length"))
     if !inplace
         x  = copy(x)
     end
     yf = zero(T)
-    n  = length(x)
-    length(y) == n || throw(ArgumentError("Inputs must have the same length"))
     i = j = 1
     @inbounds while j <= n && i <= n
         needed = y[j] - yf
@@ -686,7 +687,7 @@ function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},t
     end
     if j < n || i < n
         takenfromy = yf#min(needed,available)
-        sumleft = (sum(x[i:end]),sum(y[j:end])-takenfromy)
+        @views sumleft = (sum(x[i:end]),sum(y[j:end])-takenfromy)
         if sumleft[1] > tol || sumleft[2] > tol
             error("Not all indices were covered (n,i,j) = $((n,i,j)), sum left (x,y) = $(sumleft)")
         end

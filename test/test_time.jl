@@ -27,7 +27,7 @@ D = SpectralDistances.distmat_euclidean(m,m,1,1,1)
 
 
 # test fitting
-fm = TimeWindow(TLS(na=2), 1000, 500)
+fm = TimeWindow(LS(na=2), 1000, 500)
 y = randn(10000)
 m = fm(y)
 
@@ -48,7 +48,7 @@ dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1,
 @test evaluate(dist, m, m) < 1e-3
 @test evaluate(dist, m, m2, iters=10000, tol=1e-3) > 0.1
 
-fm = TimeWindow(TLS(na=2), 1000, 500)
+fm = TimeWindow(LS(na=2), 1000, 500)
 y = sin.(0:0.1:100)
 m = fm(y)
 
@@ -77,7 +77,7 @@ end
 
 # Construct a signal that changes freq after half
 signal(f1,f2) = [sin.((0:0.1:49.9).*f1);sin.((50:0.1:99.9).*f2)]
-fm = TimeWindow(TLS(na=2), 500, 0)
+fm = TimeWindow(LS(na=2), 500, 0)
 m = signal(1,2)  |> fm
 m2 = signal(2,1) |> fm
 # Mess with c such that it becomes cheap to transport in time
