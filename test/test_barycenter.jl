@@ -127,7 +127,7 @@ end
     a = ones(2) |> s1
     b = [ones(2) ./2 for _ in eachindex(Y)]
     a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-5)
-    @test a1[1] == a1[2]
+    @test a1[1] ≈ a1[2]
 
     X = [2.1 3]
     a1 = SpectralDistances.alg1(X,Y,a,b;β=1/3, tol=1e-3, printerval=1)
