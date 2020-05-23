@@ -1,13 +1,13 @@
 @recipe function plot(s::DSP.Periodograms.Spectrogram)
     seriestype := :heatmap
-    xlabel --> "Time"
-    ylabel --> "Freq"
+    xguide --> "Time"
+    yguide --> "Freq"
     s.time, s.freq, log.(s.power)
 end
 
 @recipe function plot(s::DSP.Periodograms.Periodogram; normalize=true)
-    ylabel --> "Power"
-    xlabel --> "Freq"
+    yguide --> "Power"
+    xguide --> "Freq"
     xscale --> :log10
     yscale --> :log10
     if normalize
@@ -33,8 +33,8 @@ Base.showable(::MIME"text/html", agif::Plots.Animation) = true
         seriestype := :scatter
         real.(v), imag.(v)
     end
-    xlabel --> "Re"
-    ylabel --> "Im"
+    xguide --> "Re"
+    yguide --> "Im"
     if circle && d isa Discrete
         t = LinRange(0, 2pi, 100)
         @series begin
@@ -50,8 +50,8 @@ end
 
 @recipe function plot(r::AbstractRoots)
     title --> "Root map"
-    xlabel --> "Re"
-    ylabel --> "Im"
+    xguide --> "Re"
+    yguide --> "Im"
     r.r, domain(r)
 end
 
