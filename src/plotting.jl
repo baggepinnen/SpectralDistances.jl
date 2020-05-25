@@ -107,7 +107,7 @@ flowplot
 
     Γ = transport_plan(dist,m1,m2;d=d)
     e1,e2 = roots.(domain(dist), (m1,m2))
-    display(Γ)
+    # display(Γ)
 
     @series begin
         markerstrokealpha --> 0.1

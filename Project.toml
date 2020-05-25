@@ -1,7 +1,7 @@
 name = "SpectralDistances"
 uuid = "2b0dec9d-f767-4f95-9e73-7df56487de68"
 authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 BackwardsLinalg = "442b4e1a-8b9d-11e9-03b0-f14b31742153"
@@ -49,7 +49,7 @@ DynamicAxisWarping = "0.1"
 FillArrays = "0.8"
 Hungarian = "0.6"
 Lazy = "0.14, 0.15"
-LoopVectorization = "0.7.7"
+LoopVectorization = "0.7.7, 0.8"
 MacroTools = "0.5"
 Optim = "0.19, 0.20, 0.21"
 OrdinaryDiffEq = "5"

@@ -434,7 +434,7 @@ end
 unbalanced_solver_closure(divergence::UnbalancedOptimalTransport.AbstractDivergence) =
     (C,a,b; kwargs...)->sinkhorn_unbalanced(C,a,b,divergence;kwargs...)
 
-function unbalanced_solver_closure(distance::AbstractDistance, solver = nothing, kwargs...)
+function unbalanced_solver_closure(distance::AbstractDistance, solver, kwargs...)
     (C,a,b; kwargs...)->sinkhorn_unbalanced(C,a,b,distance.divergence;kwargs...), kwargs
 end
 
