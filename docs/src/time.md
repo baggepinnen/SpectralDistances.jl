@@ -139,6 +139,32 @@ The results are shown below. The figure indicates the cost `log10(c)` using the 
 
 In this example, we chose the weight function `simplex_residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.
 
+## Dynamic Time Warping
+This package interfaces with [DynamicAxisWarping.jl](https://github.com/baggepinnen/DynamicAxisWarping.jl) and provides optimized methods for [`DynamicAxisWarping.dtwnn`](@ref). Below is an example of how to search for a query pattern `Qm` in a much longer pattern `Ym`
+```julia
+searchresult = dtwnn(
+    Qm,
+    Ym,
+    OptimalTransportRootDistance(p = 1, weight = simplex_residueweight),
+    rad,
+    saveall = true,
+    tol = 1e-3,
+)
+```
+Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
+
+## Distance profile
+A distance profile between a query pattern `Qm` and a much longer pattern `Ym` can be computed efficiently with (example)
+```julia
+dist = TimeDistance(
+    inner = OptimalTransportRootDistance(p = 1, β = 0.5, weight = simplex_residueweight),
+    tp    = 1,
+    c     = 0.1,
+)
+res_tt = distance_profile(dist, Qm, Ym, tol=1e-3)
+```
+Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
+
 ## Function reference
 
 ```@index

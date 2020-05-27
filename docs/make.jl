@@ -1,5 +1,5 @@
 using Documenter
-using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK, DSP
+using SpectralDistances, ControlSystems, Clustering, JuMP, GLPK, DSP, DynamicAxisWarping
 
 using Plots
 plotly()

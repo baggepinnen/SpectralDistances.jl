@@ -88,7 +88,7 @@ assignmentplot
         xc,yc
     end
     d isa Discrete && @series begin
-        l := (:dash, :black)
+        line := (:dash, :black)
         primary := false
         cos.(0:0.1:2pi),sin.(0:0.1:2pi)
     end
