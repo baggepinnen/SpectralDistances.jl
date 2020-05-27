@@ -54,6 +54,11 @@ savefig("pzmap_models2.html"); nothing # hide
 <object type="text/html" data="../pzmap_models2.html" style="width:100%;height:450px;"></object>
 ```
 
+## Computational performance improvements
+Estimating a lot (1000s) of models might take a while. The bulk of the time is spent performing a matrix factorization, something that can be significantly sped up by
+- Using `Flaot32` instead of `Float64`
+- Use [MKL.jl](https://github.com/JuliaComputing/MKL.jl) instead of the default OpenBLAS (can yield about 2x performance improvement).
+
 
 ## Type reference
 ```@index

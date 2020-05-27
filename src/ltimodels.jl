@@ -267,6 +267,12 @@ This fitmethod is a good default option.
 # Arguments:
 - `na::Int`: number of roots (order of the system). The number of peaks in the spectrum will be `na÷2`.
 - `λ::Float64 = 0.01`: reg factor
+
+# Computational performance improvements
+Estimating a lot (1000s) of models might take a while. The bulk of the time is spent performing a matrix factorization, something that can be significantly sped up by
+- Using `Flaot32` instead of `Float64`
+- Use [MKL.jl](https://github.com/JuliaComputing/MKL.jl) instead of the default OpenBLAS (can yield about 2x performance improvement).
+
 """
 LS
 @kwdef struct LS <: FitMethod
@@ -276,6 +282,11 @@ end
 
 """
     fitmodel(fm::LS, X::AbstractArray)
+
+## Computational performance improvements
+Estimating a lot (1000s) of models might take a while. The bulk of the time is spent performing a matrix factorization, something that can be significantly sped up by
+- Using `Flaot32` instead of `Float64`
+- Use [MKL.jl](https://github.com/JuliaComputing/MKL.jl) instead of the default OpenBLAS (can yield about 2x performance improvement).
 """
 function fitmodel(fm::LS,X::AbstractArray)
     y,A = getARregressor(X, fm.na)
