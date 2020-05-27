@@ -45,10 +45,12 @@ end
     DynamicAxisWarping.dtwnn(q::TimeVaryingAR, y::TimeVaryingAR, dist, rad::Int, args...; kwargs...)
 
 Wrapper for `dtwnn`. To save allocations between multiple calls to `dtwnn`, you may manually create a helper object and call
+
 ```julia
 using DynamicAxisWarping
 h = DTWHelper(dist, q, y)
 dtwnn(h, rad::Int, args...; kwargs...)
+```
 """
 function DynamicAxisWarping.dtwnn(q::TimeVaryingAR, y::TimeVaryingAR, dist, rad::Int, args...; kwargs...)
     h = DTWHelper(dist, q, y)

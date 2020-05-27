@@ -152,6 +152,9 @@ searchresult = dtwnn(
 )
 ```
 Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
+```@docs
+DynamicAxisWarping.dtwnn(q::TimeVaryingAR, y::TimeVaryingAR, dist, rad::Int)
+```
 
 ## Distance profile
 A distance profile between a query pattern `Qm` and a much longer pattern `Ym` can be computed efficiently with (example)
@@ -164,12 +167,8 @@ dist = TimeDistance(
 res_tt = distance_profile(dist, Qm, Ym, tol=1e-3)
 ```
 Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
-
-## Function reference
-
-```@index
-Pages = ["time.md"]
-Order   = [:function, :macro, :constant]
+```@docs
+SlidingDistancesBase.distance_profile(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR)
 ```
 
 ## Docstrings
