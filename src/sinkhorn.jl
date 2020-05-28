@@ -184,14 +184,14 @@ function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, ite
     Γ, u, v
 end
 
-function lowerbound(a,b,u,v,alpha,beta,β)
-        ϵ = 1e-16
-        u = @.  -β*log(u + ϵ) - alpha
-        # u .-= mean(u)
-        v = @.  -β*log(v + ϵ) - beta
-        # v .-= mean(v)
-        u'a + v'b
-end
+# function lowerbound(a,b,u,v,alpha,beta,β)
+#     ϵ = 1e-16
+#     u = @.  -β*log(u + ϵ) - alpha
+#     # u .-= mean(u)
+#     v = @.  -β*log(v + ϵ) - beta
+#     # v .-= mean(v)
+#     u'a + v'b
+# end
 
 """
     Γ, u, v = IPOT(C, a, b; β=1, iters=1000)
