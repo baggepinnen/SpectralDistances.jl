@@ -83,6 +83,31 @@ savefig("barycenter.html"); nothing # hide
 <object type="text/html" data="../barycenter.html" style="width:100%;height:450px;"></object>
 ```
 
+### Barycenters between spectrograms
+We can also calculate a barycenter between spectrograms using an efficient convolutional method, but the result tends to be a bit blurry:
+```@example
+using SpectralDistances, DSP, Plots
+N     = 48_000
+t     = 1:N
+f     = range(0.01, stop=1, length=N)
+y01   = sin.(t .* f)
+y02   = sin.(t .* (f .+ 0.5))
+y1    = [y01; zeros(5000)] .+ 0.1 .* randn.()
+y2    = [zeros(5000); y02] .+ 0.1 .* randn.()
+S1,S2 = spectrogram.((y1,y2), 2048)
+
+A = [S1,S2]
+β = 0.001
+λ = [0.5, 0.5]
+B = barycenter_convolutional(A,β=β, tol=1e-12)
+plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3))
+
+savefig("barycenter_sg.html"); nothing # hide
+```
+```@raw html
+<object type="text/html" data="../barycenter_sg.html" style="width:100%;height:450px;"></object>
+```
+
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
 ```julia

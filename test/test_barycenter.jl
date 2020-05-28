@@ -1,4 +1,4 @@
-using Test, SpectralDistances, ControlSystems, Optim
+using Test, SpectralDistances, DSP, ControlSystems, Optim
 import SpectralDistances: softmax
 ip(x,y) = x'y/norm(x)/norm(y)
 # const Continuous = SpectralDistances.Continuous
@@ -435,9 +435,16 @@ end
     A = [a1,a2]
     β = 0.01
     λ = [0.5, 0.5]
-    b = SpectralDistances.barycenter_convolutional(A,λ,β)
+    b = barycenter_convolutional(A,λ,β=β)
     @test maximum(b) == b[4,4]
     @test sum(b) ≈ 1
+
+    A1 = spectrogram(randn(1000))
+    A2 = spectrogram(randn(1000))
+    A = [A1, A2]
+    B = barycenter_convolutional(A,λ,β=β)
+    @test B isa typeof(A1)
+    @test B.power == barycenter_convolutional([A1.power, A2.power],λ,β=β)
 
 
     # w = SpectralDistances.BCWorkspace(A, β)

@@ -645,10 +645,10 @@ function BCWorkspace(A, β)
 end
 
 """
-    barycenter_convolutional(A, λ, β, iters = 1000, tol = 1e-9, ϵ = 1e-30)
+    barycenter_convolutional(A, [λ]; β = 0.01, iters = 1000, tol = 1e-9, ϵ = 1e-30)
 
 
-´β` is the regularization and `λ` are the weights (barycentric coordinates). To reuse allocated space ebtween successive calls, use the "workspace" method from the example below.
+´β` is the regularization and `λ` (optional) are the weights (barycentric coordinates). To reuse allocated space ebtween successive calls, use the "workspace" method from the example below.
 ```julia
 a1      = zeros(Float32, 10,10)
 a1[2,2] = 1
@@ -662,7 +662,14 @@ b       = barycenter_convolutional(w,A,λ)
 plot(heatmap(a1), heatmap(a2), heatmap(b))
 ```
 """
-function barycenter_convolutional(w::BCWorkspace{T,TK}, A, λ, iters = 1000, tol = 1e-9, ϵ = 1e-30) where {T,TK}
+function barycenter_convolutional(
+    w::BCWorkspace{T,TK},
+    A,
+    λ = Fill(1 / length(models), length(models));
+    iters = 10000,
+    tol = 1e-9,
+    ϵ = 1e-30,
+) where {T,TK}
 
     N = length(A)
     K, KV, U, b, bold, S = w.K, w.KV, w.U, w.b, w.bold, w.S
@@ -687,13 +694,18 @@ function barycenter_convolutional(w::BCWorkspace{T,TK}, A, λ, iters = 1000, tol
         end
 
         if iter % 10 == 1
-            err = sum(abs(bold - b) for (bold,b) in zip(bold,b))
+            err = sum(abs(bold - b) for (bold, b) in zip(bold, b))
         end
     end
     b
 end
 
-function barycenter_convolutional(A, λ, β; kwargs...)
+function barycenter_convolutional(
+    A,
+    λ = Fill(1 / length(models), length(models));
+    β = 0.01,
+    kwargs...,
+)
     w = BCWorkspace(A, β)
     barycenter_convolutional(w, A, λ; kwargs...)
 end
@@ -705,12 +717,17 @@ function meshgrid(a,b)
 end
 
 
-function barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1/length(models), length(models)); kwargs...)
-
-    A = power.(models)
-    barycenter_convolutional(
-
-
+function barycenter_convolutional(
+    models::Vector{<:DSP.Periodograms.TFR},
+    λ = Fill(1 / length(models), length(models));
+    kwargs...,
+)
+    A  = power.(models)
+    b  = barycenter_convolutional(A, λ; kwargs...)
+    B  = deepcopy(models[1])
+    Bp = power(B)
+    Bp .= b
+    B
 end
 
 
