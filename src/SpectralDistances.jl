@@ -131,7 +131,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting
+export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting, barycenter_convolutional, BCWorkspace
 
 export TimeDistance, TimeVaryingAR, TimeWindow
 

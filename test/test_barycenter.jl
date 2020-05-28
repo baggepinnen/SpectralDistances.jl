@@ -424,6 +424,31 @@ end
 end
 
 
+##
+@testset "convolutional barycenter" begin
+    @info "Testing convolutional barycenter"
+
+    a1 = zeros(Float32, 10,10)
+    a1[2,2] = 1
+    a2 = zeros(Float32, 10,10)
+    a2[6,6] = 1
+    A = [a1,a2]
+    β = 0.01
+    λ = [0.5, 0.5]
+    b = SpectralDistances.barycenter_convolutional(A,λ,β)
+    @test maximum(b) == b[4,4]
+    @test sum(b) ≈ 1
+
+
+    # w = SpectralDistances.BCWorkspace(A, β)
+    # @btime SpectralDistances.barycenter_convolutional($w,$A,$λ)
+    # 1.198 ms (46 allocations: 1.26 MiB)
+    # 585.176 μs (46 allocations: 1.26 MiB) # add @avx
+    # 469.132 μs (16 allocations: 313.13 KiB) # operate inplace
+    # 387.881 μs (0 allocations: 0 bytes) # views and generator in sum
+end
+
+
 # d = 2
 # k = 4
 # S = 4
@@ -533,3 +558,42 @@ end
 # pzmap!.(tf.(models), lab="")
 # pzmap!(tf(qmodel), m=:c, lab="q")
 # pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
+
+
+
+##
+# m,n = 1280,1280
+# x = zeros(m,n)
+# x[10,10] = 1
+# β = 0.1
+#
+# t = LinRange(0, 1, m)
+# Y, X = meshgrid(t, t)
+# xi1 = @. exp(-(X - Y)^2 / β)
+#
+# t = LinRange(0, 1, n)
+# Y, X = meshgrid(t, t)
+# xi2 = @. exp(-(X - Y)^2 / β)
+#
+# K1(x) = xi1 * x * xi2
+#
+#
+# using ImageFiltering
+#
+# t = LinRange(-0.5, 0.5, m)
+# k1 = @. exp(-t^2 / β)
+# t = LinRange(-0.5, 0.5, n)
+# k2 = @. exp(-t^2 / β)
+#
+# kernf = kernelfactors((centered(k1), centered(k2)))
+# kernp = broadcast(*, kernf...)
+#
+# K2(x) = imfilter(x, kernf)
+#
+# plot(heatmap(K1(x)), heatmap(K2(x)), heatmap(K2(x)-K1(x)))
+#
+# using FFTW
+# FFTW.set_num_threads(1)
+#
+# @btime $xi1 * $x * $xi2
+# @btime imfilter($x, $kernp)

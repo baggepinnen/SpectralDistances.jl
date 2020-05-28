@@ -606,6 +606,115 @@ scale!(x,i,w::AbstractArray) = (x * w[i]) # for dual numbers etc.
 
 
 
+struct BCWorkspace{T,TK}
+    K::TK
+    KV::Array{T,3}
+    U::Array{T,3}
+    b::Array{T,2}
+    bold::Array{T,2}
+    S::Array{T,2}
+end
+
+function BCWorkspace(A, β)
+    N    = length(A)
+    m, n = size(A[1])
+    T    = eltype(eltype(A))
+    β    = T(β)
+
+    b    = zeros(T, m, n)
+    bold = zeros(T, m, n)
+    U    = ones(T, m, n, N)
+    KV   = ones(T, m, n, N)
+    S1   = Matrix{T}(undef, m, n)
+    S2   = Matrix{T}(undef, m, n)
+
+    t    = LinRange(T(0), T(1), m)
+    Y, X = meshgrid(t, t)
+    xi1  = @. exp(-(X - Y)^2 / β)
+
+    t    = LinRange(T(0), T(1), n)
+    Y, X = meshgrid(t, t)
+    xi2  = @. exp(-(X - Y)^2 / β)
+
+    function K(u,x)
+        # xi1 * x * xi2
+        mul!(S2,x,xi2)
+        mul!(u,xi1,S2)
+    end
+    BCWorkspace(K, KV, U, b, bold, S1)
+end
+
+"""
+    barycenter_convolutional(A, λ, β, iters = 1000, tol = 1e-9, ϵ = 1e-30)
+
+
+´β` is the regularization and `λ` are the weights (barycentric coordinates). To reuse allocated space ebtween successive calls, use the "workspace" method from the example below.
+```julia
+a1      = zeros(Float32, 10,10)
+a1[2,2] = 1
+a2      = zeros(Float32, 10,10)
+a2[6,6] = 1
+A       = [a1,a2]
+β       = 0.01
+λ       = [0.5, 0.5] # Barycentric coordinates, must sum to 1
+w       = BCWorkspace(A, β)
+b       = barycenter_convolutional(w,A,λ)
+plot(heatmap(a1), heatmap(a2), heatmap(b))
+```
+"""
+function barycenter_convolutional(w::BCWorkspace{T,TK}, A, λ, iters = 1000, tol = 1e-9, ϵ = 1e-30) where {T,TK}
+
+    N = length(A)
+    K, KV, U, b, bold, S = w.K, w.KV, w.U, w.b, w.bold, w.S
+    iter = 0
+    err = one(T)
+
+    while err > tol && iter < iters
+        copyto!(bold, b)
+        iter = iter + 1
+        b .= 0
+        for r = 1:N
+            temp = @view KV[:, :, r]
+            @views K(S, U[:, :, r])
+            @avx S .= A[r] ./ max.(ϵ, S)
+            K(temp, S)
+            @views @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
+        end
+        @avx b .= exp.(b)
+        @avx b ./= sum(b)
+        for r = 1:N
+            @views @avx @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
+        end
+
+        if iter % 10 == 1
+            err = sum(abs(bold - b) for (bold,b) in zip(bold,b))
+        end
+    end
+    b
+end
+
+function barycenter_convolutional(A, λ, β; kwargs...)
+    w = BCWorkspace(A, β)
+    barycenter_convolutional(w, A, λ; kwargs...)
+end
+
+function meshgrid(a,b)
+    grid_a = [i for i in a, j in b]
+    grid_b = [j for i in a, j in b]
+    grid_a, grid_b
+end
+
+
+function barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1/length(models), length(models)); kwargs...)
+
+    A = power.(models)
+    barycenter_convolutional(
+
+
+end
+
+
+
 
 # function barycenter(d::OptimalTransportRootDistance,models; normalize=true, kwargs...)
 #     X, w, realpoles = barycenter_matrices(d, models, normalize)
