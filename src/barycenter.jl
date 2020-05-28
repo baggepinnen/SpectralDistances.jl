@@ -661,16 +661,19 @@ w       = BCWorkspace(A, β)
 b       = barycenter_convolutional(w,A,λ)
 plot(heatmap(a1), heatmap(a2), heatmap(b))
 ```
+
+Ref: J. Solomon, F. de Goes, G. Peyré, M. Cuturi, A. Butscher, A. Nguyen, T. Du, L. Guibas. Convolutional Wasserstein Distances: Efficient Optimal Transportation on Geometric Domains.  2015 https://people.csail.mit.edu/jsolomon/assets/convolutional_w2.compressed.pdf
 """
 function barycenter_convolutional(
     w::BCWorkspace{T,TK},
     A,
     λ = Fill(1 / length(models), length(models));
-    iters = 10000,
-    tol = 1e-9,
-    ϵ = 1e-30,
+    iters = 1000,
+    tol = 1e-6,
+    ϵ = 1e-40,
 ) where {T,TK}
 
+    sum(λ) ≈ 1 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
     N = length(A)
     K, KV, U, b, bold, S = w.K, w.KV, w.U, w.b, w.bold, w.S
     iter = 0
@@ -703,7 +706,7 @@ end
 function barycenter_convolutional(
     A,
     λ = Fill(1 / length(models), length(models));
-    β = 0.01,
+    β = 0.001,
     kwargs...,
 )
     w = BCWorkspace(A, β)
@@ -722,11 +725,12 @@ function barycenter_convolutional(
     λ = Fill(1 / length(models), length(models));
     kwargs...,
 )
-    A  = power.(models)
+    ss = x -> sqrt.(x)
+    A  = s1.(ss.(power.(models)))
     b  = barycenter_convolutional(A, λ; kwargs...)
     B  = deepcopy(models[1])
     Bp = power(B)
-    Bp .= b
+    Bp .= abs2.(b)
     B
 end
 
