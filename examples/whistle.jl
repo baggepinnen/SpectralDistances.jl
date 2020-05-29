@@ -1,27 +1,44 @@
+# This example loads 4 short sound clips, each containing a whistle. It then forms the barycenter of those clips with varying barycentric coordinates and plot all barycenters in a grid.
 using SpectralDistances, WAV, LPVSpectral
 cd(@__DIR__)
 y = map(1:4) do i
     filename = "whistle_$i.wav"
-    sound,fs = wavread(filename)
+    sound, fs = wavread(filename)
     @show fs
-    sound = vec(mean(sound, dims=2)) .+ 0.005 .* randn.()
+    sound = vec(mean(sound, dims = 2)) .+ 0.005 .* randn.()
 end
 
 ml = minimum(length, y)
-y = [y[1:ml] for y in y] # Make sure they are all of equal length
+y  = [y[1:ml] for y in y] # Make sure they are all of equal length
 fs = 44100
-S = melspectrogram.(y, 512, nmels=64, fs = fs, fmin = 2500, fmax=7000)
-plot(plot.(S)..., colorbar=false)
-EM = melspectrogram(mean(y), 512, nmels=64, fs = fs, fmin = 2500, fmax=7000)
+S  = melspectrogram.(y, 512, nmels = 64, fs = fs, fmin = 2500, fmax = 7000)
+plot(plot.(S)..., colorbar = false)
+EM = melspectrogram(mean(y), 512, nmels = 64, fs = fs, fmin = 2500, fmax = 7000)
 
-##
+## Plot the barycenter when all weights are equal (the Wasserstein mean)
 λ = s1([1, 1, 1, 1])
-B = barycenter_convolutional(S, λ, β=0.0005, tol=5e-6, iters=5000, ϵ=1e-100, dynamic_floor=-25, verbose=true)
-plot(plot(B, title="Barycenter"), plot(EM, title="Euclidean mean"), plot.(S, title="")..., colorbar=false, layout=(3,2), xlabel=false)
+B = barycenter_convolutional(
+    S,
+    λ,
+    β             = 0.0005,
+    tol           = 5e-6,
+    iters         = 5000,
+    ϵ             = 1e-100,
+    dynamic_floor = -25,
+    verbose       = true,
+)
+plot(
+    plot(B, title = "Barycenter"),
+    plot(EM, title = "Euclidean mean"),
+    plot.(S, title = "")...,
+    colorbar = false,
+    layout   = (3, 2),
+    xlabel   = false,
+)
 
 
 
-##
+## Plot a 5×5 grid of barycenters with different barycentric coordinates.
 N_fig = 5
 plotopts = (
     colorbar  = false,
