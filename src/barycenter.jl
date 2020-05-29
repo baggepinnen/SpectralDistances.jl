@@ -645,14 +645,16 @@ function BCWorkspace(A, β)
 end
 
 """
-    barycenter_convolutional(A, [λ]; β = 0.01, iters = 1000, tol = 1e-9, ϵ = 1e-30)
+    barycenter_convolutional(A, [λ]; β = 0.01, iters = 1000, tol = 1e-9, ϵ = 1e-90)
 
 
-´β` is the regularization and `λ` (optional) are the weights (barycentric coordinates). To reuse allocated space ebtween successive calls, use the "workspace" method from the example below.
+Convolutional barycenters.
+
+´β` is the regularization and `λ` (optional) are the weights (barycentric coordinates). To reuse allocated space between successive calls, use the "workspace" method from the example below. `ϵ` is a truncation parameter for numerical stability.
 ```julia
-a1      = zeros(Float32, 10,10)
+a1      = zeros(10, 10)
 a1[2,2] = 1
-a2      = zeros(Float32, 10,10)
+a2      = zeros(10, 10)
 a2[6,6] = 1
 A       = [a1,a2]
 β       = 0.01
@@ -666,11 +668,11 @@ Ref: J. Solomon, F. de Goes, G. Peyré, M. Cuturi, A. Butscher, A. Nguyen, T. Du
 """
 function barycenter_convolutional(
     w::BCWorkspace{T,TK},
-    A,
+    A::AbstractVector{<:AbstractMatrix},
     λ = Fill(1 / length(models), length(models));
     iters = 1000,
     tol = 1e-6,
-    ϵ = 1e-40,
+    ϵ = 1e-90,
 ) where {T,TK}
 
     sum(λ) ≈ 1 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
@@ -679,21 +681,21 @@ function barycenter_convolutional(
     iter = 0
     err = one(T)
 
-    while err > tol && iter < iters
+    @views while err > tol && iter < iters
         copyto!(bold, b)
         iter = iter + 1
         b .= 0
         for r = 1:N
-            temp = @view KV[:, :, r]
-            @views K(S, U[:, :, r])
+            temp = KV[:, :, r]
+            K(S, U[:, :, r])
             @avx S .= A[r] ./ max.(ϵ, S)
             K(temp, S)
-            @views @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
+            @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
         end
         @avx b .= exp.(b)
         @avx b ./= sum(b)
         for r = 1:N
-            @views @avx @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
+            @avx @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
         end
 
         if iter % 10 == 1
@@ -704,7 +706,7 @@ function barycenter_convolutional(
 end
 
 function barycenter_convolutional(
-    A,
+    A::AbstractVector{<:AbstractMatrix},
     λ = Fill(1 / length(models), length(models));
     β = 0.001,
     kwargs...,
@@ -720,17 +722,47 @@ function meshgrid(a,b)
 end
 
 
+"""
+    barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = mean(log(quantile(power(m), 0.05)) for m in models), kwargs...)
+
+Covenience function for the calculation of spectrograms. This function transforms the spectrograms to log-power and adjusts the floor to `dynamic_floor`, followed by a normalization to sum to 1.
+
+# Arguments:
+- `dynamic_floor`: Sets the floor of the spectrogram in log-domain, i.e., all values below this will be truncated. The default value is based on a quantile of the spectrogram powers.
+- `kwargs`: Same as for the base method
+
+# Example:
+```julia
+using SpectralDistances, DSP, Plots
+N     = 48_000
+t     = 1:N
+f     = range(0.01, stop=1, length=N)
+y01   = sin.(t .* f)
+y02   = sin.(t .* (f .+ 0.5))
+y1    = [y01; zeros(5000)] .+ 0.1 .* randn.()
+y2    = [zeros(5000); y02] .+ 0.1 .* randn.()
+S1,S2 = spectrogram.((y1,y2), 2048)
+
+A = [S1,S2]
+β = 0.0001     # Regularization parameter (higher implies more smoothing and a faster, more stable solution)
+λ = [0.5, 0.5] # Barycentric coordinates (must sum to 1)
+B = barycenter_convolutional(A, β=β, tol=1e-6, iters=500, ϵ=1e-70, dynamic_floor=-5)
+plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3), colorbar=false)
+```
+"""
 function barycenter_convolutional(
     models::Vector{<:DSP.Periodograms.TFR},
     λ = Fill(1 / length(models), length(models));
+    dynamic_floor = mean(log(quantile(vec(power(m)), 0.05)) for m in models),
     kwargs...,
 )
-    ss = x -> sqrt.(x)
+
+    ss = x -> max.(log.(x), dynamic_floor) .- dynamic_floor
     A  = s1.(ss.(power.(models)))
     b  = barycenter_convolutional(A, λ; kwargs...)
     B  = deepcopy(models[1])
     Bp = power(B)
-    Bp .= abs2.(b)
+    Bp .= exp.(b .+ dynamic_floor)
     B
 end
 

@@ -97,10 +97,10 @@ y2    = [zeros(5000); y02] .+ 0.1 .* randn.()
 S1,S2 = spectrogram.((y1,y2), 2048)
 
 A = [S1,S2]
-β = 0.0001
+β = 0.0001     # Regularization parameter (higher implies more smoothing and a faster, more stable solution)
 λ = [0.5, 0.5] # Barycentric coordinates (must sum to 1)
-B = barycenter_convolutional(A, β=β, tol=1e-6, iters=100, ϵ=1e-70)
-plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3))
+B = barycenter_convolutional(A, β=β, tol=1e-6, iters=500, ϵ=1e-70, dynamic_floor=-5)
+plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3), colorbar=false)
 
 savefig("barycenter_sg.html"); nothing # hide
 ```
