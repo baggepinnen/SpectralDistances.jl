@@ -697,8 +697,8 @@ end
 end
 
 @testset "Slerp" begin
-    a = n1(randn(3))
-    b = n1(randn(3))
+    a = n1([1,2,3])
+    b = n1([4,4,3])
     c = SpectralDistances.slerp(a,b,0.5)
     @test c ≈ n1((a+b)/2)
 end
