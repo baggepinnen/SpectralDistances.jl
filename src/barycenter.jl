@@ -723,37 +723,35 @@ end
 
 
 """
-    barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = mean(log(quantile(power(m), 0.05)) for m in models), kwargs...)
+    barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = mean(log(quantile(power(m), 0.2)) for m in models), kwargs...)
 
 Covenience function for the calculation of spectrograms. This function transforms the spectrograms to log-power and adjusts the floor to `dynamic_floor`, followed by a normalization to sum to 1.
 
 # Arguments:
-- `dynamic_floor`: Sets the floor of the spectrogram in log-domain, i.e., all values below this will be truncated. The default value is based on a quantile of the spectrogram powers.
+- `dynamic_floor`: Sets the floor of the spectrogram in log-domain, i.e., all values below this will be truncated. The default value is based on a quantile of the spectrogram powers. If your spectrograms are mostly low entropy, you can try to increase this number to get sharper results.
 - `kwargs`: Same as for the base method
 
 # Example:
 ```julia
 using SpectralDistances, DSP, Plots
-N     = 48_000
+N     = 24_000
 t     = 1:N
-f     = range(0.01, stop=1, length=N)
-y01   = sin.(t .* f)
-y02   = sin.(t .* (f .+ 0.5))
-y1    = [y01; zeros(5000)] .+ 0.1 .* randn.()
-y2    = [zeros(5000); y02] .+ 0.1 .* randn.()
-S1,S2 = spectrogram.((y1,y2), 2048)
+f     = range(0.8, stop=1.2, length=N)
+y1    = sin.(t .* f) .+ 0.1 .* randn.()
+y2    = sin.(t .* reverse(f .+ 0.5)) .+ 0.1 .* randn.()
+S1,S2 = spectrogram.((y1,y2), 1024)
 
 A = [S1,S2]
 β = 0.0001     # Regularization parameter (higher implies more smoothing and a faster, more stable solution)
 λ = [0.5, 0.5] # Barycentric coordinates (must sum to 1)
-B = barycenter_convolutional(A, β=β, tol=1e-6, iters=500, ϵ=1e-70, dynamic_floor=-5)
+B = barycenter_convolutional(A, β=β, tol=1e-6, iters=200, ϵ=1e-100, dynamic_floor=-2)
 plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3), colorbar=false)
 ```
 """
 function barycenter_convolutional(
     models::Vector{<:DSP.Periodograms.TFR},
     λ = Fill(1 / length(models), length(models));
-    dynamic_floor = mean(log(quantile(vec(power(m)), 0.05)) for m in models),
+    dynamic_floor = mean(log(quantile(vec(power(m)), 0.2)) for m in models),
     kwargs...,
 )
 

@@ -87,19 +87,17 @@ savefig("barycenter.html"); nothing # hide
 We can also calculate a barycenter between spectrograms (or arbitrary matrices) using an efficient convolutional method, but the result tends to be a bit blurry:
 ```@example
 using SpectralDistances, DSP, Plots
-N     = 48_000
+N     = 24_000
 t     = 1:N
-f     = range(0.01, stop=1, length=N)
-y01   = sin.(t .* f)
-y02   = sin.(t .* (f .+ 0.5))
-y1    = [y01; zeros(5000)] .+ 0.1 .* randn.()
-y2    = [zeros(5000); y02] .+ 0.1 .* randn.()
-S1,S2 = spectrogram.((y1,y2), 2048)
+f     = range(0.8, stop=1.2, length=N)
+y1    = sin.(t .* f) .+ 0.1 .* randn.()
+y2    = sin.(t .* reverse(f .+ 0.5)) .+ 0.1 .* randn.()
+S1,S2 = spectrogram.((y1,y2), 1024)
 
 A = [S1,S2]
 β = 0.0001     # Regularization parameter (higher implies more smoothing and a faster, more stable solution)
 λ = [0.5, 0.5] # Barycentric coordinates (must sum to 1)
-B = barycenter_convolutional(A, β=β, tol=1e-6, iters=500, ϵ=1e-70, dynamic_floor=-5)
+B = barycenter_convolutional(A, β=β, tol=1e-6, iters=200, ϵ=1e-100, dynamic_floor=-2)
 plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), layout=(1,3), colorbar=false)
 
 savefig("barycenter_sg.html"); nothing # hide
