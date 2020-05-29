@@ -84,7 +84,7 @@ savefig("barycenter.html"); nothing # hide
 ```
 
 ### Barycenters between spectrograms
-We can also calculate a barycenter between spectrograms (or arbitrary matrices) using an efficient convolutional method, but the result tends to be a bit blurry:
+We can also calculate a barycenter between spectrograms (or arbitrary matrices) using an efficient convolutional method. The most important parameter to tune in order to get a good result, apart from the regularization parameter `β`, is the `dynamic_floor`. This parameter determines where (in log space) the floor of the PSD is. This serves as a denoising, why the barycenter appears with a very dark background in the image below.
 ```@example
 using SpectralDistances, DSP, Plots
 N     = 24_000
@@ -97,7 +97,7 @@ S1,S2 = spectrogram.((y1,y2), 1024)
 A = [S1,S2]
 β = 0.0001     # Regularization parameter (higher implies more smoothing and a faster, more stable solution)
 λ = [0.5, 0.5] # Barycentric coordinates (must sum to 1)
-B = barycenter_convolutional(A, β=β, tol=1e-6, iters=200, ϵ=1e-100, dynamic_floor=-2)
+B = barycenter_convolutional(A, β=β, tol=1e-6, iters=2000, ϵ=1e-100, dynamic_floor=-2)
 plot(
     plot(S1, title="S1"),
     plot(B, title="Barycenter"),
@@ -111,9 +111,11 @@ savefig("barycenter_sg.html"); nothing # hide
 ```@raw html
 <object type="text/html" data="../barycenter_sg.html" style="width:100%;height:450px;"></object>
 ```
-Note that in order to calculate the barycenter, the sum of each input spectrogram is normalized to 1.
+Note that in order to calculate the barycenter, the sum of each input spectrogram is normalized.
 
-This function works for any vector of matrices as long as all entries are positive and each matrix has a sum of 1.  
+This function works for any vector of matrices as long as all entries are positive and each matrix has an equal sum.
+
+For a more thourogh example, see [whistle.jl](https://github.com/baggepinnen/SpectralDistances.jl/blob/master/examples/whistle.jl).
 
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
