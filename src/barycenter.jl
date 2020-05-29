@@ -645,7 +645,7 @@ function BCWorkspace(A, β)
 end
 
 """
-    barycenter_convolutional(A, [λ]; β = 0.01, iters = 1000, tol = 1e-9, ϵ = 1e-90)
+    barycenter_convolutional(A, [λ]; β = 0.01, iters = 1000, tol = 1e-9, ϵ = 1e-90, verbose = false)
 
 
 Convolutional barycenters.
@@ -673,8 +673,10 @@ function barycenter_convolutional(
     iters = 1000,
     tol = 1e-6,
     ϵ = 1e-90,
+    verbose = false,
 ) where {T,TK}
 
+    @fastmath sum(A[1]) ≈ sum(A[2]) || @warn "Input matrices do not appear to have the same mass (sum)"
     sum(λ) ≈ 1 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
     N = length(A)
     K, KV, U, b, bold, S = w.K, w.KV, w.U, w.b, w.bold, w.S
@@ -693,13 +695,14 @@ function barycenter_convolutional(
             @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
         end
         @avx b .= exp.(b)
-        @avx b ./= sum(b)
         for r = 1:N
             @avx @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
         end
+        @avx b ./= sum(b)
 
         if iter % 10 == 1
             err = sum(abs(bold - b) for (bold, b) in zip(bold, b))
+            verbose && @info "Sinkhorn conv barycenters: iter = $iter, error = $err"
         end
     end
     b
@@ -756,7 +759,10 @@ function barycenter_convolutional(
 )
 
     ss = x -> max.(log.(x), dynamic_floor) .- dynamic_floor
-    A  = s1.(ss.(power.(models)))
+    A  = ss.(power.(models))
+    ms = mean(sum, A)
+    sumnorm = x -> x .* (ms/sum(x))
+    A .= sumnorm.(A)
     b  = barycenter_convolutional(A, λ; kwargs...)
     B  = deepcopy(models[1])
     Bp = power(B)
