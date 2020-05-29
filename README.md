@@ -28,3 +28,11 @@ pkg"add SpectralDistances"
 
 ![window](figs/demon.svg)
 > Barycenter of three spectra and mixed spectrum which can be decomposed into a combination of the three input spectra
+
+
+## Example: Barycentric interpolation of spectrograms
+See the folder `examples` for the code.
+
+![barycenters](examples/barycenters.png)
+
+See the [docs](https://baggepinnen.github.io/SpectralDistances.jl/latest) for more examples.

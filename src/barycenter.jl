@@ -701,7 +701,7 @@ function barycenter_convolutional(
         @avx b ./= sum(b)
 
         if iter % 10 == 1
-            err = sum(abs(bold - b) for (bold, b) in zip(bold, b))
+            @fastmath err = sum(abs(bold - b) for (bold, b) in zip(bold, b))
             verbose && @info "Sinkhorn conv barycenters: iter = $iter, error = $err"
         end
     end
