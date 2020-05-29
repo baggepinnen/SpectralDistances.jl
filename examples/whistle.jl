@@ -51,7 +51,7 @@ for i = 0:N_fig-1, j = 0:N_fig-1
         S,
         λ,
         β             = 0.0005,
-        tol           = 1e-2,
+        tol           = 1e-4,
         iters         = 5000,
         ϵ             = 1e-100,
         dynamic_floor = -25,

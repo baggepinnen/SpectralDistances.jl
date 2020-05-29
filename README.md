@@ -31,7 +31,7 @@ pkg"add SpectralDistances"
 
 
 ## Example: Barycentric interpolation of spectrograms
-See the folder `examples` for the code.
+The image below illustrates interpolation between 4 Mel spectrograms, each one representing a short whistle. See the folder `examples` for the code.
 
 ![barycenters](examples/barycenters.png)
 
