@@ -132,16 +132,16 @@ dist = OptimalTransportRootDistance(domain=Continuous(), β=0.01, weight=simplex
     dist,
     models,
     n_classes, # number of clusters
-    seed    = :rand,
-    solver  = sinkhorn_log!,
-    tol     = 2e-6,
-    innertol = 2e-6,
-    iters   = 100000,
+    seed       = :rand,
+    solver     = sinkhorn_log!,
+    tol        = 2e-6,
+    innertol   = 2e-6,
+    iters      = 100000,
     inneriters = 100000,
-    verbose = true,
-    output  = :best,
-    uniform = true,
-    kiters  = 10
+    verbose    = true,
+    output     = :best,
+    uniform    = true,
+    kiters     = 10
 )
 
 bc,ass = clusterresult.barycenters, clusterresult.assignments
@@ -161,7 +161,7 @@ yticks!(yt)
 xticks!(yt, xrotation=45)
 current()
 ```
-The figure should look like the last figure in [the paper](https://drive.google.com/file/d/1EPS_pyC_opKMLlnk02kIfHbpawWFl4W-/view).
+The figure should look like the last figure in [the paper](http://arxiv.org/abs/2004.09152).
 
 ```@index
 Pages = ["interpolations.md"]
