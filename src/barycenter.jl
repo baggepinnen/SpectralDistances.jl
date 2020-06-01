@@ -628,13 +628,10 @@ function BCWorkspace(A, β)
     S1   = Matrix{T}(undef, m, n)
     S2   = Matrix{T}(undef, m, n)
 
-    t    = LinRange(T(0), T(1), m)
-    Y, X = meshgrid(t, t)
-    xi1  = @. exp(-(X - Y)^2 / β)
 
-    t    = LinRange(T(0), T(1), n)
-    Y, X = meshgrid(t, t)
-    xi2  = @. exp(-(X - Y)^2 / β)
+    xi1 = Matrix{T}(undef, m, m)
+    xi2 = Matrix{T}(undef, n, n)
+    _initialize_conv_op!(xi1, xi2, β)
 
     function K(u,x)
         # xi1 * x * xi2
@@ -687,11 +684,10 @@ function barycenter_convolutional(
         copyto!(bold, b)
         iter = iter + 1
         b .= 0
-        for r = 1:N
-            temp = KV[:, :, r]
+        for r = 1:N # TODO: if S storage is expanded, this loop can be split into several and @avx or @tullio can be put on some. Maybe even K can be manually inlined here to make everythin avx-able. Can also be run on GPU easily.
             K(S, U[:, :, r])
             @avx S .= A[r] ./ max.(ϵ, S)
-            K(temp, S)
+            K(KV[:, :, r], S)
             @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
         end
         @avx b .= exp.(b)
@@ -710,7 +706,7 @@ end
 
 function barycenter_convolutional(
     A::AbstractVector{<:AbstractMatrix},
-    λ = Fill(1 / length(models), length(models));
+    λ = Fill(1 / length(A), length(A));
     β = 0.001,
     kwargs...,
 )
@@ -718,17 +714,13 @@ function barycenter_convolutional(
     barycenter_convolutional(w, A, λ; kwargs...)
 end
 
-function meshgrid(a,b)
-    grid_a = [i for i in a, j in b]
-    grid_b = [j for i in a, j in b]
-    grid_a, grid_b
-end
-
 
 """
     barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = mean(log(quantile(power(m), 0.2)) for m in models), kwargs...)
 
 Covenience function for the calculation of spectrograms. This function transforms the spectrograms to log-power and adjusts the floor to `dynamic_floor`, followed by a normalization to sum to 1.
+
+This function will be called if [`barycenter`](@ref) is called with [`ConvOptimalTransportDistance`](@ref) as first argument.
 
 # Arguments:
 - `dynamic_floor`: Sets the floor of the spectrogram in log-domain, i.e., all values below this will be truncated. The default value is based on a quantile of the spectrogram powers. If your spectrograms are mostly low entropy, you can try to increase this number to get sharper results.
@@ -770,6 +762,16 @@ function barycenter_convolutional(
     B
 end
 
+
+
+function barycenter(d::ConvOptimalTransportDistance, args...; kwargs...)
+    barycenter_convolutional(
+        args...;
+        dynamic_floor = d.dynamic_floor,
+        β = d.β,
+        kwargs...,
+    )
+end
 
 
 

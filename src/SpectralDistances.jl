@@ -89,6 +89,7 @@ KernelWassersteinRootDistance,
 DiscretizedRationalDistance,
 WelchOptimalTransportDistance,
 WelchLPDistance,
+ConvOptimalTransportDistance,
 RationalOptimalTransportDistance,
 OptimalTransportHistogramDistance,
 DiscreteGridTransportDistance,
@@ -97,8 +98,7 @@ BuresDistance,
 EnergyDistance,
 CompositeDistance,
 discrete_grid_transportplan
-# closed_form_wass,
-# closed_form_wass_noinverse
+
 
 export sinkhorn,
 sinkhorn_log,
@@ -106,7 +106,9 @@ sinkhorn_log!,
 IPOT,
 sinkhorn_diff,
 sinkhorn_unbalanced,
-transport_plan
+transport_plan,
+sinkhorn_convolutional,
+SCWorkspace
 
 using UnbalancedOptimalTransport: KL, TV, Balanced, RG
 export KL, TV, Balanced, RG

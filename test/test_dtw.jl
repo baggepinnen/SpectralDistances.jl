@@ -1,4 +1,4 @@
-using SpectralDistances, DynamicAxisWarping, DSP
+using SpectralDistances, DynamicAxisWarping, DSP, Distances
 
 nfft = 32
 T = 200

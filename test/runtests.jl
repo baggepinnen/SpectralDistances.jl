@@ -172,6 +172,48 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         @test sum(Γ) ≈ 1 atol=0.001
 
 
+        @testset "Sinkhorn convolutional" begin
+            @info "Testing Sinkhorn convolutional"
+            m,n,T = 8, 10, Float64
+            for m = 8:12, n = 8:12, T = (Float64, )
+                # @show m,n,T
+
+                a = zeros(T, m, n)
+                a[2,2] = 1
+                b = zeros(T, m, n)
+                b[3,3] = 1
+                d1 = sinkhorn_convolutional(a,b,τ=1e2)
+                b = zeros(T, m, n)
+                b[4,4] = 1
+                d2 = sinkhorn_convolutional(a,b,τ=1e2)
+                @test 2sqrt(d1) ≈ sqrt(d2) rtol = 0.1
+                b = zeros(T, m, n)
+                b[6,6] = 1
+                d3 = sinkhorn_convolutional(a,b,τ=1e2)
+                @test 2sqrt(d2) ≈ sqrt(d3) rtol = 0.1
+
+                # Do the same as above but with different log stabilization
+                a = zeros(T, m, n)
+                a[2,2] = 1
+                b = zeros(T, m, n)
+                b[3,3] = 1
+                d4 = sinkhorn_convolutional(a,b,τ=1e5)
+                b = zeros(T, m, n)
+                b[4,4] = 1
+                d5 = sinkhorn_convolutional(a,b,τ=1e5)
+                @test 2sqrt(d4) ≈ sqrt(d5) rtol = 0.1
+                b = zeros(T, m, n)
+                b[6,6] = 1
+                d6 = sinkhorn_convolutional(a,b,τ=1e5)
+                @test 2sqrt(d5) ≈ sqrt(d6) rtol = 0.1
+
+                @test d1 ≈ d4 # Test that the result is the same with and without log stabilization.
+                @test d2 ≈ d5
+                @test d3 ≈ d6
+            end
+        end
+
+
     end
 
 

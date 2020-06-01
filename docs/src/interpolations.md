@@ -117,6 +117,9 @@ This function works for any vector of matrices as long as all entries are positi
 
 For a more thourogh example, see [whistle.jl](https://github.com/baggepinnen/SpectralDistances.jl/blob/master/examples/whistle.jl).
 
+### Trade off between frequency and time
+There is currently no way of having different costs between transport in time and transport along the frequency axis other than to change the resolution of the spectrogram.
+
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
 ```julia

@@ -123,7 +123,6 @@ function sinkhorn_log!(C, a, b; kwargs...)
     sinkhorn_log!(w, C, a, b; kwargs...)
 end
 
-using LoopVectorization
 
 # This is just the same as the one above, but with @avx so it only supports simple types
 function sinkhorn_log!(w::SinkhornLogWorkspace{T}, C, a, b; β=1e-1, τ=1e3, iters=1000, tol=1e-8, printerval = typemax(Int),
@@ -456,4 +455,161 @@ function transport_plan(dist,e1,e2; kwargs...)
     w2 = dist.weight(e2)
     solver = dist.divergence === nothing ? sinkhorn_log! : unbalanced_solver_closure(dist)
     Γ = solver(D, w1, w2; β = 0.01, kwargs...)[1]
+end
+
+
+
+
+
+
+
+struct SCWorkspace{T}
+    #K::TK
+    V::Array{T,2}
+    U::Array{T,2}
+    S::Array{T,2}
+    S2::Array{T,2}
+    alpha::Array{T,2}
+    beta::Array{T,2}
+    xi1::Array{T,2}
+    xi2::Array{T,2}
+end
+
+function SCWorkspace(A, B, β)
+    m, n = size(A)
+    T    = eltype(eltype(A))
+    β    = T(β)
+
+    U   = ones(T, size(B))
+    V   = ones(T, size(A))
+    S   = Matrix{T}(undef, m, n)
+    S2  = Matrix{T}(undef, size(B))
+
+    xi1 = Matrix{T}(undef, m, m)
+    xi2 = Matrix{T}(undef, n, n)
+
+    alpha,beta = zeros(T, size(A)), zeros(T, size(B))
+
+    SCWorkspace(V, U, S, S2, alpha, beta, xi1, xi2)
+end
+
+
+function sinkhorn_convolutional(
+    w::SCWorkspace{T},
+    A::AbstractMatrix,
+    B::AbstractMatrix;
+    β = 0.001,
+    τ = 1/eps(T),
+    iters = 1000,
+    tol = 1e-6,
+    ϵ = eps(T)^2,
+    verbose = false,
+) where {T}
+
+    @fastmath sum(A) ≈ sum(B) || @warn "Input matrices do not appear to have the same mass (sum)"
+    # V, U, S, S2, xi1, xi2, alpha, beta = w.V, w.U, w.S, w.S2, w.xi1, w.xi2, w.alpha, w.beta
+    V, U, S, S2, xi1, xi2 = w.V, w.U, w.S, w.S2, w.xi1, w.xi2
+    U .= 1
+    V .= 1
+    alpha = zero(T)
+    beta  = zero(T)
+    iter = 0
+    err = one(T)
+    _initialize_conv_op!(xi1, xi2, β)
+
+
+    while err > tol && iter < iters
+        iter = iter + 1
+        copyto!(S2, U)
+        # K(V, U)
+        mul!(S,U,xi2)
+        mul!(V,xi1,S)
+        @avx @. V = A / max(V, ϵ)
+        # K(U, V)
+        mul!(S,V,xi2)
+        mul!(U,xi1,S)
+        @avx @. U = B / max(U, ϵ)
+        mU, mV = maximum(abs, U), maximum(abs, V)
+        if mU > τ || mV > τ
+            alpha += log(mU)
+            beta  += log(mV)
+            U ./= mU
+            V ./= mV
+            _initialize_conv_op!(xi1, xi2, alpha, beta, β)
+        end
+
+        if iter % 10 == 1
+            @fastmath err = sum(abs(S2 - U) for (S2, U) in zip(S2, U))
+            verbose && @info "Sinkhorn conv: iter = $iter, error = $err"
+        end
+    end
+    @avx @. V = log(V + ϵ) + alpha
+    @avx @. U = log(U + ϵ) + beta
+    β*(dot(A, V) + dot(B, U))
+
+end
+
+function sinkhorn_convolutional(
+    A::AbstractMatrix,
+    B::AbstractMatrix;
+    β = 0.001,
+    kwargs...,
+)
+    w = SCWorkspace(A, B, β)
+    sinkhorn_convolutional(w, A, B; β=β, kwargs...)
+end
+
+
+function _initialize_conv_op!(xi1::AbstractMatrix{T}, xi2::AbstractMatrix{T}, β::Real) where T
+    m,n = size(xi1,2), size(xi2, 1)
+    t    = LinRange(zero(T), one(T), m)
+    @avx for i = 1:m, j = 1:m
+        xi1[i,j]  = exp(-(t[i] - t[j])^2 / β)
+    end
+    t    = LinRange(zero(T), one(T), n)
+    @avx for i = 1:n, j = 1:n
+        xi2[i,j]  = exp(-(t[i] - t[j])^2 / β)
+    end
+end
+
+function _initialize_conv_op!(xi1::AbstractMatrix{T}, xi2::AbstractMatrix{T}, alpha, beta, β::Real) where T
+    m,n = size(xi1,2), size(xi2, 1)
+    t    = LinRange(zero(T), one(T), m)
+    alpha, beta = alpha, beta
+    @avx for i = 1:m, j = 1:m
+        xi1[i,j]  = exp(-(t[i] - t[j])^2 / β + alpha + beta)
+    end
+    # t    = LinRange(zero(T), one(T), n)
+    # @avx for i = 1:n, j = 1:n
+    #     xi2[i,j]  = exp(-((t[i] - t[j])^2) / β)
+    # end
+end
+
+"""
+    ConvOptimalTransportDistance <: AbstractDistance
+
+Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref).
+
+- `β = 0.001`
+- `dynamic_floor = -10.0`
+"""
+ConvOptimalTransportDistance
+Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
+    β::T = 0.001
+    dynamic_floor::T = -10.0
+    workspace = nothing
+end
+
+function evaluate(d::ConvOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; kwargs...)
+
+    ss = x -> max.(log.(x), d.dynamic_floor) .- d.dynamic_floor
+    A  = ss(power(w1))
+    B  = ss(power(w2))
+    ms = mean(sum, (A,B))
+    A .*= (1/sum(A))
+    B .*= (1/sum(B))
+    # if d.workspace === nothing # use if needed
+    #     d.workspace = SCWorkspace(A,B,β)
+    # end
+    sinkhorn_convolutional( A, B; β = d.β, kwargs...)
 end

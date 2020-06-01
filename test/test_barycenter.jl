@@ -433,7 +433,7 @@ end
     a2 = zeros(Float64, 10,10)
     a2[6,6] = 1
     A = [a1,a2]
-    β = 0.01
+    β = 0.001
     λ = [0.5, 0.5]
     b = barycenter_convolutional(A,λ,β=β)
     @test maximum(b) == b[4,4]
@@ -442,8 +442,18 @@ end
     A1 = spectrogram(randn(1000))
     A2 = spectrogram(randn(1000))
     A = [A1, A2]
-    B = barycenter_convolutional(A,λ,β=β)
+    B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-2)
     @test B isa typeof(A1)
+
+    d = ConvOptimalTransportDistance(β=β, dynamic_floor=-2.0)
+    B2 = barycenter(d, A)
+    @test power(B) == power(B2)
+    @test time(B) == time(B2)
+
+    @test d(A1,A2) > d(A1,A1)
+    @test d(A1,A2) > d(A2,A2)
+    @test d(A1,A2) - 0.5*(d(A1,A1) + d(A2,A2)) > 0
+
     # @test B.power == barycenter_convolutional([A1.power, A2.power],λ,β=β)
 
 
