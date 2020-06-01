@@ -504,13 +504,16 @@ function sinkhorn_convolutional(
     tol = 1e-6,
     ϵ = eps(T)^2,
     verbose = false,
+    initUV = true,
 ) where {T}
 
     @fastmath sum(A) ≈ sum(B) || @warn "Input matrices do not appear to have the same mass (sum)"
     # V, U, S, S2, xi1, xi2, alpha, beta = w.V, w.U, w.S, w.S2, w.xi1, w.xi2, w.alpha, w.beta
     V, U, S, S2, xi1, xi2 = w.V, w.U, w.S, w.S2, w.xi1, w.xi2
-    U .= 1
-    V .= 1
+    if initUV
+        U .= 1
+        V .= 1
+    end
     alpha = zero(T)
     beta  = zero(T)
     iter = 0
@@ -523,7 +526,7 @@ function sinkhorn_convolutional(
         copyto!(S2, U)
         # K(V, U)
         mul!(S,U,xi2)
-        mul!(V,xi1,S)
+        mul!(V,xi1,S) # TODO: this is by far the most expensive operation
         @avx @. V = A / max(V, ϵ)
         # K(U, V)
         mul!(S,V,xi2)

@@ -180,6 +180,41 @@ function SlidingDistancesBase.distance_profile(od::TimeDistance, q::TimeVaryingA
 end
 
 
+# TODO: incorporate a stride >= 1 to speed up further, make sure init is correct in this case.
+
+function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; kwargs...)
+
+
+    df = d.dynamic_floor
+    Q = power(q)
+    Y = power(y)
+    T = eltype(Q)
+    m,n = size(Q)
+    N = lastlength(Y)
+    ss! = (o,x) -> @avx o .= max.(log.(x), df) .- df
+    A  = ss!(similar(Q), Q)
+    B  = ss!(similar(Q), getwindow(Y, n, 1))
+    A ./= sum(A)
+    workspace = SCWorkspace(A,B,d.β)
+    U,V = workspace.U, workspace.V
+
+    D = similar(Q, N-n+1)
+    sB = sum(B) - sum(B[:,n])
+    @views for i = 1:N-n+1
+        ss!(B, getwindow(Y, n, i)) # TODO: this is wasteful, only update one column and shift the rest
+        sB += sum(B[:,n])
+        sB1 = sum(B[:,1])
+        @avx B ./= sB
+        D[i] = sinkhorn_convolutional(workspace, A, B; β = d.β, initUV=i==1, kwargs...)
+        @avx U[:,1:end-1] .= exp.(U[:,2:end]) # Warm-start gives 3x imrovement in simple benchmark
+        @avx V[:,1:end-1] .= exp.(V[:,2:end])
+        sB -= sB1
+    end
+    D
+end
+
+
+
 
 # function distance_profile(d::AbstractDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...) where F
 #     T  = eltype(q.models[1].a)

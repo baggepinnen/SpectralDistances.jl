@@ -425,45 +425,7 @@ end
 
 
 ##
-@testset "convolutional barycenter" begin
-    @info "Testing convolutional barycenter"
 
-    a1 = zeros(Float64, 10,10)
-    a1[2,2] = 1
-    a2 = zeros(Float64, 10,10)
-    a2[6,6] = 1
-    A = [a1,a2]
-    β = 0.001
-    λ = [0.5, 0.5]
-    b = barycenter_convolutional(A,λ,β=β)
-    @test maximum(b) == b[4,4]
-    @test sum(b) ≈ 1
-
-    A1 = spectrogram(randn(1000))
-    A2 = spectrogram(randn(1000))
-    A = [A1, A2]
-    B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-2)
-    @test B isa typeof(A1)
-
-    d = ConvOptimalTransportDistance(β=β, dynamic_floor=-2.0)
-    B2 = barycenter(d, A)
-    @test power(B) == power(B2)
-    @test time(B) == time(B2)
-
-    @test d(A1,A2) > d(A1,A1)
-    @test d(A1,A2) > d(A2,A2)
-    @test d(A1,A2) - 0.5*(d(A1,A1) + d(A2,A2)) > 0
-
-    # @test B.power == barycenter_convolutional([A1.power, A2.power],λ,β=β)
-
-
-    # w = SpectralDistances.BCWorkspace(A, β)
-    # @btime SpectralDistances.barycenter_convolutional($w,$A,$λ)
-    # 1.198 ms (46 allocations: 1.26 MiB)
-    # 585.176 μs (46 allocations: 1.26 MiB) # add @avx
-    # 469.132 μs (16 allocations: 313.13 KiB) # operate inplace
-    # 387.881 μs (0 allocations: 0 bytes) # views and generator in sum
-end
 
 
 # d = 2
@@ -575,42 +537,3 @@ end
 # pzmap!.(tf.(models), lab="")
 # pzmap!(tf(qmodel), m=:c, lab="q")
 # pzmap!(tf(q_proj), m=:c, lab="q_proj", legend=true)
-
-
-
-##
-# m,n = 1280,1280
-# x = zeros(m,n)
-# x[10,10] = 1
-# β = 0.1
-#
-# t = LinRange(0, 1, m)
-# Y, X = meshgrid(t, t)
-# xi1 = @. exp(-(X - Y)^2 / β)
-#
-# t = LinRange(0, 1, n)
-# Y, X = meshgrid(t, t)
-# xi2 = @. exp(-(X - Y)^2 / β)
-#
-# K1(x) = xi1 * x * xi2
-#
-#
-# using ImageFiltering
-#
-# t = LinRange(-0.5, 0.5, m)
-# k1 = @. exp(-t^2 / β)
-# t = LinRange(-0.5, 0.5, n)
-# k2 = @. exp(-t^2 / β)
-#
-# kernf = kernelfactors((centered(k1), centered(k2)))
-# kernp = broadcast(*, kernf...)
-#
-# K2(x) = imfilter(x, kernf)
-#
-# plot(heatmap(K1(x)), heatmap(K2(x)), heatmap(K2(x)-K1(x)))
-#
-# using FFTW
-# FFTW.set_num_threads(1)
-#
-# @btime $xi1 * $x * $xi2
-# @btime imfilter($x, $kernp)
