@@ -200,6 +200,7 @@ Transport-based distances may require some tuning parameters to be set for the s
 - [`IPOT`](@ref) Finds exact solution (without entropy regularization), requires β around 0.1-1.
 - [`ot_jump`](@ref): exact solution using JuMP, requires `using JuMP, GLPK` before it becomes available.
 - [`ot_convex`](@ref): exact solution using [Convex.jl](https://www.juliaopt.org/Convex.jl/stable/), requires `using Convex, GLPK` before it becomes available.
+- [`sinkhorn_convolutional`](@ref): applicable only to 2D grids, but is very efficient in this case. [`ConvOptimalTransportDistance`](@ref) is the corresponding distance type.
 
 ### Providing solver and options
 ```julia

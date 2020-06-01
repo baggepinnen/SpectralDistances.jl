@@ -475,6 +475,16 @@ struct SCWorkspace{T}
     xi2::Array{T,2}
 end
 
+"""
+    SCWorkspace(A, B, β)
+
+Workspace object for [`sinkhorn_convolutional`](@ref). Manually construct this in order to save allocations between consequtive calls to the solver.
+
+#Arguments:
+- `A`: The first matrix
+- `B`: The second matrix
+- `β`: the regularization parameter
+"""
 function SCWorkspace(A, B, β)
     m, n = size(A)
     T    = eltype(eltype(A))
@@ -493,7 +503,23 @@ function SCWorkspace(A, B, β)
     SCWorkspace(V, U, S, S2, alpha, beta, xi1, xi2)
 end
 
+"""
+    sinkhorn_convolutional(w::SCWorkspace{T}, A::AbstractMatrix, B::AbstractMatrix; β = 0.001, τ = 1 / eps(T), iters = 1000, tol = 1.0e-6, ϵ = eps(T) ^ 2, verbose = false, initUV = true) where T
 
+Calculate the entropically regularizaed Sinkhorn distance between two matrices where the ground cost is squared euclidean. This function uses an efficient convolutional algorithm and is much more efficient than the corresponding [`sinkhorn_log!`](@ref) in this special case.
+
+#Arguments:
+- `w`: workspace object
+- `A`: The first matrix
+- `B`: The second matrix
+- `β`: regularization parameter
+- `τ`: stabilization parameter
+- `iters`: maximum number of iterations
+- `tol`: tolerance (change in oen of the dual variables)
+- `ϵ`: other stabilization parameter
+- `verbose`: print stuff?
+- `initUV`: if true, initializes dual variables in `w` to one. It can be useful to set this to false if you have a good initial guess (warm start). Set the corresponding `w.U, w.V` to provide the initial guess.
+"""
 function sinkhorn_convolutional(
     w::SCWorkspace{T},
     A::AbstractMatrix,
@@ -552,6 +578,9 @@ function sinkhorn_convolutional(
 
 end
 
+"""
+    sinkhorn_convolutional(A::AbstractMatrix, B::AbstractMatrix; β = 0.001, kwargs...)
+"""
 function sinkhorn_convolutional(
     A::AbstractMatrix,
     B::AbstractMatrix;
@@ -592,6 +621,8 @@ end
     ConvOptimalTransportDistance <: AbstractDistance
 
 Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref).
+
+It's importatnt to tune the two parameters below, see the docstring for [`sinkhorn_convolutional`](@ref) for more help.
 
 - `β = 0.001`
 - `dynamic_floor = -10.0`
