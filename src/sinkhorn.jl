@@ -480,7 +480,7 @@ end
 
 Workspace object for [`sinkhorn_convolutional`](@ref). Manually construct this in order to save allocations between consequtive calls to the solver.
 
-#Arguments:
+# Arguments:
 - `A`: The first matrix
 - `B`: The second matrix
 - `β`: the regularization parameter
@@ -504,15 +504,15 @@ function SCWorkspace(A, B, β)
 end
 
 """
-    sinkhorn_convolutional(w::SCWorkspace{T}, A::AbstractMatrix, B::AbstractMatrix; β = 0.001, τ = 1 / eps(T), iters = 1000, tol = 1.0e-6, ϵ = eps(T) ^ 2, verbose = false, initUV = true) where T
+    sinkhorn_convolutional(w::SCWorkspace{T}, A::AbstractMatrix, B::AbstractMatrix; β = 0.01, τ = 1 / eps(T), iters = 1000, tol = 1.0e-6, ϵ = eps(T) ^ 2, verbose = false, initUV = true) where T
 
 Calculate the entropically regularizaed Sinkhorn distance between two matrices where the ground cost is squared euclidean. This function uses an efficient convolutional algorithm and is much more efficient than the corresponding [`sinkhorn_log!`](@ref) in this special case.
 
-#Arguments:
+# Arguments:
 - `w`: workspace object
 - `A`: The first matrix
 - `B`: The second matrix
-- `β`: regularization parameter
+- `β`: regularization parameter. To get smooth distance profiles ([`distance_profile`](@ref)), a slightly higher β than for barycenters is recommended.  β around 0.01 should do fine.
 - `τ`: stabilization parameter
 - `iters`: maximum number of iterations
 - `tol`: tolerance (change in oen of the dual variables)
@@ -524,7 +524,7 @@ function sinkhorn_convolutional(
     w::SCWorkspace{T},
     A::AbstractMatrix,
     B::AbstractMatrix;
-    β = 0.001,
+    β = 0.01,
     τ = 1/eps(T),
     iters = 1000,
     tol = 1e-6,
@@ -622,7 +622,10 @@ end
 
 Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref).
 
-It's importatnt to tune the two parameters below, see the docstring for [`sinkhorn_convolutional`](@ref) for more help.
+It's important to tune the two parameters below, see the docstring for [`sinkhorn_convolutional`](@ref) for more help.
+
+- To get sharp barycenters, a smaller β around 0.001 is recommended.
+- To get smooth distance profiles ([`distance_profile`](@ref)), a slightly higher β than for barycenters is recommended.  β around 0.01 should do fine.
 
 - `β = 0.001`
 - `dynamic_floor = -10.0`

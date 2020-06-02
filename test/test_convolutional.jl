@@ -54,13 +54,13 @@ b = barycenter_convolutional(A,λ,β=β)
 @test maximum(b) == b[4,4]
 @test sum(b) ≈ 1
 
-A1 = spectrogram(randn(1000), 128)
-A2 = spectrogram(randn(1000), 128)
+A1 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
+A2 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
 A = [A1, A2]
-B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-2)
+B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-3)
 @test B isa typeof(A1)
 
-d = ConvOptimalTransportDistance(β=β, dynamic_floor=-2.0)
+d = ConvOptimalTransportDistance(β=β, dynamic_floor=-3.0)
 B2 = barycenter(d, A)
 @test power(B) == power(B2)
 @test time(B) == time(B2)
@@ -69,9 +69,12 @@ B2 = barycenter(d, A)
 @test d(A1,A2) > d(A2,A2)
 @test d(A1,A2) - 0.5*(d(A1,A1) + d(A2,A2)) > 0
 
-A3 = spectrogram(randn(10000), 128)
+A3 = spectrogram(sin.(LinRange(0.8,1.2,300_000) .* (1:300_000)) .+ 0.01randn(300_000), 256, window=hanning)
 
-@time D = distance_profile(d, A1, A3, tol=1e-4)
+d = ConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0)
+@time D = distance_profile(d, A1, A3, tol=1e-6, stride=15)
+isinteractive() && plot(D)
+@test 40 <= argmin(D) <= 70
 # TODO: write some tests for D
 
 # @test B.power == barycenter_convolutional([A1.power, A2.power],λ,β=β)

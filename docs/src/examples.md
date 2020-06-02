@@ -119,6 +119,39 @@ end
 ```
 This can be made significantly more effective (but less accurate) using the `knn` approach from the [Nearest Neighbor classification](@ref).
 
+## Computing a spectrogram distance profile
+In this example, we'll search through a long spectrogram `Y` for a short query `Q`. We will compute a *distance profile*, which is a vector with all distance between `Q` and each window into `Y` of the same length as `Q`. The distance profile should have minima roughly where `Y` has the same frequencies as the query, and the global minimum where the chirp has increasing frequency (you can zoon into the figure to verify).
+
+To make computing distance profiles faster, [`SlidingDistancesBase.distance_profile`](@ref) accepts a `stride`. We also set `β` relatively high to get a smooth and noise-free distance profile.
+```@example
+using SpectralDistances, DSP, Plots
+Q = spectrogram(
+    sin.(LinRange(0.9, 1.1, 10000).^ 2 .* (1:10000)) .+ 0.1 * randn(10000),
+    256,
+    window = hanning,
+)
+Y = spectrogram(
+    sin.(LinRange(0.7, 1.6, 300_000).^ 2 .* (1:300_000)) .+ 0.01 * randn(300_000),
+    256,
+    window = hanning,
+)
+
+d = ConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0)
+D = distance_profile(d, Q, Y, tol=1e-6, stride=15)
+plot(
+    plot(Y, title = "Data"),
+    plot(Q, title = "Query spectrogram"),
+    plot(D, title = "Distance Profile"),
+    legend = false,
+    colorbar = false,
+)
+savefig("dist_profile.html"); nothing # hide
+```
+
+```@raw html
+<object type="text/html" data="../dist_profile.html" style="width:100%;height:450px;"></object>
+```
+
 
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
