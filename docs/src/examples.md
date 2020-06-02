@@ -117,7 +117,7 @@ function scorefunction(query_model)
     score = minimum(distance_vector)
 end
 ```
-This can be made significantly more effective (but less accurate) using the `knn` approach from the [Nearest Neighbor classification](@ref).
+This can be made significantly more effective (but less accurate) using the `knn` approach from the [Nearest Neighbor classification](@ref). If you want to detect a small number of patterns in a much longer signal, see the method using [`SlidingDistancesBase.distance_profile`](@ref) below.
 
 ## Computing a spectrogram distance profile
 In this example, we'll search through a long spectrogram `Y` for a short query `Q`. We will compute a *distance profile*, which is a vector with all distance between `Q` and each window into `Y` of the same length as `Q`. The distance profile should have minima roughly where `Y` has the same frequencies as the query, and the global minimum where the chirp has increasing frequency (you can zoon into the figure to verify).

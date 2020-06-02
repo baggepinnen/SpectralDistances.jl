@@ -169,6 +169,7 @@ res_tt = distance_profile(dist, Qm, Ym, tol=1e-3)
 Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
 ```@docs
 SlidingDistancesBase.distance_profile(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR)
+SlidingDistancesBase.distance_profile(od::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR)
 ```
 
 ## Docstrings
