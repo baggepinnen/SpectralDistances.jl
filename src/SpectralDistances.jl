@@ -108,7 +108,10 @@ sinkhorn_diff,
 sinkhorn_unbalanced,
 transport_plan,
 sinkhorn_convolutional,
-SCWorkspace
+SCWorkspace,
+normalize_spectrogram,
+normalize_spectrogram!
+
 
 using UnbalancedOptimalTransport: KL, TV, Balanced, RG
 export KL, TV, Balanced, RG

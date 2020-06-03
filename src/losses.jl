@@ -360,23 +360,24 @@ Compute the symmetric, pairwise distance matrix using the specified distance.
 
 - `normalize`: set to true to normalize distances such that the diagonal is zero. This is useful for distances that are not true distances due to `d(x,y) ≠ 0` such as the [`OptimalTransportRootDistance`](@ref)
 
-This function uses multiple threads if available.
+This function uses multiple threads if available and copies the distance object to each thread in case it stores an internal cache.
 """
 function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
     T = typeof(evaluate(dist,e[1],e[1];kwargs...))
     D = zeros(T,n,n)
+    dists = [deepcopy(dist) for _ in 1:Threads.nthreads()]
     for i = 1:n
         D[i,i] = evaluate(dist,e[i],e[i];kwargs...) # Note we do calc this distance since it's nonzero for regularized distances.
         Threads.@threads for j=i+1:n
-            D[i,j] = evaluate(dist, e[i], e[j]; kwargs...)
+            D[i,j] = evaluate(dists[Threads.threadid()], e[i], e[j]; kwargs...)
             (D[j,i] = D[i,j])
         end
     end
     if normalize
         d = diag(D)
         for i = 1:size(D,1)
-            x = max(0.5d[i], 0)
+            x = 0.5d[i]
             D[:,i] .-= x
             D[i,:] .-= x
         end

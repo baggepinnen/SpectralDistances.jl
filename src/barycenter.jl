@@ -673,6 +673,7 @@ function barycenter_convolutional(
     verbose = false,
 ) where {T,TK}
 
+    length(A) < 2 && return A[]
     @fastmath sum(A[1]) ≈ sum(A[2]) || @warn "Input matrices do not appear to have the same mass (sum)"
     sum(λ) ≈ 1 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
     N = length(A)
@@ -750,8 +751,7 @@ function barycenter_convolutional(
     kwargs...,
 )
 
-    ss = x -> max.(log.(x), dynamic_floor) .- dynamic_floor
-    A  = ss.(power.(models))
+    A  = normalize_spectrogram.(models, dynamic_floor)
     ms = mean(sum, A)
     sumnorm = x -> x .* (ms/sum(x))
     A .= sumnorm.(A)
@@ -767,6 +767,14 @@ end
 function barycenter(d::ConvOptimalTransportDistance, args...; kwargs...)
     barycenter_convolutional(
         args...;
+        β = d.β,
+        kwargs...,
+    )
+end
+
+function barycenter(d::ConvOptimalTransportDistance, A::Vector{<:DSP.Periodograms.TFR}, args...; kwargs...)
+    barycenter_convolutional(
+        A, args...;
         dynamic_floor = d.dynamic_floor,
         β = d.β,
         kwargs...,

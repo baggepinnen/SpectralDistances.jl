@@ -508,6 +508,8 @@ end
 
 Calculate the entropically regularizaed Sinkhorn distance between two matrices where the ground cost is squared euclidean. This function uses an efficient convolutional algorithm and is much more efficient than the corresponding [`sinkhorn_log!`](@ref) in this special case.
 
+This function spends most of its time doing matrix multiplications. You may want to tune `BLAS.set_num_threads` in order to maximize performance. 1-2 threads is often best, especially if you thread outside of calls to this function.
+
 # Arguments:
 - `w`: workspace object
 - `A`: The first matrix
@@ -625,28 +627,41 @@ Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref).
 It's important to tune the two parameters below, see the docstring for [`sinkhorn_convolutional`](@ref) for more help.
 
 - To get sharp barycenters, a smaller β around 0.001 is recommended.
-- To get smooth distance profiles ([`distance_profile`](@ref)), a slightly higher β than for barycenters is recommended.  β around 0.01 should do fine.
+- To get smooth distance profiles ([`distance_profile`](@ref)), a slightly higher β than for barycenters is recommended.  β around 0.01-0.05 should do fine.
 
 - `β = 0.001`
 - `dynamic_floor = -10.0`
 """
 ConvOptimalTransportDistance
-Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
+Base.@kwdef mutable struct ConvOptimalTransportDistance{T,WT<:Union{Nothing, SCWorkspace{T}}} <: AbstractDistance
     β::T = 0.001
     dynamic_floor::T = -10.0
-    workspace = nothing
+    workspace::WT = nothing
 end
 
 function evaluate(d::ConvOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; kwargs...)
-
-    ss = x -> max.(log.(x), d.dynamic_floor) .- d.dynamic_floor
-    A  = ss(power(w1))
-    B  = ss(power(w2))
-    ms = mean(sum, (A,B))
-    A .*= (1/sum(A))
-    B .*= (1/sum(B))
-    # if d.workspace === nothing # use if needed
-    #     d.workspace = SCWorkspace(A,B,β)
-    # end
+    A  = s1(normalize_spectrogram(w1, d.dynamic_floor))
+    B  = s1(normalize_spectrogram(w2, d.dynamic_floor))
     sinkhorn_convolutional( A, B; β = d.β, kwargs...)
 end
+
+function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix{T}, B::AbstractMatrix{T}; kwargs...) where T
+    if d.workspace === nothing
+        d.workspace = SCWorkspace(A,B,d.β)
+    end
+    sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)
+end
+
+
+"""
+    normalize_spectrogram(S, dynamic_floor = max(log(quantile(x, 0.5)), -100))
+"""
+function normalize_spectrogram(x::AbstractArray{T}, dynamic_floor = max(log(quantile(vec(x), 0.5)), T(-100))) where T
+    @avx max.(log.(x .+ eps(T)), dynamic_floor) .- dynamic_floor
+end
+function normalize_spectrogram!(o, x::AbstractArray{T}, dynamic_floor = max(log(quantile(vec(power(x)), 0.5)), T(-100))) where T
+    @avx o .= max.(log.(x .+ eps(T)), dynamic_floor) .- dynamic_floor
+end
+
+normalize_spectrogram(x::Periodograms.TFR, args...) = normalize_spectrogram(power(x), args...)
+normalize_spectrogram!(o, x::Periodograms.TFR, args...) = normalize_spectrogram!(o, power(x), args...)
