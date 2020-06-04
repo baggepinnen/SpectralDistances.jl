@@ -717,7 +717,7 @@ end
 
 
 """
-    barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = mean(log(quantile(power(m), 0.2)) for m in models), kwargs...)
+    barycenter_convolutional(models::Vector{<:DSP.Periodograms.TFR}, λ = Fill(1 / length(models), length(models)); dynamic_floor = default_dynamic_floor(models), kwargs...)
 
 Covenience function for the calculation of spectrograms. This function transforms the spectrograms to log-power and adjusts the floor to `dynamic_floor`, followed by a normalization to sum to 1.
 
@@ -747,7 +747,7 @@ plot(plot(S1, title="S1"), plot(B, title="Barycenter"), plot(S2, title="S2"), la
 function barycenter_convolutional(
     models::Vector{<:DSP.Periodograms.TFR},
     λ = Fill(1 / length(models), length(models));
-    dynamic_floor = mean(log(quantile(vec(power(m)), 0.2)) for m in models),
+    dynamic_floor = default_dynamic_floor(models),
     kwargs...,
 )
 
@@ -775,7 +775,7 @@ end
 function barycenter(d::ConvOptimalTransportDistance, A::Vector{<:DSP.Periodograms.TFR}, args...; kwargs...)
     barycenter_convolutional(
         A, args...;
-        dynamic_floor = d.dynamic_floor,
+        dynamic_floor = isnan(d.dynamic_floor) ? default_dynamic_floor(A) : d.dynamic_floor,
         β = d.β,
         kwargs...,
     )

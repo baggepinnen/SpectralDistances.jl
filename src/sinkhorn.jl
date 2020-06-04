@@ -622,7 +622,14 @@ end
 """
     ConvOptimalTransportDistance <: AbstractDistance
 
-Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref).
+Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref). This type automatically creates a workspace object that is reused between invocations. Functions that internally performs threaded computations copy this object to each thread, but if manual threading is performed, this must be handled manually, e.g.:
+```julia
+using ThreadTools
+dists = [deepcopy(dist) for _ in 1:Threads.nthreads()]
+D = tmap(eachindex(X)) do i
+    evaluate(dists[Threads.threadid()], Q, X[i]; kwargs...)
+end
+```
 
 It's important to tune the two parameters below, see the docstring for [`sinkhorn_convolutional`](@ref) for more help.
 
@@ -635,7 +642,7 @@ It's important to tune the two parameters below, see the docstring for [`sinkhor
 ConvOptimalTransportDistance
 Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
     β::T = 0.001
-    dynamic_floor::T = -10.0
+    dynamic_floor::T = NaN
     workspace::Union{Nothing, SCWorkspace{T}} = nothing
 end
 
@@ -654,14 +661,20 @@ end
 
 
 """
-    normalize_spectrogram(S, dynamic_floor = max(log(quantile(x, 0.5)), -100))
+    normalize_spectrogram(S, dynamic_floor = default_dynamic_floor(S))
 """
-function normalize_spectrogram(x::AbstractArray{T}, dynamic_floor = max(log(quantile(vec(x), 0.5)), T(-100))) where T
+function normalize_spectrogram(x::AbstractArray{T}, dynamic_floor = default_dynamic_floor(x)) where T
+    isnan(dynamic_floor) && (dynamic_floor = default_dynamic_floor(x))
     @avx max.(log.(x .+ eps(T)), dynamic_floor) .- dynamic_floor
 end
-function normalize_spectrogram!(o, x::AbstractArray{T}, dynamic_floor = max(log(quantile(vec(power(x)), 0.5)), T(-100))) where T
+function normalize_spectrogram!(o, x::AbstractArray{T}, dynamic_floor = default_dynamic_floor(x)) where T
+    isnan(dynamic_floor) && (dynamic_floor = default_dynamic_floor(x))
     @avx o .= max.(log.(x .+ eps(T)), dynamic_floor) .- dynamic_floor
 end
 
 normalize_spectrogram(x::Periodograms.TFR, args...) = normalize_spectrogram(power(x), args...)
 normalize_spectrogram!(o, x::Periodograms.TFR, args...) = normalize_spectrogram!(o, power(x), args...)
+
+default_dynamic_floor(x::AbstractArray{T}) where T = max(log(quantile(vec(x), 0.5)), T(-100))
+default_dynamic_floor(x::Periodograms.TFR) = default_dynamic_floor(power(x))
+default_dynamic_floor(models::Vector{<:Periodograms.TFR}) = mean(default_dynamic_floor(m) for m in models)
