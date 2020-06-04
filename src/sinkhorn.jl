@@ -538,6 +538,7 @@ function sinkhorn_convolutional(
     @fastmath sum(A) ≈ sum(B) || @warn "Input matrices do not appear to have the same mass (sum)"
     # V, U, S, S2, xi1, xi2, alpha, beta = w.V, w.U, w.S, w.S2, w.xi1, w.xi2, w.alpha, w.beta
     V, U, S, S2, xi1, xi2 = w.V, w.U, w.S, w.S2, w.xi1, w.xi2
+    size(A) == size(V) && size(U) == size(B) || throw(ArgumentError("Sizes of input matrices do not match sizes of cache in the workspace. This can happen if a distance object was previously used on inputs with other dimensions."))
     if initUV
         U .= 1
         V .= 1

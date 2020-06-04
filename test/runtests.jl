@@ -1,6 +1,6 @@
 @info "Running tests"
 using SpectralDistances# Distributions
-using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils # For subtypes
+using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils, SparseArrays # For subtypes
 using DSP, Distances, DoubleFloats
 import GLPK, Convex, JuMP
 
