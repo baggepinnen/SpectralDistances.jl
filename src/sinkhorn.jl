@@ -633,10 +633,10 @@ It's important to tune the two parameters below, see the docstring for [`sinkhor
 - `dynamic_floor = -10.0`
 """
 ConvOptimalTransportDistance
-Base.@kwdef mutable struct ConvOptimalTransportDistance{T,WT<:Union{Nothing, SCWorkspace{T}}} <: AbstractDistance
+Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
     β::T = 0.001
     dynamic_floor::T = -10.0
-    workspace::WT = nothing
+    workspace::Union{Nothing, SCWorkspace{T}} = nothing
 end
 
 function evaluate(d::ConvOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; kwargs...)
