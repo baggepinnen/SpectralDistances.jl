@@ -554,6 +554,19 @@ end
     @test issymmetric(D)
     @test tr(D) == 0
     @test @inferred(SpectralDistances.distmat_euclidean(e,e)) ≈ D
+
+
+    A = randn(10,10)
+    A[diagind(A)] .= rand(10);
+    A = A + A';
+    B = SparseMatrixCSC(A)
+
+    symmetrize!(A)
+    symmetrize!(B)
+    @test A == B
+    @test issymmetric(A)
+
+
 end
 
 

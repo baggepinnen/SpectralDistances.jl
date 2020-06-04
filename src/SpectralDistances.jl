@@ -6,7 +6,7 @@ $(EXPORTS)
 """
 module SpectralDistances
 
-using LinearAlgebra, Statistics, Printf
+using LinearAlgebra, SparseArrays, Statistics, Printf
 using DSP,
     ControlSystems,
     Distances,
@@ -72,7 +72,8 @@ export ls,
     embedding,
     distmat,
     distmat_euclidean,
-    distmat_euclidean!
+    distmat_euclidean!,
+    symmetrize!
 
 export evaluate,
 distance_profile,
