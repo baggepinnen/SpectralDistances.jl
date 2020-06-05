@@ -284,78 +284,6 @@ end
 # end
 
 
-
-# """
-#     cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; β = 1, L = 32) where T
-#
-#
-# Returns the sinkhorn cost, the estimated barycenter and the gradient w.r.t. λ
-#
-# This function is called from within [`barycentric_coordinates`](@ref). See help for this function regarding the other parameters.
-#
-# Ref https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf
-#
-# The difference in this algorithm compared to the paper is that they operate on histograms where the cost matric `C` is the same for all pairs of pᵢ and q. Here, there is a unique `C` for each pair.
-#
-# #Arguments:
-# - `C`: Vector of cost matrices
-# - `λ`: barycentric coordinates
-# - `β`: sinkhorn regularization parameter
-# - `L`: number of sinkhorn iterations
-# """
-# function sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; β=1, L=32, solver=IPOT) where T
-#     N = length(p)
-#     S = length(p[1])
-#     w = zeros(T,S)
-#     any(isnan, λ) && return NaN,ql,w
-#     @assert length(λ) == S "Length of barycentric coordinates bust be same as number of anchors"
-#     @assert length(q) == N "Dimension of input measure must be same as dimension of anchor measures"
-#     @assert length(C) == S
-#     K = [exp.(.-C ./ β) for C in C]
-#     b = [fill(1/N, N, S) for _ in 0:L+1]
-#     r = zeros(T,N,S)
-#     φ = [Matrix{T}(undef,N,S) for _ in 1:L]
-#     local P
-#     for l = 1:L
-#         for s in 1:S
-#             φ[l][:,s] = K[s]'* (p[s] ./ (K[s] * b[l][:,s]))
-#         end
-#         P = prod(φ[l].^λ', dims=2) |> vec
-#         b[l+1] .= P ./ φ[l]
-#     end
-#
-#     # Since we are not working with histograms where the support of all bins remain the same, we must calculate the location of the barycenter and not only the weights. The location is then used to get a new cost matrix between q's location and the projected barycenter location.
-#     Pl = barycenter(pl, λ)
-#     # @show norm(Pl-ql), sum(isnan,Pl), sum(isnan, λ)
-#     Cbc = distmat_euclidean(Pl, ql)
-#
-#     Γ, a, bb = solver(Cbc, P, q, β=β, iters=4L) # We run a bit longer here to get a good value
-#     cost = sum(Cbc .* Γ)
-#
-#     ∇W = a
-#     # ∇W = bb
-#     g = ∇W .* P
-#
-#     for l = L:-1:1
-#         w .+= log.(φ[l])'g
-#         for s in 1:S
-#             r[:,s] .= (-K[s]'*((K[s]*((λ[s].* g .- r[:,s]) ./ φ[l][:,s])) .* p[s] ./ (K[s]*b[l][:,s]).^2)) .* b[l][:,s]
-#         end
-#         g = sum(r, dims=2) |> vec
-#     end
-#     cost, Pl,w
-# end
-
-
-# geomean(x) = prod(x)^(1/length(x))
-# a = rand(3)
-# la = log.(a)
-# lag = la .- mean(la)
-# geomean(exp.(lag))
-
-
-
-
 # function sinkhorn_cost(pl,ql, p, q::AbstractVector, C, λ::AbstractVector{T}; β=1, L=32, solver=IPOT, kwargs...) where T
 #     N = length(p[1])
 #     S = length(p)
@@ -535,7 +463,7 @@ function sinkhorn_convolutional(
     initUV = true,
 ) where {T}
 
-    @fastmath sum(A) ≈ sum(B) || @warn "Input matrices do not appear to have the same mass (sum)"
+    # @fastmath sum(A) ≈ sum(B) || @warn "Input matrices do not appear to have the same mass (sum)"
     # V, U, S, S2, xi1, xi2, alpha, beta = w.V, w.U, w.S, w.S2, w.xi1, w.xi2, w.alpha, w.beta
     V, U, S, S2, xi1, xi2 = w.V, w.U, w.S, w.S2, w.xi1, w.xi2
     size(A) == size(V) && size(U) == size(B) || throw(ArgumentError("Sizes of input matrices do not match sizes of cache in the workspace. This can happen if a distance object was previously used on inputs with other dimensions."))
@@ -572,14 +500,73 @@ function sinkhorn_convolutional(
 
         if iter % 10 == 1
             @fastmath err = sum(abs(S2 - U) for (S2, U) in zip(S2, U))
-            verbose && @info "Sinkhorn conv: iter = $iter, error = $err"
+            # verbose && @info "Sinkhorn conv: iter = $iter, error = $err"
         end
     end
     @avx @. V = log(V + ϵ) + alpha
     @avx @. U = log(U + ϵ) + beta
-    β*(dot(A, V) + dot(B, U))
+    β*(dot(A, V) + dot(B, U)), V, U
 
 end
+
+#
+# function sinkhorn_convolutional_diff(
+#     A::AbstractMatrix,
+#     B::AbstractMatrix;
+#     β = 0.01,
+#     T = promote_type(eltype(A),eltype(B)),
+#     τ = 1/eps(T),
+#     iters = 10,
+#     tol = 1e-3,
+#     ϵ = eps(T)^2,
+#     verbose = false,
+#     initUV = true,
+# )
+#
+#     A = A ./ sum(A)
+#     B = B ./ sum(B)
+#
+#     U = ones(size(B))
+#     V = ones(size(A))
+#
+#     alpha = zero(T)
+#     beta  = zero(T)
+#     iter = 0
+#     err = one(T)
+#     m,n = size(A)
+#     xi1 = Matrix{T}(undef, m, m)
+#     xi2 = Matrix{T}(undef, n, n)
+#     _initialize_conv_op!(xi1, xi2, β)
+#
+#
+#     while err > tol && iter < iters
+#         iter = iter + 1
+#         S2 = U
+#         # K(V, U)
+#         V = xi1*U*xi2
+#         @. V = A / max(V, ϵ)
+#         # K(U, V)
+#         U = xi1*V*xi2
+#         @. U = B / max(U, ϵ)
+#         mU, mV = maximum(abs, U), maximum(abs, V)
+#         if mU > τ || mV > τ
+#             alpha += log(mU)
+#             beta  += log(mV)
+#             U ./= mU
+#             V ./= mV
+#             _initialize_conv_op!(xi1, xi2, alpha, beta, β)
+#         end
+#
+#         if iter % 10 == 1
+#             @fastmath err = sum(abs(S2 - U) for (S2, U) in zip(S2, U))
+#             verbose && @info "Sinkhorn conv: iter = $iter, error = $err"
+#         end
+#     end
+#     @. V = log(V + ϵ) + alpha
+#     @. U = log(U + ϵ) + beta
+#     β*(dot(A, V) + dot(B, U))
+#
+# end
 
 """
     sinkhorn_convolutional(A::AbstractMatrix, B::AbstractMatrix; β = 0.001, kwargs...)
@@ -598,11 +585,11 @@ end
 function _initialize_conv_op!(xi1::AbstractMatrix{T}, xi2::AbstractMatrix{T}, β::Real) where T
     m,n = size(xi1,2), size(xi2, 1)
     t    = LinRange(zero(T), one(T), m)
-    @avx for i = 1:m, j = 1:m
+     for i = 1:m, j = 1:m
         xi1[i,j]  = exp(-(t[i] - t[j])^2 / β)
     end
     t    = LinRange(zero(T), one(T), n)
-    @avx for i = 1:n, j = 1:n
+     for i = 1:n, j = 1:n
         xi2[i,j]  = exp(-(t[i] - t[j])^2 / β)
     end
 end
@@ -647,17 +634,25 @@ Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
     workspace::Union{Nothing, SCWorkspace{T}} = nothing
 end
 
+Base.@kwdef mutable struct ConvOptimalTransportDistanceDiff{T} <: AbstractDistance
+    β::T = 0.01
+end
+
 function evaluate(d::ConvOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; kwargs...)
     A  = s1(normalize_spectrogram(w1, d.dynamic_floor))
     B  = s1(normalize_spectrogram(w2, d.dynamic_floor))
-    sinkhorn_convolutional( A, B; β = d.β, kwargs...)
+    sinkhorn_convolutional( A, B; β = d.β, kwargs...)[1]
 end
 
-function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix{T}, B::AbstractMatrix{T}; kwargs...) where T
+function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::AbstractMatrix{T}; kwargs...) where T
     if d.workspace === nothing
         d.workspace = SCWorkspace(A,B,d.β)
     end
-    sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)
+    sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)[1]
+end
+
+function evaluate(d::ConvOptimalTransportDistanceDiff, A::AbstractMatrix, B::AbstractMatrix; kwargs...)
+    sinkhorn_convolutional(A, B; β = d.β, kwargs...)[1]
 end
 
 
