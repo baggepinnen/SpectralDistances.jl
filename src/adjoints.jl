@@ -217,3 +217,21 @@ end
 #     end
 #     return Eigen(vals_diff, vectors_diff)
 # end
+
+using ChainRulesCore
+function rrule(::typeof(sinkhorn_convolutional), w, A, B; kwargs...)
+    cost, V, U = sinkhorn_convolutional(w, A,B; kwargs...)
+    function sinkhorn_convolutional_pullback(Δc)
+        return (NO_FIELDS, @thunk(V .= Δc.*V), @thunk(U .= Δc.*U))
+    end
+    return cost, sinkhorn_convolutional_pullback
+end
+
+
+ZygoteRules.@adjoint function sinkhorn_convolutional(w, A, B; kwargs...)
+    cost, V, U = sinkhorn_convolutional(w,A,B; kwargs...)
+    function sinkhorn_convolutional_pullback(Δc)
+        return (nothing, (V .= Δc.*V), (U .= Δc.*U))
+    end
+    return cost, sinkhorn_convolutional_pullback
+end

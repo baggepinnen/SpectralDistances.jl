@@ -558,10 +558,10 @@ Algorithm 2 from ["Fast Computation of Wasserstein Barycenters"](https://arxiv.o
 """
 function alg2(X,Y,a,b; β = 1/10, θ = 0.5, printerval=typemax(Int), tol=1e-6, innertol=1e-4, iters=500, inneriters=10000, atol=1e-32, solver=IPOT, γ=0.0, weights=nothing, uniform=false)
     uniform || @warn("This function is known to be buggy when not enforcing uniform weights", maxlog=10)
-    N = length(Y)
-    a = copy(a)
+    N  = length(Y)
+    a  = copy(a)
     ao = copy(a)
-    X = copy(X)
+    X  = copy(X)
     if weights !== nothing && eltype(weights) != eltype(X)
         X = convert(Matrix{eltype(weights)}, X)
     end
@@ -677,7 +677,7 @@ function barycenter_convolutional(
     @fastmath sum(A[1]) ≈ sum(A[2]) || @warn "Input matrices do not appear to have the same mass (sum)"
     0.99 < sum(λ) < 1.01 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
     N = length(A)
-    K, KV, U, b, bold, S = w.K, w.KV, w.U, w.b, w.bold, w.S
+    @unpack K, KV, U, b, bold, S = w
     iter = 0
     err = one(T)
 
@@ -702,62 +702,59 @@ function barycenter_convolutional(
             verbose && @info "Sinkhorn conv barycenters: iter = $iter, error = $err"
         end
     end
-    # cost = zero(T)
-    # for r = 1:N
-    #     cost += dot(b, log.(KV[:,:,r])) + dot(A[r], log.(U[:,:,r]))
-    # end
     b#, cost
 end
 
-function barycenter_convolutional_diff(
-    A::AbstractVector{<:AbstractMatrix},
-    λ::AbstractVector{T};
-    β = 0.01,
-    iters = 1000,
-    tol = 1e-6,
-    ϵ = 1e-90,
-    verbose = false,
-) where {T}
-
-    length(A) < 2 && return A[]
-    @fastmath sum(A[1]) ≈ sum(A[2]) || @warn "Input matrices do not appear to have the same mass (sum)"
-    0.99 < sum(λ) < 1.01 || throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
-    N = length(A)
-    err = one(T)
-
-    m,n = size(A[1])
-
-    b    = similar(λ, m, n) .= 0
-    # S = similar(b)
-    U    = similar(λ, m, n, N) .= 1
-    KV   = similar(λ, m, n, N) .= 1
-
-    xi1 = Matrix{T}(undef, m, m)
-    xi2 = Matrix{T}(undef, n, n)
-    _initialize_conv_op!(xi1, xi2, β)
-
-
-
-    for i = 1:iters
-        b .= 0
-        for r = 1:N
-            S = xi1* U[:, :, r] * xi2
-            # mul!(S,U,xi2)
-            # mul!(V,xi1,S) # TODO: this is by far the most expensive operation
-            @. S = A[r] / max(ϵ, S)
-            KV[:, :, r] = xi1* S * xi2
-            # mul!(S,V,xi2)
-            # mul!(U,xi1,S)
-            @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
-        end
-        @. b = exp(b)
-        for r = 1:N
-            @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
-        end
-
-    end
-    b
-end
+# function barycenter_convolutional_diff(
+#     A::AbstractVector{<:AbstractMatrix},
+#     λ::AbstractVector{T};
+#     β       = 0.01,
+#     iters   = 1000,
+#     tol     = 1e-6,
+#     ϵ       = 1e-90,
+#     verbose = false,
+# ) where {T}
+#
+#     length(A) < 2 && return A[]
+#     @fastmath sum(A[1]) ≈ sum(A[2]) ||
+#               @warn "Input matrices do not appear to have the same mass (sum)"
+#     0.99 < sum(λ) < 1.01 ||
+#         throw(ArgumentError("sum of barycentric coordinates λ was $(sum(λ)) but should be 1"))
+#
+#     N    = length(A)
+#     err  = one(T)
+#     m, n = size(A[1])
+#     b    = similar(λ, m, n) .= 0
+#     # S  = similar(b)
+#     U    = similar(λ, m, n, N) .= 1
+#     KV   = similar(λ, m, n, N) .= 1
+#
+#     xi1  = Matrix{T}(undef, m, m)
+#     xi2  = Matrix{T}(undef, n, n)
+#     _initialize_conv_op!(xi1, xi2, β)
+#
+#
+#
+#     for i = 1:iters
+#         b .= 0
+#         for r = 1:N
+#             S = xi1 * U[:, :, r] * xi2
+#             # mul!(S,U,xi2)
+#             # mul!(V,xi1,S) # TODO: this is by far the most expensive operation
+#             @. S = A[r] / max(ϵ, S)
+#             KV[:, :, r] = xi1 * S * xi2
+#             # mul!(S,V,xi2)
+#             # mul!(U,xi1,S)
+#             @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
+#         end
+#         @. b = exp(b)
+#         for r = 1:N
+#             @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
+#         end
+#
+#     end
+#     b
+# end
 
 function barycenter_convolutional(
     A::AbstractVector{<:AbstractMatrix},
@@ -927,7 +924,20 @@ struct BCCWorkspace{T}
     S2::Matrix{T}
     xi1::Matrix{T}
     xi2::Matrix{T}
+    scw::SCWorkspace{T}
 end
+
+
+"""
+    BCCWorkspace(X::Vector{<:AbstractMatrix{T}}, L, β) where T
+
+Create a workspace cache for [`barycentric_coordinates`](@ref) with the convolutional distance.
+
+# Arguments:
+- `X`: Input matrices
+- `L`: Number of iterations
+- `β`: Regularization factor
+"""
 function BCCWorkspace(p::Vector{<:AbstractMatrix{T}}, L, β) where T
     N   = length(p)
     S   = length(p)
@@ -942,44 +952,40 @@ function BCCWorkspace(p::Vector{<:AbstractMatrix{T}}, L, β) where T
     C4  = zeros(T,m,n)
     C5  = zeros(T,m,n)
     S2  = zeros(T,m,n)
+    scw = SCWorkspace(p[1], p[1], β)
 
     xi1 = Matrix{T}(undef, m, m)
     xi2 = Matrix{T}(undef, n, n)
     _initialize_conv_op!(xi1, xi2, β)
-    BCCWorkspace{T}(w,b,r,φ,C,C2,C3,S2,xi1,xi2)
+    BCCWorkspace{T}(w,b,r,φ,C,C2,C3,C4,C5,S2,xi1,xi2,scw)
 end
 
 
-# """
-#     cost, barycenter, gradient = sinkhorn_diff(pl,ql, p, q::AbstractVector{T}, C, λ::AbstractVector; β = 1, L = 32) where T
-#
-#
-# Returns the sinkhorn cost, the estimated barycenter and the gradient w.r.t. λ
-#
-# This function is called from within [`barycentric_coordinates`](@ref). See help for this function regarding the other parameters.
-#
-# Ref https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf
-#
-# The difference in this algorithm compared to the paper is that they operate on histograms where the cost matric `C` is the same for all pairs of pᵢ and q. Here, there is a unique `C` for each pair.
-#
-# #Arguments:
-# - `C`: Vector of cost matrices
-# - `λ`: barycentric coordinates
-# - `β`: sinkhorn regularization parameter
-# - `L`: number of sinkhorn iterations
-# """
+"""
+    cost, B, grad = sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, X, q::AbstractMatrix{T}, λ::AbstractVector; β = 0.01) where T
+
+Returns cost, barycenter and gradient of `λ`. Called from within [`barycentric_coordinates`](@ref)`(
+    d::ConvOptimalTransportDistance,
+    X::Vector{<:AbstractMatrix},
+    q::AbstractMatrix)`
+
+# Arguments:
+- `workspace`: DESCRIPTION
+- `X`: Input matrices (anchors)
+- `q`: Query matrix
+- `λ`: barycentric coordinates
+- `β`: reg parameter
+"""
 function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractMatrix{T}, λ::AbstractVector; β=0.01) where T
 
-    @unpack w,b,r,φ,C,C2,C3,C4,C5,S2,xi1,xi2 = workspace
+    @unpack w,b,r,φ,C,C2,C3,C4,C5,S2,xi1,xi2,scw = workspace
     w .= 0
     r .= 0
 
     L = length(φ)
-
     N = length(p)
     S = length(p)
     m,n = size(p[1])
-
 
     function K(u,x)
         # xi1 * x * xi2
@@ -987,36 +993,34 @@ function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractM
         mul!(u,xi1,S2)
     end
 
-
     local P
     @views for l = 1:L
         for s in 1:S
             K(C,b[l][:,:,s])
-            K(φ[l][:,:,s], (C .= p[s] ./ (C)))
+            @avx @. C = p[s] / C
+            K(φ[l][:,:,s], C)
         end
         P = dropdims(prod(φ[l].^reshape(λ,1,1,:), dims=3), dims=3)
-        b[l+1] .= P ./ φ[l]
+        @avx b[l+1] .= P ./ φ[l]
     end
 
-    cost,a,_ = sinkhorn_convolutional(P, q; β)
+    cost,a,_ = sinkhorn_convolutional(scw, P, q; β)
 
-    # a .= a
-    # a .-= mean(a)
-
-    ∇W = @. (a .= β * a)
+    @avx ∇W = @. (a = β * a)
     # ∇W = bb
-    g = ∇W .* P
-
-    # @show size(g)
+    @avx g = (∇W .= ∇W .* P)
 
     for l = L:-1:1
         @views for s in 1:S
-            S2 .= log.(φ[l][:,:,s])
+            @avx S2 .= log.(φ[l][:,:,s])
             w[s] += dot(S2, g)
             K(C,b[l][:,:,s])
-            C .= abs2.(C)
-            C4 .= (λ[s].* g .- r[:,:,s]) ./ φ[l][:,:,s]
-            r[:,:,s] .= (-K(C3,(K(C2,C4)) .* p[s] ./ C)) .* b[l][:,:,s]
+            @avx @. C = abs2(C)
+            @avx @. C4 = (λ[s]* g - r[:,:,s]) / φ[l][:,:,s]
+            K(C2,C4)
+            @avx @. C2 = C2 * p[s] / C
+            K(C3,C2)
+            @avx @. r[:,:,s] = -C3 * b[l][:,:,s]
         end
         g = dropdims(sum(r, dims=3), dims=3)
     end
@@ -1028,8 +1032,56 @@ function sinkhorn_convolutional_diff(p::Vector, q::AbstractMatrix, λ::AbstractV
     sinkhorn_convolutional_diff(w, p, q, λ; β, kwargs...)
 end
 
-# geomean(x) = prod(x)^(1/length(x))
-# a = rand(3)
-# la = log.(a)
-# lag = la .- mean(la)
-# geomean(exp.(lag))
+
+
+"""
+    barycentric_coordinates(d::ConvOptimalTransportDistance, X::Vector{<:AbstractMatrix}, q::AbstractMatrix; method = LBFGS(), kwargs...)
+
+Calculate the barycentric coordinates of a vector of matrices `X` using the convolutional method.
+
+#Arguments:
+- `q`: Query matrix
+- `method`: The optimizer from Optim
+- `kwargs`: Are sent to [`sinkhorn_convolutional`](@ref)
+"""
+function barycentric_coordinates(
+    d::ConvOptimalTransportDistance,
+    X::Vector{<:AbstractMatrix},
+    q::AbstractMatrix;
+    L = 40,
+    method = LBFGS(),
+    kwargs...
+)
+    workspace = BCCWorkspace(X, L, d.β)
+
+    function fg!(F, G, λ)
+        λ = softmax(λ)
+        cost, B, g = sinkhorn_convolutional_diff(workspace, X, q, λ; d.β)
+
+        if G != nothing
+            G .= λ .* (g .- dot(g, λ)) # Chain rule for softmax
+            # G .= g
+        end
+        return cost
+    end
+
+    λ = zeros(length(X))
+
+    res = Optim.optimize(
+        Optim.only_fg!(fg!),
+        λ,
+        method,
+        Optim.Options(
+            store_trace = true,
+            show_trace = true,
+            show_every = 1,
+            iterations = 10,
+            allow_f_increases = false,
+            time_limit = 150,
+            x_tol = 1e-3,
+            f_tol = 1e-3,
+            g_tol = 1e-4,
+        ),
+    )
+    softmax(res.minimizer), res
+end

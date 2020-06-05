@@ -36,6 +36,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ThreadTools = "dbf13d8f-d36e-4350-8970-f3a99faba1a8"
 TotalLeastSquares = "028f657a-7ace-5159-a694-8cfd97933b0c"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 UnbalancedOptimalTransport = "6f61b460-fd45-461a-bdf7-98edd72e362f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
