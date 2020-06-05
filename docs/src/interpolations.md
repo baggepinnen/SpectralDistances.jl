@@ -85,7 +85,7 @@ savefig("barycenter.html"); nothing # hide
 
 ### Barycenters between spectrograms
 We can also calculate a barycenter between spectrograms (or arbitrary matrices) using an efficient convolutional method. The most important parameter to tune in order to get a good result, apart from the regularization parameter `β`, is the `dynamic_floor`. This parameter determines where (in log space) the floor of the PSD is. This serves as a denoising, why the barycenter appears with a very dark background in the image below.
-```@example
+```@example barycenter_spectrograms
 using SpectralDistances, DSP, Plots
 N     = 24_000
 t     = 1:N
@@ -119,6 +119,47 @@ For a more thourogh example, see [whistle.jl](https://github.com/baggepinnen/Spe
 
 ### Trade off between frequency and time
 There is currently no way of having different costs between transport in time and transport along the frequency axis other than to change the resolution of the spectrogram.
+
+
+## Barycentric coordiantes
+The inverse problem to that of finding a barycenter is that of finding the barycentric coordinates λ of a query point $Q$, such that the resulting barycenter is as close as possible to the query point. Given a set of rational spectra $\left\{ G_i \right\}$, a nonlinear projection of a spectrum $Q$ onto this set can be obtained by solving the following nested optimization problem
+```math
+\begin{align}
+  λ &= \argmin_{\bar{λ}} \, W\big(Q,  Q^*(\bar{λ})\big)\\
+  Q^*(\bar{λ}) &= \argmin_{\bar{Q}} \sum_i \bar{λ}_i W(G_i, \bar{Q})
+\end{align}
+```
+where $λ$ are the barycentric coordinates belonging to the probability simplex. Problems of this type are sometimes referred to as [histogram regression](https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf).
+
+A nonlinear projection onto a basis consisting of spectra can be useful for, e.g., spectral dictionary learning, basis pursuit, topic modelling, denoising and detection. The function [`barycentric_coordinates`](@ref) is available for select distances:
+```@docs
+barycentric_coordinates
+```
+
+Below is an example that assumes that you have access to a vector with a signal called `y` and the corresponding sample rate `fs` (in this example, we use the `y` constructed in the previous example. In the example, we simply use one of the input spectra as query point. This way, we know what barycentric coordinates we expect
+```@example barycenter_spectrograms
+using SpectralDistances, DSP, Plots
+models = map(DSP.arraysplit(y1, 8*512, 0)) do y
+    spectrogram(y, 512, fs = 24_000, window=hanning)
+end
+
+matrices = s1.(normalize_spectrogram.(models))
+
+β      = 0.01
+dist   = ConvOptimalTransportDistance(β=β)
+Q      = matrices[2] # Use the second spectrogram as query
+λ, res = barycentric_coordinates(dist, matrices, Q)
+plot(
+    bar(λ, title="Barycentric coordinates", lab=""),
+    plot(spectrogram(y1, window=hanning), title="Signal"),
+    heatmap(Q, title="Query point")
+)
+
+savefig("barycentric_coords_sg.html"); nothing # hide
+```
+```@raw html
+<object type="text/html" data="../barycentric_coords_sg.html" style="width:100%;height:450px;"></object>
+```
 
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.

@@ -970,7 +970,7 @@ Returns cost, barycenter and gradient of `λ`. Called from within [`barycentric_
     q::AbstractMatrix)`
 
 # Arguments:
-- `workspace`: DESCRIPTION
+- `workspace`: See [`BCCWorkspace`](@ref)
 - `X`: Input matrices (anchors)
 - `q`: Query matrix
 - `λ`: barycentric coordinates
@@ -1027,6 +1027,9 @@ function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractM
     cost, P,w
 end
 
+"""
+    sinkhorn_convolutional_diff(p::Vector, q::AbstractMatrix, λ::AbstractVector; β = 0.01, L = 32, kwargs...)
+"""
 function sinkhorn_convolutional_diff(p::Vector, q::AbstractMatrix, λ::AbstractVector; β=0.01, L = 32, kwargs...)
     w = BCCWorkspace(p, L, β)
     sinkhorn_convolutional_diff(w, p, q, λ; β, kwargs...)
@@ -1039,18 +1042,45 @@ end
 
 Calculate the barycentric coordinates of a vector of matrices `X` using the convolutional method.
 
-#Arguments:
+# Arguments:
 - `q`: Query matrix
 - `method`: The optimizer from Optim
 - `kwargs`: Are sent to [`sinkhorn_convolutional`](@ref)
+
+## Optim options
+The default options are
+```
+options = Optim.Options(
+        store_trace       = true,
+        show_trace        = false,
+        show_every        = 1,
+        iterations        = 10,
+        allow_f_increases = false,
+        time_limit        = 150,
+        x_tol             = 1e-3,
+        f_tol             = 1e-3,
+        g_tol             = 1e-4,
+    )
+```
 """
 function barycentric_coordinates(
     d::ConvOptimalTransportDistance,
     X::Vector{<:AbstractMatrix},
     q::AbstractMatrix;
     L = 40,
-    method = LBFGS(),
-    kwargs...
+    method  = LBFGS(),
+    options = Optim.Options(
+        store_trace       = true,
+        show_trace        = false,
+        show_every        = 1,
+        iterations        = 10,
+        allow_f_increases = false,
+        time_limit        = 150,
+        x_tol             = 1e-3,
+        f_tol             = 1e-3,
+        g_tol             = 1e-4,
+    ),
+    kwargs...,
 )
     workspace = BCCWorkspace(X, L, d.β)
 
@@ -1067,21 +1097,6 @@ function barycentric_coordinates(
 
     λ = zeros(length(X))
 
-    res = Optim.optimize(
-        Optim.only_fg!(fg!),
-        λ,
-        method,
-        Optim.Options(
-            store_trace = true,
-            show_trace = true,
-            show_every = 1,
-            iterations = 10,
-            allow_f_increases = false,
-            time_limit = 150,
-            x_tol = 1e-3,
-            f_tol = 1e-3,
-            g_tol = 1e-4,
-        ),
-    )
+    res = Optim.optimize(Optim.only_fg!(fg!), λ, method, options)
     softmax(res.minimizer), res
 end
