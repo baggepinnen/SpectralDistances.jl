@@ -1004,7 +1004,7 @@ function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractM
         @avx b[l+1] .= P ./ φ[l]
     end
 
-    cost,a,_ = sinkhorn_convolutional(scw, P, q; β)
+    cost,a,_ = sinkhorn_convolutional(scw, P, q; β=β)
 
     @avx ∇W = @. (a = β * a)
     # ∇W = bb
@@ -1032,7 +1032,7 @@ end
 """
 function sinkhorn_convolutional_diff(p::Vector, q::AbstractMatrix, λ::AbstractVector; β=0.01, L = 32, kwargs...)
     w = BCCWorkspace(p, L, β)
-    sinkhorn_convolutional_diff(w, p, q, λ; β, kwargs...)
+    sinkhorn_convolutional_diff(w, p, q, λ; β=β, kwargs...)
 end
 
 
@@ -1086,7 +1086,7 @@ function barycentric_coordinates(
 
     function fg!(F, G, λ)
         λ = softmax(λ)
-        cost, B, g = sinkhorn_convolutional_diff(workspace, X, q, λ; d.β)
+        cost, B, g = sinkhorn_convolutional_diff(workspace, X, q, λ; d.β=β)
 
         if G != nothing
             G .= λ .* (g .- dot(g, λ)) # Chain rule for softmax
