@@ -1086,7 +1086,7 @@ function barycentric_coordinates(
 
     function fg!(F, G, λ)
         λ = softmax(λ)
-        cost, B, g = sinkhorn_convolutional_diff(workspace, X, q, λ; d.β=β)
+        cost, B, g = sinkhorn_convolutional_diff(workspace, X, q, λ; β=d.β)
 
         if G != nothing
             G .= λ .* (g .- dot(g, λ)) # Chain rule for softmax
