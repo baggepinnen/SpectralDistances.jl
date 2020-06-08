@@ -5,6 +5,7 @@ version = "0.1.5"
 
 [deps]
 BackwardsLinalg = "442b4e1a-8b9d-11e9-03b0-f14b31742153"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"

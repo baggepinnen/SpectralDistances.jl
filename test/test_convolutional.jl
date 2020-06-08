@@ -4,21 +4,21 @@ using SpectralDistances, Distances, DSP
 @testset "Sinkhorn convolutional" begin
     @info "Testing Sinkhorn convolutional"
     m,n,T = 8, 10, Float64
-    for m = 8:12, n = 8:12, T = (Float64, )
+    for m = 8:2:12, n = 8:2:12, T = (Float64, )
         # @show m,n,T
 
         a = zeros(T, m, n)
         a[2,2] = 1
         b = zeros(T, m, n)
         b[3,3] = 1
-        d1 = sinkhorn_convolutional(a,b,τ=1e2)
+        d1 = sinkhorn_convolutional(a,b,τ=1e2)[1]
         b = zeros(T, m, n)
         b[4,4] = 1
-        d2 = sinkhorn_convolutional(a,b,τ=1e2)
+        d2 = sinkhorn_convolutional(a,b,τ=1e2)[1]
         @test 2sqrt(d1) ≈ sqrt(d2) rtol = 0.1
         b = zeros(T, m, n)
         b[6,6] = 1
-        d3 = sinkhorn_convolutional(a,b,τ=1e2)
+        d3 = sinkhorn_convolutional(a,b,τ=1e2)[1]
         @test 2sqrt(d2) ≈ sqrt(d3) rtol = 0.1
 
         # Do the same as above but with different log stabilization
@@ -26,14 +26,14 @@ using SpectralDistances, Distances, DSP
         a[2,2] = 1
         b = zeros(T, m, n)
         b[3,3] = 1
-        d4 = sinkhorn_convolutional(a,b,τ=1e5)
+        d4 = sinkhorn_convolutional(a,b,τ=1e5)[1]
         b = zeros(T, m, n)
         b[4,4] = 1
-        d5 = sinkhorn_convolutional(a,b,τ=1e5)
+        d5 = sinkhorn_convolutional(a,b,τ=1e5)[1]
         @test 2sqrt(d4) ≈ sqrt(d5) rtol = 0.1
         b = zeros(T, m, n)
         b[6,6] = 1
-        d6 = sinkhorn_convolutional(a,b,τ=1e5)
+        d6 = sinkhorn_convolutional(a,b,τ=1e5)[1]
         @test 2sqrt(d5) ≈ sqrt(d6) rtol = 0.1
 
         @test d1 ≈ d4 # Test that the result is the same with and without log stabilization.
@@ -43,39 +43,69 @@ using SpectralDistances, Distances, DSP
 end
 
 
-a1 = zeros(Float64, 10,10)
-a1[2,2] = 1
-a2 = zeros(Float64, 10,10)
-a2[6,6] = 1
-A = [a1,a2]
-β = 0.001
-λ = [0.5, 0.5]
-b = barycenter_convolutional(A,λ,β=β)
-@test maximum(b) == b[4,4]
-@test sum(b) ≈ 1
 
-A1 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
-A2 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
-A = [A1, A2]
-B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-3)
-@test B isa typeof(A1)
+@testset "Misc convolutional" begin
+    @info "Testing Misc convolutional"
 
-d = ConvOptimalTransportDistance(β=β, dynamic_floor=-3.0)
-B2 = barycenter(d, A)
-@test power(B) == power(B2)
-@test time(B) == time(B2)
+    @test -0.72 < SpectralDistances.default_dynamic_floor(rand(100,100)) < -0.6
+    a1 = zeros(Float64, 10,10)
+    a1[2,2] = 1
+    a2 = zeros(Float64, 10,10)
+    a2[6,6] = 1
+    A = [a1,a2]
+    β = 0.001
+    λ = [0.5, 0.5]
+    b = barycenter_convolutional(A,λ,β=β)
+    @test maximum(b) == b[4,4]
+    @test sum(b) ≈ 1
 
-@test d(A1,A2) > d(A1,A1)
-@test d(A1,A2) > d(A2,A2)
-@test d(A1,A2) - 0.5*(d(A1,A1) + d(A2,A2)) > 0
+    d = ConvOptimalTransportDistance(β=0.01)
+    l = barycentric_coordinates(d, A, a1)[1]
+    @test l ≈ [1, 0]
+    @test sum(l) ≈ 1
+    l = barycentric_coordinates(d, A, a2)[1]
+    @test l ≈ [0, 1]
 
-A3 = spectrogram(sin.(LinRange(0.8,1.2,300_000) .* (1:300_000)) .+ 0.01randn(300_000), 256, window=hanning)
+    l = barycentric_coordinates(d, A, b)[1]
+    @test l ≈ [0.5, 0.5]
 
-d = ConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0)
-@time D = distance_profile(d, A1, A3, tol=1e-6, stride=15)
-isinteractive() && plot(D)
-@test 40 <= argmin(D) <= 70
-# TODO: write some tests for D
+
+    A1 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
+    A2 = spectrogram(sin.(1:10000) .+ 0.1randn(10000), 256, window=hanning)
+    A = [A1, A2]
+
+    @test -5 < SpectralDistances.default_dynamic_floor(A1) < -4
+    @test -5 < SpectralDistances.default_dynamic_floor(A) < -4
+
+    o = similar(A1.power)
+    @test normalize_spectrogram!(o,A1) == normalize_spectrogram(A1)
+
+
+    B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-3)
+    @test B isa typeof(A1)
+
+    d = ConvOptimalTransportDistance(β=β, dynamic_floor=-3.0)
+    B2 = barycenter(d, A)
+    @test power(B) == power(B2)
+    @test time(B) == time(B2)
+
+    @test d(A1,A2) > d(A1,A1)
+    @test d(A1,A2) > d(A2,A2)
+    @test d(A1,A2) - 0.5*(d(A1,A1) + d(A2,A2)) > 0
+
+    A3 = spectrogram(sin.(LinRange(0.8,1.2,300_000) .* (1:300_000)) .+ 0.01randn(300_000), 256, window=hanning)
+
+    d = ConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0)
+    @time D = distance_profile(d, A1, A3, tol=1e-6, stride=15)
+    isinteractive() && plot(D)
+    @test 40 <= argmin(D) <= 70
+
+
+
+
+
+end
+
 
 # @test B.power == barycenter_convolutional([A1.power, A2.power],λ,β=β)
 
