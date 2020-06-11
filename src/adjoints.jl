@@ -229,7 +229,7 @@ end
 
 
 ZygoteRules.@adjoint function sinkhorn_convolutional(w, A, B; β, kwargs...)
-    cost, V, U = sinkhorn_convolutional(w,A,B; β, kwargs...)
+    cost, V, U = sinkhorn_convolutional(w,A,B; β=β, kwargs...)
     V2, U2 = copy(V), copy(U) # This is absolutely required!
     function sinkhorn_convolutional_pullback(Δc)
         Δc *= β
