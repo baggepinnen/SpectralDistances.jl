@@ -909,8 +909,6 @@ end
 # end
 
 
-
-
 struct BCCWorkspace{T}
     w::Vector{T}
     b::Vector{Array{T,3}}
