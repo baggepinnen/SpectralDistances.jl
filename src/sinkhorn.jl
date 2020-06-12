@@ -647,11 +647,6 @@ function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::Abstrac
     sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)[1]
 end
 
-function evaluate(d::ConvOptimalTransportDistanceDiff, A::AbstractMatrix, B::AbstractMatrix; kwargs...)
-    sinkhorn_convolutional(A, B; β = d.β, kwargs...)[1]
-end
-
-
 """
     normalize_spectrogram(S, dynamic_floor = default_dynamic_floor(S))
 """
