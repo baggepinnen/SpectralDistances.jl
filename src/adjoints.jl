@@ -217,3 +217,28 @@ end
 #     end
 #     return Eigen(vals_diff, vectors_diff)
 # end
+
+# using ChainRulesCore
+# function rrule(::typeof(sinkhorn_convolutional), w, A, B; kwargs...)
+#     cost, V, U = sinkhorn_convolutional(w, A,B; kwargs...)
+#     function sinkhorn_convolutional_pullback(Δc)
+#         return (NO_FIELDS, @thunk(V .= Δc.*V), @thunk(U .= Δc.*U))
+#     end
+#     return cost, sinkhorn_convolutional_pullback
+# end
+
+
+ZygoteRules.@adjoint function sinkhorn_convolutional(w, A, B; β, kwargs...)
+    cost, V, U = sinkhorn_convolutional(w,A,B; β=β, kwargs...)
+    V2, U2 = copy(V), copy(U) # This is absolutely required!
+    function sinkhorn_convolutional_pullback(Δc)
+        Δc *= β
+        mV = mean(V2) # If this normalization is not done, one has to normalize the gradients later instead, otherwise most of the gradient will point "into the constraints"
+        mU = mean(U2)
+        @avx @. V2 = (V2 - mV)*Δc
+        @avx @. U2 = (U2 - mU)*Δc
+
+        return (nothing, V2, U2)
+    end
+    return cost, sinkhorn_convolutional_pullback
+end

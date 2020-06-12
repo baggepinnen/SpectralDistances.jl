@@ -345,7 +345,7 @@ end
         pzmap!(tf(Xe), m=:c, title="Barycenter EuclideanRootDistance")
     end
     ##
-    d = @inferred OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.01)
+    d = @inferred OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=residueweight, β=0.02)
     Xe = barycenter(d, models, solver=sinkhorn_log!)
 
     G = tf.(models)

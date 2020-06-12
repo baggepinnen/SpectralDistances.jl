@@ -28,7 +28,8 @@ using DSP,
     ThreadTools,
     TotalLeastSquares,
     ZygoteRules,
-    UnbalancedOptimalTransport
+    UnbalancedOptimalTransport,
+    UnPack
 
 using SlidingDistancesBase
 import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!
@@ -137,7 +138,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting, barycenter_convolutional, BCWorkspace
+export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting, barycenter_convolutional, BCWorkspace, BCCWorkspace
 
 export TimeDistance, TimeVaryingAR, TimeWindow
 
