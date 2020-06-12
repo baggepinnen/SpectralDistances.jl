@@ -374,15 +374,33 @@ function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
             (D[j,i] = D[i,j])
         end
     end
-    if normalize
-        d = diag(D)
-        for i = 1:size(D,1)
-            x = 0.5d[i]
-            D[:,i] .-= x
-            D[i,:] .-= x
+    normalize && symmetrize!(D)
+    Symmetric(D)
+end
+
+
+function symmetrize!(D)
+    d = diag(D)
+    for i = 1:size(D,1)
+        x = 0.5d[i]
+        D[:,i] .-= x
+        D[i,:] .-= x
+    end
+    D
+end
+
+function symmetrize!(D::SparseMatrixCSC)
+    d = deepcopy(diag(D))
+    N = length(d)
+    for k = 1:N
+        x = 0.5d[k]
+        for i = 1:N
+            D[i,k] == 0 && continue
+            D[i,k] -= x
+            D[k,i] -= x
         end
     end
-    Symmetric(D)
+    D
 end
 
 # distmat_logmag(e1::AbstractArray,e2::AbstractArray) = distmat_euclidean(logmag.(e1), logmag.(e2))

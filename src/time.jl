@@ -211,7 +211,7 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
         sB += sum(B[:,n-stride+1:n])
         sB1 = sum(B[:,1:stride])
         @avx B ./= sB
-        D[iD += 1] = sinkhorn_convolutional(workspace, A, B; β = d.β, initUV = false, kwargs...)
+        D[iD += 1] = sinkhorn_convolutional(workspace, A, B; β = d.β, initUV = false, kwargs...)[1]
         @avx U[:,1:end-stride] .= exp.(U[:,1+stride:end]) # Warm-start gives 3x imrovement in simple benchmark
         @avx V[:,1:end-stride] .= exp.(V[:,1+stride:end])
         @avx U[:,end-stride+1:end] .= 1#exp.(U[:,end]) # These make it slower

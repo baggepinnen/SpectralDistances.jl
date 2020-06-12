@@ -6,7 +6,7 @@ $(EXPORTS)
 """
 module SpectralDistances
 
-using LinearAlgebra, Statistics, Printf
+using LinearAlgebra, SparseArrays, Statistics, Printf
 using DSP,
     ControlSystems,
     Distances,
@@ -28,7 +28,8 @@ using DSP,
     ThreadTools,
     TotalLeastSquares,
     ZygoteRules,
-    UnbalancedOptimalTransport
+    UnbalancedOptimalTransport,
+    UnPack
 
 using SlidingDistancesBase
 import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!
@@ -72,7 +73,8 @@ export ls,
     embedding,
     distmat,
     distmat_euclidean,
-    distmat_euclidean!
+    distmat_euclidean!,
+    symmetrize!
 
 export evaluate,
 distance_profile,
@@ -136,7 +138,7 @@ DiscreteRoots,
 ContinuousRoots,
 domain_transform
 
-export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting, barycenter_convolutional, BCWorkspace
+export interpolator, barycenter, ISA, barycentric_coordinates, barycentric_weighting, barycenter_convolutional, BCWorkspace, BCCWorkspace
 
 export TimeDistance, TimeVaryingAR, TimeWindow
 
