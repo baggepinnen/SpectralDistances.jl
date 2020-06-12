@@ -819,10 +819,6 @@ function barycenter(d::ConvOptimalTransportDistance, args...; kwargs...)
     barycenter_convolutional( args...; β = d.β, kwargs...)
 end
 
-function barycenter(d::ConvOptimalTransportDistanceDiff, args...; kwargs...)
-    barycenter_convolutional_diff( args...; β = d.β, kwargs...)
-end
-
 function barycenter(d::ConvOptimalTransportDistance, A::Vector{<:DSP.Periodograms.TFR}, args...; kwargs...)
     barycenter_convolutional(
         A, args...;
