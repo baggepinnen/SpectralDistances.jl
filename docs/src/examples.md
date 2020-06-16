@@ -24,9 +24,11 @@ cd(path)
 files     = glob("*.wav")
 labels0   = match.(r"[a-z_]+", files)..:match .|> String # This regex assumes that the files are named in a certain way, you may adopt as needed, or load the labels separately.
 ulabels   = unique(labels0)
-labels    = sum((labels0 .== reshape(ulabels,1,:)) .* (1:30)', dims=2)[:]
-na        = 18 # Order of the models
+n_classes = length(ulabels)
+labels    = sum((labels0 .== reshape(ulabels,1,:)) .* (1:n_classes)', dims=2)[:]
+na        = 18 # Order of the models (prefer an even number)
 fitmethod = LS(na=na, λ=1e-5)
+fs        = 44100 # the sample rate
 
 models = mapsoundfiles(files, fs) do sound # mapsoundfiles is defined in AudioClustering
     sound = SpectralDistances.bp_filter(sound, (50/fs, 18000/fs)) # prefiltering is a good idea
@@ -39,7 +41,7 @@ We now have a matrix `X` with features, we can run clustering on it like this:
 ```julia
 using Clustering
 labels,models,X,Z = get_features(trainpath)
-cr = kmeans(v1(X,2), 30) # v1 normalizes mean and variance
+cr = kmeans(v1(X,2), n_classes) # v1 normalizes mean and variance
 
 Plots.plot(
     scatter(threeD(X'),
