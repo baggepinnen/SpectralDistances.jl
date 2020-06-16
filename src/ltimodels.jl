@@ -76,7 +76,7 @@ function Base.show(io::IO, ::MIME"text/plain", m::AR{T,Rt,Ct}) where {T,Rt,Ct}
 end
 
 function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
-    println(io,"AR{coeff: $(eltype(T)), root: $(eltype(Ct))} Abs disc: ", repr(round.(real.(abs.(m.p)), digits=3)))
+    print(io,"AR{coeff: $(eltype(T)), root: $(eltype(Ct))} Abs disc ∈: ", repr(round.(extrema(real.(abs.(m.p))), sigdigits=5)))
 end
 
 "`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."
