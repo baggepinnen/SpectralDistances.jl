@@ -64,7 +64,7 @@ function AR(r::DiscreteRoots, σ²=nothing)
     AR{typeof(a), typeof(r), typeof(rc)}(a, ac, r, rc, b)
 end
 
-function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
+function Base.show(io::IO, ::MIME"text/plain", m::AR{T,Rt,Ct}) where {T,Rt,Ct}
     println(io,"AR{coeff type: $(eltype(T)), root type: $(eltype(Ct))}(")
     println(io,"b: ", m.b)
     printstyled(io,"Cont. poles: ", bold=true)
@@ -73,6 +73,10 @@ function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
     printstyled(io,"Cont. coeffs: ", bold=true)
     println(io, repr("text/plain", m.ac))
     print(io,"Spectral energy: ", spectralenergy(Continuous(), m))
+end
+
+function Base.show(io::IO, m::AR{T,Rt,Ct}) where {T,Rt,Ct}
+    println(io,"AR{coeff: $(eltype(T)), root: $(eltype(Ct))} Abs disc: ", repr(round.(real.(abs.(m.p)), digits=3)))
 end
 
 "`checkroots(r::DiscreteRoots)` prints a warning if there are roots on the negative real axis."

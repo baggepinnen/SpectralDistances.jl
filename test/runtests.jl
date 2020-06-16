@@ -30,6 +30,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
             a = randn(3)
             m = AR(a)
             @test_nowarn show(m)
+            @test_nowarn show([m, m])
             @test m.a == a
             @test length(m.p) == 2
 
