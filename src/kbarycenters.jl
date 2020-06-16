@@ -78,7 +78,7 @@ function kbarycenters(X,p,k; seed=:rand, kiters=10, verbose=false, output=:best,
     KBResult(ass, Q, cost)
 end
 
-function barycenters(C,X,p,q,λ,ass,k;kwargs...)
+function barycenters(C::AbstractMatrix,X,p,q,λ,ass,k;kwargs...)
     N = length(X)
     unnull!(ass,k)
     Q = tmap(1:k) do i
@@ -91,13 +91,13 @@ function barycenters(C,X,p,q,λ,ass,k;kwargs...)
     end
 end
 
-function kwcostfun(C,X,Q,p,q; solver=sinkhorn_log!, kwargs...)
+function kwcostfun(C::AbstractMatrix,X,Q,p,q; solver=sinkhorn_log!, kwargs...)
     C = distmat_euclidean!(C, X,Q)
     sum(solver(C, p, q; kwargs...)[1] .* C)
 end
 
 
-function assignments(C,X,Q,p,q;kwargs...)
+function assignments(C::AbstractMatrix,X,Q,p,q;kwargs...)
     k = length(Q)
     c = 0.0
     ass = map(1:length(X)) do i
@@ -162,4 +162,90 @@ function kbarycenters(d::OptimalTransportRootDistance, models::Vector{<:Abstract
     X, w, realpoles = barycenter_matrices(d, models, normalize)
     res = kbarycenters(X, w, k; β=d.β, kwargs...)
     KBResult(res.assignments, bc2model.(res.barycenters,realpoles), res.cost)
+end
+
+
+## Spectrograms ==============================================================================
+
+function kbarycenters(
+    d::ConvOptimalTransportDistance,
+    Xi::Vector{<:DSP.Periodograms.TFR},
+    k;
+    seed = :rand,
+    kiters = 10,
+    verbose = false,
+    output = :best,
+    kwargs...,
+)
+
+
+    ss = x -> max.(log.(x), d.dynamic_floor) .- d.dynamic_floor
+    X  = s1.(ss.(power.(Xi)))
+
+    N = length(X)
+    @assert k < N "number of clusters must be smaller than number of points"
+    if seed === :rand
+        Q = copy.(X[randperm(N)[1:k]])
+    elseif seed === :eq
+        Q = copy.(X[1:N÷k:end])
+    else
+        throw(ArgumentError("Unknown symbol for seed: $seed"))
+    end
+    λ = ones(N) |> s1
+    ass, cost = assignments(d, X, Q; kwargs...)
+    ass_old = copy(ass)
+    verbose && @info "kbarycenters: Iter: 0 cost: $(cost)"
+    bestcost = cost
+    bestass = ass
+    for iter = 1:kiters
+        Q = barycenters(d, X, λ, ass, k; kwargs...)
+        ass, cost = assignments(d, X, Q; kwargs...)
+        @show ass
+        if cost < bestcost
+            bestcost = cost
+            bestass = ass
+        end
+        if ass == ass_old
+            verbose && @info "kbarycenters: Iter: $iter converged"
+            break
+        end
+        verbose && @info "kbarycenters: Iter: $iter cost: $(cost) num changes: $(count(ass .!= ass_old))"
+        ass_old = ass
+        yield()
+    end
+    if ass != bestass && output === :best
+        verbose && @info "kbarycenters: Best cost: $bestcost"
+        cost = bestcost
+        Q = barycenters(d, X, λ, bestass, k; kwargs...)
+    end
+    KBResult(ass, Q, cost)
+end
+
+function barycenters(d::ConvOptimalTransportDistance, X,λ,ass,k;kwargs...)
+    N = length(X)
+    unnull!(ass,k)
+    Q = tmap(1:k) do i
+        inds = ass .== i
+        if count(inds) == 0
+            @warn "null cluster"
+            inds = randperm(N)[1:2]
+        end
+        barycenter(d, X[inds], s1(λ[inds]); kwargs...)
+    end
+end
+
+
+function assignments(d::ConvOptimalTransportDistance,X,Q;kwargs...)
+    k = length(Q)
+    c = 0.0
+    workspaces = [SCWorkspace(X[1], X[1], d.β) for _ in 1:Threads.nthreads()]
+    ass = map(1:length(X)) do i
+        dists = tmap(1:k) do j
+            sinkhorn_convolutional(workspaces[Threads.threadid()], X[i], Q[j]; β=d.β, kwargs...)
+        end
+        ind = argmin(dists)
+        c += dists[ind]
+        ind
+    end
+    ass, c
 end
