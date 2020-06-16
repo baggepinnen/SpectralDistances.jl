@@ -265,3 +265,44 @@ function PrimitiveModel(d::AbstractDistance, m::AbstractModel)
     w = d.weight(r)
     PrimitiveModel(r.r,w)
 end
+
+using Threads: nthreads, @threads, threadid
+function distmat(od::TimeDistance, models::Vector{<:TimeVaryingAR}; normalize=false, kwargs...)
+    n = length(models)
+    d = od.inner
+    T = eltype(models[1].models[1].a)
+    N = length(models[1])
+    C = [Matrix{T}(undef, N, N) for _ = 1:nthreads()]
+
+    weights = map(models) do q
+        s1(reduce(vcat,map(d.weight, q.models)))
+    end
+
+    workspace = [SinkhornLogWorkspace(T, N, N) for _ = 1:nthreads()]
+    dists = [deepcopy(d) for _ = 1:nthreads()]
+    D = zeros(T, n, n)
+    @showprogress 1 "distmat" for i = 1:n
+        m1 = models[i]
+        distmat_euclidean!(C[1], m1, m1, d.p, od.tp, od.c)
+        Γ = sinkhorn_log!(workspace[1], C[1], weights[i], weights[i]; β = d.β, kwargs...)[1]
+        D[i, i] = dot(Γ, C[1])
+        Threads.@threads for j = i+1:n
+            m2 = models[j]
+            id = threadid()
+            distmat_euclidean!(C[id], m1, m2, d.p, od.tp, od.c)
+            Γ = sinkhorn_log!(
+                workspace[id],
+                C[id],
+                weights[i],
+                weights[j];
+                β = d.β,
+                kwargs...,
+            )[1]
+            D[i, j] = dot(Γ, C[id])
+            (D[j, i] = D[i, j])
+        end
+    end
+    normalize && symmetrize!(D)
+    Symmetric(D)
+
+end
