@@ -366,11 +366,11 @@ function distmat(dist,e::AbstractVector; normalize=false, kwargs...)
     n = length(e)
     T = typeof(evaluate(dist,e[1],e[1];kwargs...))
     D = zeros(T,n,n)
-    dists = [deepcopy(dist) for _ in 1:Threads.nthreads()]
+    dists = [deepcopy(dist) for _ in 1:nthreads()]
     @showprogress 1 "distmat" for i = 1:n
         D[i,i] = evaluate(dist,e[i],e[i];kwargs...) # Note we do calc this distance since it's nonzero for regularized distances.
-        Threads.@threads for j=i+1:n
-            D[i,j] = evaluate(dists[Threads.threadid()], e[i], e[j]; kwargs...)
+        @threads for j=i+1:n
+            D[i,j] = evaluate(dists[threadid()], e[i], e[j]; kwargs...)
             (D[j,i] = D[i,j])
         end
     end

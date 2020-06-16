@@ -266,7 +266,6 @@ function PrimitiveModel(d::AbstractDistance, m::AbstractModel)
     PrimitiveModel(r.r,w)
 end
 
-using Threads: nthreads, @threads, threadid
 function distmat(od::TimeDistance, models::Vector{<:TimeVaryingAR}; normalize=false, kwargs...)
     n = length(models)
     d = od.inner

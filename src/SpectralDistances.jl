@@ -35,6 +35,7 @@ using SlidingDistancesBase
 import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!
 
 import Base.@kwdef
+using Base.Threads: nthreads, @threads, threadid
 
 export ls,
     plr,
