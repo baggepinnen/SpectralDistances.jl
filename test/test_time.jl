@@ -89,6 +89,13 @@ dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1,
 d = evaluate(dist, m, m2, iters=10000, tol=1e-5)
 @test d ≈ 0.01 rtol=5e-2
 
+## Test distmat
+
+D = distmat(dist, [m, m2])
+@test size(D) == (2,2)
+@test D[1,1] ≈ dist(m,m)
+@test D[1,2] ≈ dist(m,m2)
+
 
 ## Test chirps
 
@@ -123,11 +130,3 @@ cv = exp10.(LinRange(-3, -0.5, 6))
 end
 
 isinteractive() && plot(onsets, dists', lab=cv', line_z = log10.(cv)', color=:inferno, legend=false, colorbar=true, xlabel="Onset [s]", )
-
-
-## Test distmat
-
-D = distmat(dist, [m, m2])
-@test size(D) == (2,2)
-@test D[1,1] ≈ dist(m,m)
-@test D[1,2] ≈ dist(m,m2)
