@@ -19,7 +19,6 @@ function predict_nn(labels, D)
     D[diagind(D)] .= Inf # The diagonals contain trivial matches
     dists, inds = findmin(D, dims=2)
     inds = vec(getindex.(inds, 2))
-    @show size(inds), size(labels)
     yh = map(i->labels[i], inds)
 end
 
@@ -52,7 +51,7 @@ function knn_classify(labels, Xtrain, q, k)
 end
 ```
 
-Increased performance is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions. The following code fits models with different fit methods and of different orders
+Increased accuracy is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions. The following code fits models with different fit methods and of different orders
 ```julia
 using ThreadTools, AudioClustering, ProgressMeter
 modelspecs = collect(Iterators.product(10:2:14, (TLS,LS))) # Model order × fitmethod

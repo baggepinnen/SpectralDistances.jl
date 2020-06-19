@@ -372,12 +372,14 @@ end
 
 
     method = LBFGS()
-    method=ParticleSwarm()
+    method = ParticleSwarm()
     # d = OptimalTransportRootDistance(domain=SpectralDistances.Continuous(),p=2, weight=unitweight, β=0.1)
-    λ = @inferred barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
-    isinteractive() && bar(λ)
-
-    @test median(λ) > 0.02
+    successrate = mean(1:5) do _
+        λ = @inferred barycentric_coordinates(d,models,Xe, method, options=options, solver=sinkhorn_log!, robust=true, uniform=true, tol=1e-6)
+        isinteractive() && bar(λ)
+        median(λ) > 0.02
+    end
+    @test successrate >= 4/5
 
     G = tf.(models)
     if isinteractive()
