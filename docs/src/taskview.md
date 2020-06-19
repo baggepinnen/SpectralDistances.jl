@@ -142,7 +142,7 @@ The features derived here can of course be combined with any number of other fea
 ## Detection
 Detection refers to finding a short query pattern `q` in a long recording `y`. This task can often be performance optimized for expensive-to-compute distances.
 
-In it's most basic form, a dection score can be calculated by simply broadcasting a distance over `y`, see [Detection using examples](@ref).
+In its most basic form, a dection score can be calculated by simply broadcasting a distance over `y`, see [Detection using examples](@ref).
 
 For spectrogram distances, we have optimized methods for calculating distance profiles, see
 [Computing a spectrogram distance profile](@ref). Also [`TimeDistance`](@ref) has an optimized method for [`distance_profile`](@ref).
