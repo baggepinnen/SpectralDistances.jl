@@ -1,6 +1,6 @@
 # Task View
 
-This page breaks functionality up according to tasks in order to make it easier to find relevant functions
+This page breaks functionality up according to tasks in order to make it easier to find relevant functions. Throughout this page, we assume that you are familiar with how to estimate models ([Models and root manipulations](@ref)) and specify distances ([Distances](@ref)).
 
 ## Classification
 There are two main ways to perform classification using the functionality in this package
@@ -34,7 +34,7 @@ predicted_class = labels[argmin(dists)]
 
 By far the fastest neighbor querys can be made by extracting embeddings from estimated models and using a KD-tree to accelerate neigbor searches. Below, we'll go into detail on how to do this. This corresponds to using the [`EuclideanRootDistance`](@ref) without weighting.
 
-The following function finds you the `k` most likely classes corresponding to query embedding `q` from within `Xtrain`. `Xtrain` and `q` are expected to be embeddings formed by the function [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from AudioClustering.jl.
+The following function finds you the `k` most likely classes corresponding to query embedding `q` from within `Xtrain`. `Xtrain` and `q` are expected to be embeddings formed by the function [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from AudioClustering.jl. (See [Calculate root embeddings from sound files](@ref) for an intro.)
 ```julia
 using MultivariateStats, NearestNeighbors, AudioClustering
 
@@ -140,6 +140,17 @@ The features derived here can of course be combined with any number of other fea
 
 
 
+## Detection
+Detection refers to finding a short query pattern `q` in a long recording `y`. This task can often be performance optimized for expensive-to-compute distances.
+
+In it's most basic form, a dection score can be calculated by simply broadcasting a distance over `y`, see [Detection using examples](@ref).
+
+For spectrogram distances, we have optimized methods for calculating distance profiles, see
+[Computing a spectrogram distance profile](@ref). Also [`TimeDistance`](@ref) has an optimized method for [`distance_profile`](@ref).
+
+Detection can also be done using Dynamic Time Warping combined with optimal transport, see [Dynamic Time Warping](@ref).
+
+
 ## Unsupervised learning
 For clustering applications, there are a number of approaches
 - Distance matrix
@@ -162,3 +173,7 @@ Several sounds from the same class can be reduced to a smaller number of sounds 
 
 ## Dataset augmentation
 Barycenters can be used also to augment datasets with opints "in-between" other points. The figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) illustrates how four spectrogams are extended into 25 spectrograms.
+
+
+## Interpolation between spectra
+An interpolation between spectra is obtained by calculating a [`barycenter`](@ref) using varying barycentric coordinates. See [Interpolations and Barycenters](@ref).

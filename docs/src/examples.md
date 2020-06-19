@@ -98,7 +98,7 @@ annotate!(anns)
 Many algorithms make use of a matrix containing all pairwise distances between points. Given a set of models, we can easily obtain such a matrix:
 ```julia
 distance = OptimalTransportRootDistance(domain=Continuous())
-D = SpectralDistances.distmat(distance, models)
+D = SpectralDistances.distmat(distance, models, normalize=true)
 ```
 with this matrix, we can, for instance, run clustering:
 ```julia

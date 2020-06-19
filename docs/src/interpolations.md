@@ -124,10 +124,10 @@ There is currently no way of having different costs between transport in time an
 ## Barycentric coordiantes
 The inverse problem to that of finding a barycenter is that of finding the barycentric coordinates λ of a query point $Q$, such that the resulting barycenter is as close as possible to the query point. Given a set of rational spectra $\left\{ G_i \right\}$, a nonlinear projection of a spectrum $Q$ onto this set can be obtained by solving the following nested optimization problem
 ```math
-\begin{align}
+\begin{aligned}
   λ &= \argmin_{\bar{λ}} \, W\big(Q,  Q^*(\bar{λ})\big)\\
   Q^*(\bar{λ}) &= \argmin_{\bar{Q}} \sum_i \bar{λ}_i W(G_i, \bar{Q})
-\end{align}
+\end{aligned}
 ```
 where $λ$ are the barycentric coordinates belonging to the probability simplex. Problems of this type are sometimes referred to as [histogram regression](https://perso.liris.cnrs.fr/nicolas.bonneel/WassersteinBarycentricCoordinates/WBC_lowres.pdf).
 
