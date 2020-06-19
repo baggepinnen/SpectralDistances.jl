@@ -114,9 +114,51 @@ r = ranking(labels, votes)
 
 ### Feature-based classification
 
+The embeddings extracted above can be used as features for a standard classifier. Below we show an example using a random forest
+
+```julia
+using DecisionTree, MultivariateStats, Random, AudioClustering
+N       = length(labels)
+X       = embeddings(models)' |> copy # DecisionTree expects features along columns
+perm    = randperm(N)
+Nt      = N ÷ 2 # Use half dataset for training
+train_x = X[perm[1:Nt], :]
+train_y = labels[perm[1:Nt]]
+test_x  = X[perm[Nt+1:end], :]
+test_y  = labels[perm[Nt+1:end]]
+
+model = RandomForestClassifier(n_trees=400, max_depth=15)
+DecisionTree.fit!(model, train_x, train_y)
+
+predictions = DecisionTree.predict(model, test_x)
+k_predictions =
+getindex.(sortperm.(eachrow(predict_proba(model, test_x)), rev = true), Ref(1:3)) # Predict to 3
+@show accuracy = mean(predictions .== test_y)   # Top prediction accuracy
+@show accuracy = mean(test_y .∈ k_predictions)  # Top 3 predictions accuracy
+```
+The features derived here can of course be combined with any number of other features, such as from [AcousticFeatures.jl](https://github.com/ymtoo/AcousticFeatures.jl/).
+
+
 
 ## Unsupervised learning
+For clustering applications, there are a number of approaches
+- Distance matrix
+- Feature-based
+- K-barycenters
+
+### Clustering using a distance matrix
+Using [`distmat`](@ref) with keyword arg `normalize=true`, you can obtain a distance matrix that can be used with a large number of clustering algorithms from [Clustering.jl](https://juliastats.org/Clustering.jl/stable/index.html) or [HDBSCAN.jl](https://github.com/baggepinnen/HDBSCAN.jl).
+
+### Clustering using features
+Using [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from AudioClustering.jl, you can run regular K-means which is blazingly fast, but often produces worse clusterings than more sophisticated methods.
+
+### Clustering using K-barycenters
+This approach is similar to K-means, but uses a transport based method to calculate distances and form averages rather than the Euclidean distance. See the example [K-Barycenters](@ref).
 
 ## Dimensionality reduction
+Several sounds from the same class can be reduced to a smaller number of sounds by forming a barycenter. See examples [Barycenters](@ref), [Barycenters between spectrograms](@ref) and the figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) which shows how four spectrograms can be used to calculate a "center spectrogram".
+
+
 
 ## Dataset augmentation
+Barycenters can be used also to augment datasets with opints "in-between" other points. The figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) illustrates how four spectrogams are extended into 25 spectrograms.
