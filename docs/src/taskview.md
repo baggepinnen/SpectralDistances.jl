@@ -54,7 +54,7 @@ end
 
 Increased performance is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions. The following code fits models with different fit methods and of different orders
 ```julia
-using ThreadTools, AudioClustering
+using ThreadTools, AudioClustering, ProgressMeter
 modelspecs = collect(Iterators.product(10:2:14, (TLS,LS))) # Model order × fitmethod
 
 manymodels = @showprogress "Estimating models" map(modelspecs) do (na, fm)
@@ -84,7 +84,7 @@ majority_vote = vote(votes)
 @show mean(labels .== majority_vote) # Accuracy
 ```
 
-To predict "up to k classes", try he following
+To predict "up to k classes", try the following
 
 ```julia
 using StatsBase # for countmap
@@ -148,7 +148,9 @@ In it's most basic form, a dection score can be calculated by simply broadcastin
 For spectrogram distances, we have optimized methods for calculating distance profiles, see
 [Computing a spectrogram distance profile](@ref). Also [`TimeDistance`](@ref) has an optimized method for [`distance_profile`](@ref).
 
-Detection can also be done using Dynamic Time Warping combined with optimal transport, see [Dynamic Time Warping](@ref).
+Detection can also be done using Dynamic Time Warping combined with optimal transport, see [Dynamic Time Warping](@ref). For examples of the combination of DTW and OT, see the following notebooks
+- [DTW-OT: Introduction](https://nbviewer.jupyter.org/github/baggepinnen/julia_examples/blob/master/frequency_warping.ipynb)
+- [DTW-OT: Detection](https://nbviewer.jupyter.org/github/baggepinnen/julia_examples/blob/master/frequency_warping2.ipynb)
 
 
 ## Unsupervised learning

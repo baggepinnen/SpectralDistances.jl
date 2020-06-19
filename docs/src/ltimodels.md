@@ -60,6 +60,10 @@ Estimating a lot (1000s) of models might take a while. The bulk of the time is s
 - Use [MKL.jl](https://github.com/JuliaComputing/MKL.jl) instead of the default OpenBLAS (can yield about 2x performance improvement).
 
 
+## Further reading and examples
+This [notebook](https://nbviewer.jupyter.org/github/baggepinnen/julia_examples/blob/master/identification_robust.ipynb) illustrates how the estimation of models in the presence of strong impulsive noise can be improved.
+
+
 ## Type reference
 ```@index
 Pages = ["ltimodels.md"]

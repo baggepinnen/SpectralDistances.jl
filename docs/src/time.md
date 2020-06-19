@@ -156,6 +156,10 @@ Both `Qm` and `Ym` are expected to be of type [`TimeVaryingAR`](@ref).
 DynamicAxisWarping.dtwnn(q::TimeVaryingAR, y::TimeVaryingAR, dist, rad::Int)
 ```
 
+For examples of the combination of DTW and OT, see the following notebooks
+- [DTW-OT: Introduction](https://nbviewer.jupyter.org/github/baggepinnen/julia_examples/blob/master/frequency_warping.ipynb)
+- [DTW-OT: Detection](https://nbviewer.jupyter.org/github/baggepinnen/julia_examples/blob/master/frequency_warping2.ipynb)
+
 ## Distance profile
 A distance profile between a query pattern `Qm` and a much longer pattern `Ym` can be computed efficiently with (example)
 ```julia
