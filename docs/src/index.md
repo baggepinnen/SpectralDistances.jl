@@ -32,7 +32,7 @@ Many distances are differentiable and can thus be used for gradient-based learni
 
 ## Contents
 ```@contents
-Pages = ["distances.md", "time.md", "ltimodels.md", "interpolations.md", "plotting.md", "misc.md", "examples.md"]
+Pages = ["distances.md", "time.md", "ltimodels.md", "interpolations.md", "plotting.md", "misc.md", "examples.md", "taskview.md"]
 ```
 
 

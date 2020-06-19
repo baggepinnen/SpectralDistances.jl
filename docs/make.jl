@@ -11,7 +11,7 @@ makedocs(
     # format = LaTeX(),
     format = Documenter.HTML(prettyurls = haskey(ENV, "CI")),
     modules = [SpectralDistances],
-    pages = ["index.md", "ltimodels.md", "distances.md", "time.md", "interpolations.md", "plotting.md", "misc.md", "examples.md"]
+    pages = ["index.md", "ltimodels.md", "distances.md", "time.md", "interpolations.md", "plotting.md", "misc.md", "examples.md", "taskview.md"]
 )
 
 # For debugging purposes
