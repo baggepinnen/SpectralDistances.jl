@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Task View · SpectralDistances</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">SpectralDistances</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">SpectralDistances</a></li><li><a class="tocitem" href="../ltimodels/">Models and root manipulations</a></li><li><a class="tocitem" href="../distances/">Distances</a></li><li><a class="tocitem" href="../time/">Time-Frequency distances</a></li><li><a class="tocitem" href="../interpolations/">Interpolations and Barycenters</a></li><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../misc/">Misc.</a></li><li><a class="tocitem" href="../examples/">Examples</a></li><li class="is-active"><a class="tocitem" href>Task View</a><ul class="internal"><li><a class="tocitem" href="#Classification-1"><span>Classification</span></a></li><li><a class="tocitem" href="#Unsupervised-learning-1"><span>Unsupervised learning</span></a></li><li><a class="tocitem" href="#Dimensionality-reduction-1"><span>Dimensionality reduction</span></a></li><li><a class="tocitem" href="#Dataset-augmentation-1"><span>Dataset augmentation</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Task View</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Task View</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/baggepinnen/SpectralDistances.jl/blob/master/docs/src/taskview.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Task-View-1"><a class="docs-heading-anchor" href="#Task-View-1">Task View</a><a class="docs-heading-anchor-permalink" href="#Task-View-1" title="Permalink"></a></h1><p>This page breaks functionality up according to tasks in order to make it easier to find relevant functions</p><h2 id="Classification-1"><a class="docs-heading-anchor" href="#Classification-1">Classification</a><a class="docs-heading-anchor-permalink" href="#Classification-1" title="Permalink"></a></h2><p>There are two main ways to perform classification using the functionality in this package</p><ul><li>Nearest-neighbor based</li><li>Feature based</li></ul><h3 id="Nearest-neighbor-based-classification-1"><a class="docs-heading-anchor" href="#Nearest-neighbor-based-classification-1">Nearest-neighbor based classification</a><a class="docs-heading-anchor-permalink" href="#Nearest-neighbor-based-classification-1" title="Permalink"></a></h3><p>This is very simple, select a distance, and calculate the nearest neighbor from a dataset to your query.</p><p>First, we demonstrate how one can do &quot;leave-one-out&quot; prediction within a labeled dataset, i.e., for each example, classify it using all the others.</p><p>Any distance can be used to calculate a distance matrix <a href="../distances/#SpectralDistances.distmat-Tuple{Any,AbstractArray{T,1} where T}"><code>distmat</code></a>. Given a distance matrix <code>D</code>, you can predict the nearest neighbor class with the following function</p><pre><code class="language-julia">function predict_nn(labels, D)
+    D = copy(D)
+    D[diagind(D)] .= Inf # The diagonals contain trivial matches
+    dists, inds = findmin(D, dims=2)
+    inds = vec(getindex.(inds, 2))
+    @show size(inds), size(labels)
+    yh = map(i-&gt;labels[i], inds)
+end
+
+predicted_classes = predict_nn(labels, D)</code></pre><p>When we want to classify a new sample <code>q</code>, we can simply broadcast a distance <code>d</code> between <code>q</code> and all labeled samples in the training set</p><pre><code class="language-julia">dists = d.(models_train, q)
+predicted_class = labels[argmin(dists)]</code></pre><p>By far the fastest neighbor querys can be made by extracting embeddings from estimated models and using a KD-tree to accelerate neigbor searches. Below, we&#39;ll go into detail on how to do this. This corresponds to using the <a href="../distances/#SpectralDistances.EuclideanRootDistance"><code>EuclideanRootDistance</code></a> without weighting.</p><p>The following function finds you the <code>k</code> most likely classes corresponding to query embedding <code>q</code> from within <code>Xtrain</code>. <code>Xtrain</code> and <code>q</code> are expected to be embeddings formed by the function <a href="https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models"><code>embeddings</code></a> from AudioClustering.jl.</p><pre><code class="language-julia">using MultivariateStats, NearestNeighbors, AudioClustering
+
+Xtrain = embeddings(models_train)
+
+function knn_classify(labels, Xtrain, q, k)
+    N = size(Xtrain,2)
+    W = fit(Whitening, Xtrain)
+    X = MultivariateStats.transform(W,Xtrain)
+    q = MultivariateStats.transform(W,q)
+    tree = NearestNeighbors.KDTree(Xtrain)
+    inds, dists = knn(tree, q, min(5k+1, N-1), true)
+    ul = unique(labels[inds[2:end]])
+    ul[1:min(k, length(ul))]
+end</code></pre><p>Increased performance is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions. The following code fits models with different fit methods and of different orders</p><pre><code class="language-julia">using ThreadTools, AudioClustering
+modelspecs = collect(Iterators.product(10:2:14, (TLS,LS))) # Model order × fitmethod
+
+manymodels = @showprogress &quot;Estimating models&quot; map(modelspecs) do (na, fm)
+    fitmethod = fm(na=na, λ=1e-5)
+    tmap(sounds) do sound
+        sound = @view(sound[findfirst(!iszero, sound):findlast(!iszero, sound)])
+        sound = Float32.(SpectralDistances.bp_filter(sound, (50 / fs, 0.49)))
+        fitmethod(sound)
+    end
+end
+
+manyX = embeddings.(manymodels)</code></pre><p>To predict a single class, let many classifiers vote for the best class</p><pre><code class="language-julia">using MLBase # For mode
+
+function vote(preds)
+    map(1:length(preds[1])) do i
+        mode(getindex.(preds, i))
+    end
+end
+
+votes = [classpred1, classpred2, classpred3, ...]
+majority_vote = vote(votes)
+@show mean(labels .== majority_vote) # Accuracy</code></pre><p>To predict &quot;up to k classes&quot;, try he following</p><pre><code class="language-julia">using StatsBase # for countmap
+function predict_k(labels, preds, k)
+    map(eachindex(labels)) do i
+        cm = countmap(getindex.(preds, i)) |&gt; collect |&gt; x-&gt;sort(x, by=last, rev=true)
+        first.(cm[1:min(k,length(cm))])
+    end
+end
+
+votes = [classpred1, classpred2, classpred3, ...]
+k_votes = predict_k(labels, votes, k)
+@show mean(labels .∈ k_votes) # Accuracy</code></pre><p>To figure out which classifier is best, rank them like so</p><pre><code class="language-julia">function ranking(labels, preds)
+    scores = [mean(labels .== yh) for yh in preds]
+    sortperm(scores, rev=true)
+end
+
+votes = [classpred1, classpred2, classpred3, ...]
+r = ranking(labels, votes)</code></pre><h3 id="Feature-based-classification-1"><a class="docs-heading-anchor" href="#Feature-based-classification-1">Feature-based classification</a><a class="docs-heading-anchor-permalink" href="#Feature-based-classification-1" title="Permalink"></a></h3><h2 id="Unsupervised-learning-1"><a class="docs-heading-anchor" href="#Unsupervised-learning-1">Unsupervised learning</a><a class="docs-heading-anchor-permalink" href="#Unsupervised-learning-1" title="Permalink"></a></h2><h2 id="Dimensionality-reduction-1"><a class="docs-heading-anchor" href="#Dimensionality-reduction-1">Dimensionality reduction</a><a class="docs-heading-anchor-permalink" href="#Dimensionality-reduction-1" title="Permalink"></a></h2><h2 id="Dataset-augmentation-1"><a class="docs-heading-anchor" href="#Dataset-augmentation-1">Dataset augmentation</a><a class="docs-heading-anchor-permalink" href="#Dataset-augmentation-1" title="Permalink"></a></h2></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Examples</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 19 June 2020 06:52">Friday 19 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
