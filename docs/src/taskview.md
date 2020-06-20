@@ -12,11 +12,11 @@ This is very simple, select a distance, and calculate the nearest neighbor from 
 
 First, we demonstrate how one can do "leave-one-out" prediction within a labeled dataset, i.e., for each example, classify it using all the others.
 
-Any distance can be used to calculate a distance matrix [`distmat`](@ref). Given a distance matrix `D`, you can predict the nearest neighbor class with the following function
+Any distance can be used to calculate a distance matrix [`distmat`](@ref). Given a distance matrix `D`, you can predict the nearest-neighbor class with the following function
 ```julia
 function predict_nn(labels, D)
     D = copy(D)
-    D[diagind(D)] .= Inf # The diagonals contain trivial matches
+    D[diagind(D)] .= Inf # The diagonal contains trivial matches
     dists, inds = findmin(D, dims=2)
     inds = vec(getindex.(inds, 2))
     yh = map(i->labels[i], inds)
@@ -30,6 +30,7 @@ When we want to classify a new sample `q`, we can simply broadcast a distance `d
 dists = d.(models_train, q)
 predicted_class = labels[argmin(dists)]
 ```
+note that if you're doing *detection*, i.e., looking for a short `q` in a much longer time series, see [Detection](@ref) below, and the function [`distance_profile`](@ref).
 
 By far the fastest neighbor querys can be made by extracting embeddings from estimated models and using a KD-tree to accelerate neigbor searches. Below, we'll go into detail on how to do this. This corresponds to using the [`EuclideanRootDistance`](@ref) without weighting.
 
@@ -167,13 +168,18 @@ Using [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimatin
 ### Clustering using K-barycenters
 This approach is similar to K-means, but uses a transport based method to calculate distances and form averages rather than the Euclidean distance. See the example [K-Barycenters](@ref).
 
+### Finding motifs or outliers
+To find motifs (recurring patterns) or outliers (discords), see [MatrixProfile.jl](https://github.com/baggepinnen/MatrixProfile.jl) which interacts well with SpectralDistances.jl.
+
 ## Dimensionality reduction
-Several sounds from the same class can be reduced to a smaller number of sounds by forming a barycenter. See examples [Barycenters](@ref), [Barycenters between spectrograms](@ref) and the figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) which shows how four spectrograms can be used to calculate a "center spectrogram".
+Several sounds from the same class can be reduced to a smaller number of sounds by forming a barycenter. See examples [Barycenters](@ref), [Barycenters between spectrograms](@ref) and the figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) (reproduced below) which shows how four spectrograms can be used to calculate a "center spectrogram".
+
+![window](https://github.com/baggepinnen/SpectralDistances.jl/blob/master/examples/barycenters.png?raw=true)
 
 
 
 ## Dataset augmentation
-Barycenters can be used also to augment datasets with opints "in-between" other points. The figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) illustrates how four spectrogams are extended into 25 spectrograms.
+Barycenters can be used also to augment datasets with points "in-between" other points. The figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) (reproduced above) illustrates how four spectrogams are extended into 25 spectrograms.
 
 
 ## Interpolation between spectra
