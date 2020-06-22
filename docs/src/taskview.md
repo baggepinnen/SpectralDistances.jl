@@ -8,37 +8,40 @@ There are two main ways to perform classification using the functionality in thi
 - Feature based
 
 ### Nearest-neighbor based classification
-This is very simple, select a distance, and calculate the nearest neighbor from a dataset to your query.
+This is very simple, select a distance, and calculate the nearest neighbor from a dataset to your query. The dataset can be either a vector of models estimated from signals, a vector of spectrograms, or a matrix of embedding vectors derived from models.
 
-First, we demonstrate how one can do "leave-one-out" prediction within a labeled dataset, i.e., for each example, classify it using all the others.
+First, we demonstrate how one can perform "leave-one-out" corss validation within a labeled dataset, i.e., for each example, classify it using all the others. Since a distance based classifier does not have an explicit "training phase", this sort of cross-validation is comparatively cheap to perform.
 
-Any distance can be used to calculate a distance matrix [`distmat`](@ref). Given a distance matrix `D`, you can predict the nearest-neighbor class with the following function
+Any distance can be used to calculate a distance matrix using the function [`distmat`](@ref). Given a distance matrix `D`, you can predict the nearest-neighbor class with the following function
 ```julia
-function predict_nn(labels, D)
-    D = copy(D)
-    D[diagind(D)] .= Inf # The diagonal contains trivial matches
-    dists, inds = findmin(D, dims=2)
+function predict_nn(labels::Vector{Int}, D)
+    dists, inds = findmin(D + Inf*I, dims=2) # The diagonal contains trivial matches, hence add infinite Identity
     inds = vec(getindex.(inds, 2))
-    yh = map(i->labels[i], inds)
+    map(i->labels[i], inds)
 end
 
 predicted_classes = predict_nn(labels, D)
 ```
 
-When we want to classify a new sample `q`, we can simply broadcast a distance `d` between `q` and all labeled samples in the training set
+When we want to *classify a new sample* `q`, we can simply broadcast[^tmap] a distance `d` between `q` and all labeled samples in the training set
 ```julia
 dists = d.(models_train, q)
 predicted_class = labels[argmin(dists)]
 ```
 note that if you're doing *detection*, i.e., looking for a short `q` in a much longer time series, see [Detection](@ref) below, and the function [`distance_profile`](@ref).
 
-By far the fastest neighbor querys can be made by extracting embeddings from estimated models and using a KD-tree to accelerate neigbor searches. Below, we'll go into detail on how to do this. This corresponds to using the [`EuclideanRootDistance`](@ref) without weighting.
 
-The following function finds you the `k` most likely classes corresponding to query embedding `q` from within `Xtrain`. `Xtrain` and `q` are expected to be embeddings formed by the function [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from AudioClustering.jl. (See [Calculate root embeddings from sound files](@ref) for an intro.)
+[^tmap]: If `d` is an expensive distance to compute, you may want to consider using `tmap` from [ThreadTools.jl](https://github.com/baggepinnen/ThreadTools.jl instead. If you do, make sure you copy the distance object to each thread, in case it contains an internal cache.)
+
+
+#### Nearest neighbor using embeddings
+By far the fastest neighbor querys can be made by extracting embeddings from estimated models and using a KD-tree to accelerate neigbor searches. Below, we'll go into detail on how to do this. This corresponds to using the [`EuclideanRootDistance`](@ref) with uniform weighting on the poles.
+
+The following function finds you the ``k`` most likely classes corresponding to query embedding `q` from within `Xtrain`. `Xtrain` and `q` are expected to be embeddings formed by the function [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from [AudioClustering.jl](https://github.com/baggepinnen/AudioClustering.jl). (See [Calculate root embeddings from sound files](@ref) for an intro.)
 ```julia
 using MultivariateStats, NearestNeighbors, AudioClustering
 
-Xtrain = embeddings(models_train)
+Xtrain = embeddings(models_train) # Assumes that you have already estimated models
 
 function knn_classify(labels, Xtrain, q, k)
     N = size(Xtrain,2)
@@ -52,7 +55,7 @@ function knn_classify(labels, Xtrain, q, k)
 end
 ```
 
-Increased accuracy is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions. The following code fits models with different fit methods and of different orders
+Increased accuracy is often obtained by estimating models with a few different specifications and fitting methods and use them all to form predictions (this will form an ensemble). The following code fits models with different fit methods and of different orders
 ```julia
 using ThreadTools, AudioClustering, ProgressMeter
 modelspecs = collect(Iterators.product(10:2:14, (TLS,LS))) # Model order × fitmethod
@@ -61,12 +64,12 @@ manymodels = @showprogress "Estimating models" map(modelspecs) do (na, fm)
     fitmethod = fm(na=na, λ=1e-5)
     tmap(sounds) do sound
         sound = @view(sound[findfirst(!iszero, sound):findlast(!iszero, sound)])
-        sound = Float32.(SpectralDistances.bp_filter(sound, (50 / fs, 0.49)))
+        sound = Float32.(SpectralDistances.bp_filter(sound, (50 / fs, 0.49))) # Apply some bandpass filtering
         fitmethod(sound)
     end
 end
 
-manyX = embeddings.(manymodels)
+manyX = embeddings.(manymodels) # This is not a matrix of matrices
 ```
 
 To predict a single class, let many classifiers vote for the best class
@@ -79,12 +82,12 @@ function vote(preds)
     end
 end
 
-votes = [classpred1, classpred2, classpred3, ...]
+votes = [classpred1, classpred2, classpred3, ...] # Each classpred can be obtained by, e.g., knn_classify above.
 majority_vote = vote(votes)
 @show mean(labels .== majority_vote) # Accuracy
 ```
 
-To predict "up to k classes", try the following
+To predict "up to ``k`` classes", try the following
 
 ```julia
 using StatsBase # for countmap
@@ -132,9 +135,9 @@ DecisionTree.fit!(model, train_x, train_y)
 
 predictions = DecisionTree.predict(model, test_x)
 k_predictions =
-getindex.(sortperm.(eachrow(predict_proba(model, test_x)), rev = true), Ref(1:3)) # Predict to 3
-@show accuracy = mean(predictions .== test_y)   # Top prediction accuracy
-@show accuracy = mean(test_y .∈ k_predictions)  # Top 3 predictions accuracy
+getindex.(sortperm.(eachrow(predict_proba(model, test_x)), rev = true), Ref(1:3)) # Predict top 3
+@show accuracy = mean(predictions .== test_y)    # Top class prediction accuracy
+@show accuracy = mean(test_y .∈ k_predictions)  # Top 3 classes predictions accuracy
 ```
 The features derived here can of course be combined with any number of other features, such as from [AcousticFeatures.jl](https://github.com/ymtoo/AcousticFeatures.jl/).
 
@@ -166,7 +169,7 @@ Using [`distmat`](@ref) with keyword arg `normalize=true`, you can obtain a dist
 Using [`embeddings`](https://github.com/baggepinnen/AudioClustering.jl#estimating-linear-models) from AudioClustering.jl, you can run regular K-means which is blazingly fast, but often produces worse clusterings than more sophisticated methods.
 
 ### Clustering using K-barycenters
-This approach is similar to K-means, but uses a transport based method to calculate distances and form averages rather than the Euclidean distance. See the example [K-Barycenters](@ref).
+This approach is similar to K-means, but uses a transport-based method to calculate distances and form averages rather than the Euclidean distance. See the example [K-Barycenters](@ref).
 
 ### Finding motifs or outliers
 To find motifs (recurring patterns) or outliers (discords), see [MatrixProfile.jl](https://github.com/baggepinnen/MatrixProfile.jl) which interacts well with SpectralDistances.jl.
@@ -179,7 +182,7 @@ Several sounds from the same class can be reduced to a smaller number of sounds 
 
 
 ## Dataset augmentation
-Barycenters can be used also to augment datasets with points "in-between" other points. The figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) (reproduced above) illustrates how four spectrogams are extended into 25 spectrograms.
+Barycenters can also be used also to augment datasets with points "in-between" other points. The same figure in the [readme](https://github.com/baggepinnen/SpectralDistances.jl) (reproduced above) illustrates how four spectrogams are extended into 25 spectrograms.
 
 
 ## Interpolation between spectra
