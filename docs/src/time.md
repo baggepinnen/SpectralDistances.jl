@@ -6,6 +6,12 @@ plotly()
 For non-stationary signals, it is important to consider how the spectrum changes with time. This package has some, so far, basic support for time-frequency representations of non-stationary signals.
 ## Overview
 
+There are two main approaches for time-frequency representations supported
+1. Model based
+2. Spectrogram based
+
+### Model based
+
 We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
 ```@repl time
 fitmethod = TimeWindow(LS(na=2), 1000, 500)
@@ -66,7 +72,7 @@ evaluate(dist, m, m2)
 ```
 
 
-### Chirp example
+#### Chirp example
 Here we consider the estimation of the distance between two signals containing chirps, where the onset of the chirp differs. We start by creating some signals with different chirp onsets:
 ```@example time
 fs = 100000
@@ -138,6 +144,19 @@ The results are shown below. The figure indicates the cost `log10(c)` using the 
 ```
 
 In this example, we chose the weight function `simplex_residueweight`, which ensures that each time step has the same amount of spectral mass. Individual poles will still have different masses within each timestep, as determined by the pole's residue.
+
+### Spectrogram based
+The distance [`ConvOptimalTransportDistance`](@ref) can operate on 2D measures on a grid, for example spectrograms. This distance supports calculating barycenters and barycentric coordinates. See [Barycenters between spectrograms](@ref) and [Barycentric coordiantes](@ref).
+
+
+This distance has a special option
+- `invariant_axis::Int = 0`
+
+If this is set to 1 or 2, the distance will be approximately invariant to translations along the invariant axis. As an example, to be invariant to a spectrogram being shifted slightly in time, set `invariant_axis = 2`. If this option is used, the distance is not differentiable and this option will be ignored when calculating barycenters etc. 
+
+```@docs
+ConvOptimalTransportDistance
+```
 
 ## Dynamic Time Warping
 This package interfaces with [DynamicAxisWarping.jl](https://github.com/baggepinnen/DynamicAxisWarping.jl) and provides optimized methods for [`DynamicAxisWarping.dtwnn`](@ref). Below is an example of how to search for a query pattern `Qm` in a much longer pattern `Ym`

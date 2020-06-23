@@ -505,7 +505,10 @@ function sinkhorn_convolutional(
     end
     @avx @. V = log(V + ϵ) + alpha
     @avx @. U = log(U + ϵ) + beta
-    β*(dot(A, V) + dot(B, U)), V, U
+    c = β*(dot(A, V) + dot(B, U))
+    V .-= mean(V)
+    U .-= mean(U)
+    c, V, U
 
 end
 
@@ -626,11 +629,13 @@ It's important to tune the two parameters below, see the docstring for [`sinkhor
 
 - `β = 0.001`
 - `dynamic_floor = -10.0`
+- `invariant_axis::Int = 0` If this is set to 1 or 2, the distance will be approximately invariant to translations along the invariant axis. As an example, to be invariant to a spectrogram being shifted slightly in time, set `invariant_axis = 2`.
 """
 ConvOptimalTransportDistance
 Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
     β::T = 0.001
     dynamic_floor::T = NaN
+    invariant_axis::Int = 0
     workspace::Union{Nothing, SCWorkspace{T}} = nothing
 end
 
@@ -644,7 +649,19 @@ function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::Abstrac
     if d.workspace === nothing
         d.workspace = SCWorkspace(A,B,d.β)
     end
-    sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)[1]
+    c,V,U = sinkhorn_convolutional(d.workspace::SCWorkspace{T}, A, B; β = d.β, kwargs...)
+    if d.invariant_axis != 0
+        isderiving() && error("Can not differentiate a distance with an invariant axis (I haven't bothered figure out the adjoint).")
+        ia = d.invariant_axis
+        sum_axis = ia == 1 ? 2 : 1
+        v,u = vec(sum(A.*V, dims=sum_axis)), vec(sum(B.*U, dims=sum_axis))
+        v ./= sum(v)
+        u ./= sum(u)
+        Γ = discrete_grid_transportplan(v, u)
+        invariant_cost = sum(Γ[i,j]*abs2((i-j)/2) for i = 1:size(Γ,1), j = 1:size(Γ,2))
+        return c - invariant_cost / size(Γ,1)
+    end
+    return c
 end
 
 """

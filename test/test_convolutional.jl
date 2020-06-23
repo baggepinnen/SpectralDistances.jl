@@ -44,6 +44,56 @@ end
 
 
 
+
+@testset "Invariant axis" begin
+    @info "Testing Invariant axis"
+    w,h = 5,5
+    for w = 5:6, h = 5:6
+        β = 0.05
+        D = [abs2((i-j)/2) for i = 1:h, j = 1:h] # NOTE: the 1/2 here is important
+        B = [zeros(h,w) for _ in 1:2]
+
+        B[1][1,1] = 1
+        B[1][1,5] = 1
+        B[2][2,1] = 1
+        B[2][2,5] = 1
+
+        B = s1.(B)
+        c,V,U = sinkhorn_convolutional(B[1], B[2], β=β, τ=1e20)
+        c1,V1,U1 = sinkhorn_convolutional(B[1], B[1], β=β, τ=1e20)
+        c2,V2,U2 = sinkhorn_convolutional(B[2], B[2], β=β, τ=1e20)
+        c3 = sqrt((c - 0.5(c1+c2))) # The size of the summed over dimension needs to multiply here
+        v,u = sum(B[1].*V, dims=2)[:], sum(B[2].*U, dims=2)[:] # Integrate over the dimension to be sensitive to (because we need to be invariant to this dimension in this step)
+        Γ = discrete_grid_transportplan(s1(v), s1(u))    # Solve 1D OT between integrated measures
+        invariant_cost = sqrt(dot(Γ, D) / size(B[1],1))
+
+        @test c3 ≈ invariant_cost rtol=0.15
+
+        if isinteractive()
+            Plots.heatmap(Γ, layout=5, title="Transport plan")
+            Plots.heatmap!(V, sp=2, title="V")
+            Plots.heatmap!(U, sp=3, title="U")
+            Plots.plot!(v, sp=4, lab=invariant_cost)
+            Plots.plot!(u, sp=5, lab=c3)
+        end
+
+
+        invariant_cost = dot(Γ, D) / size(B[1],1)
+        di = ConvOptimalTransportDistance(β=β, invariant_axis=1)
+        d = ConvOptimalTransportDistance(β=β, invariant_axis=0)
+        cdist = d(B[1], B[2]) - 0.5*(d(B[1], B[1]) + d(B[2], B[2]))
+        @test cdist ≈ c3^2
+        ci = (di(B[1], B[2]) - 0.5*(di(B[1], B[1]) + di(B[2], B[2])))
+
+        @test ci ≈ cdist-invariant_cost rtol=0.15
+
+        @test di(B[1], B[2]) ≈ d(B[1], B[2])-invariant_cost rtol=0.15
+
+    end
+end
+
+
+
 @testset "Misc convolutional" begin
     @info "Testing Misc convolutional"
 

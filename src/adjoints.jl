@@ -233,10 +233,10 @@ ZygoteRules.@adjoint function sinkhorn_convolutional(w, A, B; β, kwargs...)
     V2, U2 = copy(V), copy(U) # This is absolutely required!
     function sinkhorn_convolutional_pullback(Δc)
         Δc *= β
-        mV = mean(V2) # If this normalization is not done, one has to normalize the gradients later instead, otherwise most of the gradient will point "into the constraints"
-        mU = mean(U2)
-        @avx @. V2 = (V2 - mV)*Δc
-        @avx @. U2 = (U2 - mU)*Δc
+        # mV = mean(V2) # If this normalization is not done, one has to normalize the gradients later instead, otherwise most of the gradient will point "into the constraints"
+        # mU = mean(U2) # NOTE: the normalization is now done directly in sinkhorn_convolutional
+        @avx @. V2 = (V2)*Δc
+        @avx @. U2 = (U2)*Δc
 
         return (nothing, V2, U2)
     end
