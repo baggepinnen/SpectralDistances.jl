@@ -45,8 +45,8 @@ end
 
 
 
-@testset "Invariant axis" begin
-    @info "Testing Invariant axis"
+@testset "Invariant axis alternative" begin
+    @info "Testing Invariant axis alternative"
     w,h = 5,5
     for w = 5:6, h = 5:6
         β = 0.05
@@ -63,7 +63,9 @@ end
         c1,V1,U1 = sinkhorn_convolutional(B[1], B[1], β=β, τ=1e20)
         c2,V2,U2 = sinkhorn_convolutional(B[2], B[2], β=β, τ=1e20)
         c3 = sqrt((c - 0.5(c1+c2))) # The size of the summed over dimension needs to multiply here
-        v,u = sum(B[1].*V, dims=2)[:], sum(B[2].*U, dims=2)[:] # Integrate over the dimension to be sensitive to (because we need to be invariant to this dimension in this step)
+        v,u = sum(B[1], dims=2)[:], sum(B[2], dims=2)[:] # Integrate over the dimension to be sensitive to (because we need to be invariant to this dimension in this step)
+        @assert sum(u) ≈ 1
+        @assert sum(v) ≈ 1
         Γ = discrete_grid_transportplan(s1(v), s1(u))    # Solve 1D OT between integrated measures
         invariant_cost = sqrt(dot(Γ, D) / size(B[1],1))
 

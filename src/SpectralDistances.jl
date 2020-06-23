@@ -100,7 +100,8 @@ RationalCramerDistance,
 BuresDistance,
 EnergyDistance,
 CompositeDistance,
-discrete_grid_transportplan
+discrete_grid_transportplan,
+discrete_grid_transportcost
 
 
 export sinkhorn,

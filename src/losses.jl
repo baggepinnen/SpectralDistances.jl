@@ -630,18 +630,22 @@ end
 
 function evaluate(d::DiscretizedRationalDistance, b1, b2; kwargs...)
     plan = discrete_grid_transportplan(b1, b2)
-    cost = sum(plan .* d.distmat)
+    cost = dot(plan, d.distmat)
 end
 
-function evaluate(d::WelchOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; solver=sinkhorn_log!, kwargs...)
-    D = d.distmat == nothing ? distmat_euclidean(w1.freq, w2.freq, d.p) : d.distmat
-    C = discrete_grid_transportplan(s1(w1.power),s1(w2.power), 1e-3)
-    cost = dot(C, D)
-    if !isfinite(cost)
-        @show count(!isfinite, w1.power), count(!isfinite, w2.power), count(!isfinite, C), count(!isfinite, D)
-        error("WelchOptimalTransportDistance failed")
+function evaluate(
+    d::WelchOptimalTransportDistance,
+    w1::DSP.Periodograms.TFR,
+    w2::DSP.Periodograms.TFR;
+    kwargs...,
+)
+    if d.distmat === nothing
+        return discrete_grid_transportcost(s1(w1.power), s1(w2.power), d.p, 1e-3; inplace=true)
+    else
+        D = d.distmat
+        C = discrete_grid_transportplan(s1(w1.power), s1(w2.power), 1e-3; inplace=true)
+        return dot(C, D)
     end
-    cost
 end
 
 function evaluate(d::WelchLPDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR;  kwargs...)
@@ -661,7 +665,7 @@ function evaluate(d::OptimalTransportHistogramDistance, x1, x2; solver=IPOT, kwa
     distmat = [abs(e1-e2)^p for e1 in centers(h1.edges[1]), e2 in centers(h2.edges[1])]
     plan = solver(distmat, s1(h1.weights), s1(h2.weights); kwargs...)[1]
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
-    cost = sum(plan .* distmat)
+    cost = dot(plan, distmat)
 end
 
 function evaluate(d::DiscreteGridTransportDistance, x1, x2; kwargs...)
@@ -674,13 +678,15 @@ function evaluate(d::DiscreteGridTransportDistance, x1, x2; kwargs...)
     @avx c2 .= x2 ./ sum(x2)
     C = discrete_grid_transportplan(c1, c2, g=d.C, inplace=true)
     # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
-    dot(d.C,D)
+    dot(d.C, D)
 end
 
 """
-    discrete_grid_transportplan(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T))) where T
+    discrete_grid_transportplan(x::AbstractVector{T}, y::AbstractVector{T}, tol=sqrt(eps(T)); inplace=false) where T
 
 Calculate the optimal-transport plan between two vectors that are assumed to have the same support, with sorted support points.
+- ´inplace` if true, `x` is overwritten.
+- It's possible to supply keyword argument `g` to provide preallocated memory for the transport plan. Make sure it's all zeros if you do.
 """
 function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},tol=sqrt(eps(T)); g = zeros(T,length(x), length(x)), inplace=false) where T
     n  = length(x)
@@ -694,12 +700,12 @@ function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},t
         needed = y[j] - yf
         available = x[i]
         if available >= needed
-            g[i,j] += needed
+            g[i,j] = needed
             x[i] -= needed
             yf = zero(T)
             j += 1
         else
-            g[i,j] += available
+            g[i,j] = available
             yf += available
             i += 1
         end
@@ -712,6 +718,53 @@ function discrete_grid_transportplan(x::AbstractVector{T},y::AbstractVector{T},t
         end
     end
     g
+end
+
+"""
+    discrete_grid_transportcost(x::AbstractVector{T}, y::AbstractVector{T}, p = 2, tol=sqrt(eps(T)); inplace=false) where T
+
+Calculate the optimal-transport cost between two vectors that are assumed to have the same support, with sorted and equdistant support points.
+
+The calculated cost corresponds to the following
+```julia
+D = [abs2((i-j)/2) for i in eachindex(x), j in eachindex(y)] # note the 1/2
+Γ = discrete_grid_transportplan(x, y)
+dot(Γ, D)
+```
+- ´p´ is the power of the distance
+- ´inplace` if true, `x` is overwritten.
+"""
+function discrete_grid_transportcost(x::AbstractVector{T},y::AbstractVector{T}, p = 2, tol=sqrt(eps(T)); inplace=false) where T
+    n  = length(x)
+    length(y) == n || throw(ArgumentError("Inputs must have the same length"))
+    if !inplace
+        x  = copy(x)
+    end
+    yf = zero(T)
+    i = j = 1
+    cost = zero(T)
+    @inbounds while j <= n && i <= n
+        needed = y[j] - yf
+        available = x[i]
+        if available >= needed
+            cost += (abs(i-j)/2)^p*needed
+            x[i] -= needed
+            yf = zero(T)
+            j += 1
+        else
+            cost += (abs(i-j)/2)^p*available
+            yf += available
+            i += 1
+        end
+    end
+    if j < n || i < n
+        takenfromy = yf#min(needed,available)
+        @views sumleft = (sum(x[i:end]),sum(y[j:end])-takenfromy)
+        if sumleft[1] > tol || sumleft[2] > tol
+            error("Not all indices were covered (n,i,j) = $((n,i,j)), sum left (x,y) = $(sumleft)")
+        end
+    end
+    cost
 end
 
 # function Base.inv(f::AbstractVector)

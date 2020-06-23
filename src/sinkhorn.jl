@@ -587,13 +587,13 @@ end
 
 function _initialize_conv_op!(xi1::AbstractMatrix{T}, xi2::AbstractMatrix{T}, β::Real) where T
     m,n = size(xi1,2), size(xi2, 1)
-    t    = LinRange(zero(T), one(T), m)
-     for i = 1:m, j = 1:m
-        xi1[i,j]  = exp(-(t[i] - t[j])^2 / β)
+    t = LinRange(zero(T), one(T), m)
+    for i = 1:m, j = 1:m
+        xi1[i,j] = exp(-(t[i] - t[j])^2 / β)
     end
-    t    = LinRange(zero(T), one(T), n)
+    t = LinRange(zero(T), one(T), n)
      for i = 1:n, j = 1:n
-        xi2[i,j]  = exp(-(t[i] - t[j])^2 / β)
+        xi2[i,j] = exp(-(t[i] - t[j])^2 / β)
     end
 end
 
@@ -654,12 +654,12 @@ function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::Abstrac
         isderiving() && error("Can not differentiate a distance with an invariant axis (I haven't bothered figure out the adjoint).")
         ia = d.invariant_axis
         sum_axis = ia == 1 ? 2 : 1
-        v,u = vec(sum(A.*V, dims=sum_axis)), vec(sum(B.*U, dims=sum_axis))
-        v ./= sum(v)
-        u ./= sum(u)
-        Γ = discrete_grid_transportplan(v, u)
-        invariant_cost = sum(Γ[i,j]*abs2((i-j)/2) for i = 1:size(Γ,1), j = 1:size(Γ,2))
-        return c - invariant_cost / size(Γ,1)
+        v,u = vec(sum(A, dims=sum_axis)), vec(sum(B, dims=sum_axis))
+        # v ./= sum(v); u ./= sum(u) # this should already hold
+        # Γ = discrete_grid_transportplan(v, u; inplace=false)
+        # invariant_cost = sum(Γ[i,j]*abs2((i-j)/2) for i = 1:size(Γ,1), j = 1:size(Γ,2))
+        invariant_cost = discrete_grid_transportcost(v, u; inplace=true)
+        return c - invariant_cost / size(A,ia)
     end
     return c
 end

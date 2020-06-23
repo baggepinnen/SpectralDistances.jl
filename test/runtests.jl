@@ -302,25 +302,32 @@ end
     x = [1.,0,0]
     y = [0,0.5,0.5]
 
-    g = @inferred SpectralDistances.discrete_grid_transportplan(x,y)
+    g = @inferred discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] == y
     @test sum(g,dims=2)[:] == x
 
     # test robustness for long vectors
     x = s1(rand(1000))
     y = s1(rand(1000))
-    g = SpectralDistances.discrete_grid_transportplan(x,y)
+    D = [abs2((i-j)/2) for i in eachindex(x), j in eachindex(y)]
+    g = discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] ≈ y
     @test sum(g,dims=2)[:] ≈ x
-    g = SpectralDistances.discrete_grid_transportplan(y,x)
+    @test dot(g, D) ≈ discrete_grid_transportcost(x,y)
+
+    g = discrete_grid_transportplan(y,x)
     @test sum(g,dims=1)[:] ≈ x
     @test sum(g,dims=2)[:] ≈ y
+    @test dot(g, D) ≈ discrete_grid_transportcost(y,x)
 
     # test exception for unequal masses
     x = s1(rand(Float32,1000))
     y = rand(Float32,1000)
-    @test_throws ErrorException SpectralDistances.discrete_grid_transportplan(x,y)
-    @test_throws ErrorException SpectralDistances.discrete_grid_transportplan(y,x)
+    @test_throws ErrorException discrete_grid_transportplan(x,y)
+    @test_throws ErrorException discrete_grid_transportplan(y,x)
+
+    @test_throws ErrorException discrete_grid_transportcost(x,y)
+    @test_throws ErrorException discrete_grid_transportcost(y,x)
 
 end
 
@@ -579,7 +586,6 @@ end
     @test @inferred(dist(x1,x2)) < dist(x1,x3)
     dist = WelchOptimalTransportDistance(p=2)
     @test dist(x1,x2) < dist(x1,x3)
-    @test_throws ErrorException dist(NaN*x1,x3)
 
     dist = @inferred WelchLPDistance(p=1)
     @test @inferred(dist(x1,x2)) < dist(x1,x3)
