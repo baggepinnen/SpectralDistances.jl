@@ -659,7 +659,7 @@ function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::Abstrac
         # Γ = discrete_grid_transportplan(v, u; inplace=false)
         # invariant_cost = sum(Γ[i,j]*abs2((i-j)/2) for i = 1:size(Γ,1), j = 1:size(Γ,2))
         invariant_cost = discrete_grid_transportcost(v, u; inplace=true)
-        return c - invariant_cost / size(A,ia)
+        return c - invariant_cost
     end
     return c
 end

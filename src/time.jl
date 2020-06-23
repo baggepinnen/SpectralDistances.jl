@@ -180,8 +180,6 @@ function SlidingDistancesBase.distance_profile(od::TimeDistance, q::TimeVaryingA
 end
 
 
-# TODO: incorporate a stride >= 1 to speed up further, make sure init is correct in this case.
-
 """
     SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; stride=1, kwargs...)
 
@@ -195,6 +193,7 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
     Y   = power(y)
     T   = eltype(Q)
     m,n = size(Q)
+    stride <= n || throw(ArgumentError("The stride can not be longer than the length of `q`"))
     N   = lastlength(Y)
     ss! = (o,x) -> @avx o .= max.(log.(x), df) .- df
     A   = ss!(similar(Q), Q)
@@ -204,6 +203,7 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
     U,V = workspace.U, workspace.V
 
     D = similar(Q, (N-n)÷stride+1)
+    # Di = similar(Q, (N-n)÷stride+1)
     sB = sum(B) - sum(B[:,n-stride+1:n])
     iD = 0
     @views for i = 1:stride:N-n+1
@@ -212,13 +212,22 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
         sB1 = sum(B[:,1:stride])
         @avx B ./= sB
         D[iD += 1] = sinkhorn_convolutional(workspace, A, B; β = d.β, initUV = false, kwargs...)[1]
+        if d.invariant_axis != 0
+            ia = d.invariant_axis
+            sum_axis = ia == 1 ? 2 : 1
+            v,u = vec(sum(A, dims=sum_axis)), vec(sum(B, dims=sum_axis))
+            # v ./= sum(v); u ./= sum(u)
+            invariant_cost = discrete_grid_transportcost(v, u; inplace=true)
+            # Di[iD] = invariant_cost
+            D[iD] -= invariant_cost
+        end
         @avx U[:,1:end-stride] .= exp.(U[:,1+stride:end]) # Warm-start gives 3x imrovement in simple benchmark
         @avx V[:,1:end-stride] .= exp.(V[:,1+stride:end])
         @avx U[:,end-stride+1:end] .= 1#exp.(U[:,end]) # These make it slower
         @avx V[:,end-stride+1:end] .= 1#exp.(V[:,end])
         sB -= sB1
     end
-    D
+    D#, Di
 end
 
 

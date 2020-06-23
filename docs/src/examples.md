@@ -155,6 +155,42 @@ savefig("dist_profile.html"); nothing # hide
 ```
 
 
+To illustrate the effect of setting `invariant_axis = 2`, i.e., configuring the distance to be approximately invariant to translations along the time axis, we conpute two different distance profiles
+
+```@example
+using SpectralDistances, DSP, Plots
+N = 48_000
+g(x,N) = exp(-10*(x-N/2)^2/N^2)
+t = 1:N
+f = range(0.01, stop=1, length=N)
+y = sin.(t .* f) .* g.(t, N)
+y1 = y .+ 0.1 .* randn.()
+y2 = [0y; y; 0y] .+ 0.1 .* randn.()
+
+Q = spectrogram(y1, 512, window = hanning)
+Y = spectrogram(y2, 512, window = hanning)
+
+d = ConvOptimalTransportDistance(β=0.01, dynamic_floor=-3.0)
+D = distance_profile(d, Q, Y, tol=1e-6, stride=15)
+
+di = ConvOptimalTransportDistance(β=0.01, dynamic_floor=-3.0, invariant_axis=2)
+Di = distance_profile(di, Q, Y, tol=1e-6, stride=15)
+
+plot(
+    plot(Y, title = "Data", legend = false, xlabel=""),
+    plot(Q, title = "Query spectrogram", legend = false, xlabel=""),
+    plot([D Di], title = "Distance Profile", lab=["Regular" "Invariant time axis"]),
+    colorbar = false,
+    layout = (1,3)
+)
+savefig("dist_profile_invariant.html"); nothing # hide
+```
+
+```@raw html
+<object type="text/html" data="../dist_profile_invariant.html" style="width:100%;height:450px;"></object>
+```
+It should be obvious from the distance profiles that the one corresponding to the distance with an invariant axis is less sensitve to purturbations along the time axis. Both distance profiles should have roughly the same global minimum, and they should also be similar when there is no overlap between `Q` and `Y`. However, when there's a partial overlap, the invariant distance is smaller.
+
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example

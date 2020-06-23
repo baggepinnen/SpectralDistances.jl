@@ -309,16 +309,16 @@ end
     # test robustness for long vectors
     x = s1(rand(1000))
     y = s1(rand(1000))
-    D = [abs2((i-j)/2) for i in eachindex(x), j in eachindex(y)]
+    D = [abs2(abs(i-j)/1000) for i in eachindex(x), j in eachindex(y)]
     g = discrete_grid_transportplan(x,y)
     @test sum(g,dims=1)[:] ≈ y
     @test sum(g,dims=2)[:] ≈ x
-    @test dot(g, D) ≈ discrete_grid_transportcost(x,y)
+    @test dot(g, D) ≈ discrete_grid_transportcost(x,y) rtol=0.01
 
     g = discrete_grid_transportplan(y,x)
     @test sum(g,dims=1)[:] ≈ x
     @test sum(g,dims=2)[:] ≈ y
-    @test dot(g, D) ≈ discrete_grid_transportcost(y,x)
+    @test dot(g, D) ≈ discrete_grid_transportcost(y,x) rtol=0.01
 
     # test exception for unequal masses
     x = s1(rand(Float32,1000))

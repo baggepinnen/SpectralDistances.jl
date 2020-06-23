@@ -727,7 +727,7 @@ Calculate the optimal-transport cost between two vectors that are assumed to hav
 
 The calculated cost corresponds to the following
 ```julia
-D = [abs2((i-j)/2) for i in eachindex(x), j in eachindex(y)] # note the 1/2
+D = [abs2((i-j)/(n-1)) for i in 1:n, j in 1:n] # note the 1/(n-1)
 Γ = discrete_grid_transportplan(x, y)
 dot(Γ, D)
 ```
@@ -747,12 +747,12 @@ function discrete_grid_transportcost(x::AbstractVector{T},y::AbstractVector{T}, 
         needed = y[j] - yf
         available = x[i]
         if available >= needed
-            cost += (abs(i-j)/2)^p*needed
+            cost += (abs(i-j)/(n-1))^p*needed # the -1 is because the largest difference is n-1
             x[i] -= needed
             yf = zero(T)
             j += 1
         else
-            cost += (abs(i-j)/2)^p*available
+            cost += (abs(i-j)/(n-1))^p*available # the -1 is because the largest difference is n-1
             yf += available
             i += 1
         end

@@ -45,12 +45,13 @@ end
 
 
 
-@testset "Invariant axis alternative" begin
-    @info "Testing Invariant axis alternative"
+@testset "Invariant axis" begin
+    @info "Testing Invariant axis"
     w,h = 5,5
-    for w = 5:6, h = 5:6
+    for w = [5, 6, 20], h = [5,6,20]
+        @show w,h
         β = 0.05
-        D = [abs2((i-j)/2) for i = 1:h, j = 1:h] # NOTE: the 1/2 here is important
+        D = [abs2((i-j)/(h-1)) for i = 1:h, j = 1:h]
         B = [zeros(h,w) for _ in 1:2]
 
         B[1][1,1] = 1
@@ -66,8 +67,8 @@ end
         v,u = sum(B[1], dims=2)[:], sum(B[2], dims=2)[:] # Integrate over the dimension to be sensitive to (because we need to be invariant to this dimension in this step)
         @assert sum(u) ≈ 1
         @assert sum(v) ≈ 1
-        Γ = discrete_grid_transportplan(s1(v), s1(u))    # Solve 1D OT between integrated measures
-        invariant_cost = sqrt(dot(Γ, D) / size(B[1],1))
+        Γ = discrete_grid_transportplan(v, u)    # Solve 1D OT between integrated measures
+        invariant_cost = sqrt(dot(Γ, D))
 
         @test c3 ≈ invariant_cost rtol=0.15
 
@@ -80,14 +81,14 @@ end
         end
 
 
-        invariant_cost = dot(Γ, D) / size(B[1],1)
+        invariant_cost = dot(Γ, D)
         di = ConvOptimalTransportDistance(β=β, invariant_axis=1)
         d = ConvOptimalTransportDistance(β=β, invariant_axis=0)
         cdist = d(B[1], B[2]) - 0.5*(d(B[1], B[1]) + d(B[2], B[2]))
         @test cdist ≈ c3^2
         ci = (di(B[1], B[2]) - 0.5*(di(B[1], B[1]) + di(B[2], B[2])))
 
-        @test ci ≈ cdist-invariant_cost rtol=0.15
+        @test ci ≈ cdist-invariant_cost rtol=0.15 atol=sqrt(eps())
 
         @test di(B[1], B[2]) ≈ d(B[1], B[2])-invariant_cost rtol=0.15
 
