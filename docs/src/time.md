@@ -152,11 +152,8 @@ The distance [`ConvOptimalTransportDistance`](@ref) can operate on 2D measures o
 This distance has a special option
 - `invariant_axis::Int = 0`
 
-If this is set to 1 or 2, the distance will be approximately invariant to translations along the invariant axis. As an example, to be invariant to a spectrogram being shifted slightly in time, set `invariant_axis = 2`. If this option is used, the distance is not differentiable and this option will be ignored when calculating barycenters etc. 
+If this is set to 1 or 2, the distance will be approximately invariant to translations of the entire measure along the invariant axis. As an example, to be invariant to a spectrogram being shifted slightly in time, set `invariant_axis = 2`. If this option is used, the distance is not differentiable and this option will be ignored when calculating barycenters etc.
 
-```@docs
-ConvOptimalTransportDistance
-```
 
 ## Dynamic Time Warping
 This package interfaces with [DynamicAxisWarping.jl](https://github.com/baggepinnen/DynamicAxisWarping.jl) and provides optimized methods for [`DynamicAxisWarping.dtwnn`](@ref). Below is an example of how to search for a query pattern `Qm` in a much longer pattern `Ym`

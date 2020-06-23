@@ -186,7 +186,7 @@ end
     SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; stride=1, kwargs...)
 
 Optimized method for [`ConvOptimalTransportDistance`](@ref). To get smooth distance profiles, a slightly higher β than for barycenters is recommended.  β around 0.01 should do fine.
-- `stride`: allows you to reduce computations by taking setting `stride > 1`.
+- `stride`: allows you to reduce computations by setting `stride > 1`.
 """
 function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; stride=1, kwargs...)
 
