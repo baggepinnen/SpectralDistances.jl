@@ -642,7 +642,7 @@ end
 function evaluate(d::ConvOptimalTransportDistance, w1::DSP.Periodograms.TFR, w2::DSP.Periodograms.TFR; kwargs...)
     A  = s1(normalize_spectrogram(w1, d.dynamic_floor))
     B  = s1(normalize_spectrogram(w2, d.dynamic_floor))
-    sinkhorn_convolutional( A, B; β = d.β, kwargs...)[1]
+    evaluate(d, A, B; kwargs...)
 end
 
 function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::AbstractMatrix{T}; kwargs...) where T
