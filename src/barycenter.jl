@@ -816,10 +816,12 @@ end
 
 
 function barycenter(d::ConvOptimalTransportDistance, args...; kwargs...)
+    @assert d.invariant_axis == 0 "Invariant axis not supported"
     barycenter_convolutional( args...; β = d.β, kwargs...)
 end
 
 function barycenter(d::ConvOptimalTransportDistance, A::Vector{<:DSP.Periodograms.TFR}, args...; kwargs...)
+    @assert d.invariant_axis == 0 "Invariant axis not supported"
     barycenter_convolutional(
         A, args...;
         dynamic_floor = isnan(d.dynamic_floor) ? default_dynamic_floor(A) : d.dynamic_floor,
@@ -1077,6 +1079,7 @@ function barycentric_coordinates(
     kwargs...,
 )
     workspace = BCCWorkspace(X, L, d.β)
+    @assert d.invariant_axis == 0 "Invariant axis not supported"
 
     function fg!(F, G, λ)
         λ = softmax(λ)
