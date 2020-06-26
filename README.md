@@ -1,6 +1,6 @@
 [![CI](https://github.com/baggepinnen/SpectralDistances.jl/workflows/CI/badge.svg)](https://github.com/baggepinnen/SpectralDistances.jl/actions)
 [![codecov](https://codecov.io/gh/baggepinnen/SpectralDistances.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/baggepinnen/SpectralDistances.jl)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://baggepinnen.github.io/SpectralDistances.jl/latest)
+[![docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://baggepinnen.github.io/SpectralDistances.jl/latest)
 
 This repository implements all optimal-transport based distances between spectra detailed in the following pre print
 

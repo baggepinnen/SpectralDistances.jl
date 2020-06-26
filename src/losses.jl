@@ -160,7 +160,6 @@ A kernel version of the root distance
 - `domain::D = Continuous()`: [`Discrete`](@ref) or [`Continuous`](@ref)
 - `λ::Float64 = 1.0`: Kernel precision, lower value means wider kernel.
 - `transform::F = identity`: If provided, this Function transforms all roots before the distance is calculated
-- `distance::DI = SqEuclidean()`: Inner distance
 """
 KernelWassersteinRootDistance
 @kwdef struct KernelWassersteinRootDistance{D,F,DI} <: AbstractRootDistance
@@ -252,6 +251,11 @@ struct DiscreteGridTransportDistance{D,TD,T,V} <: AbstractDistance
     c2::V
 end
 
+"""
+    DiscreteGridTransportDistance(Cityblock(), Float32, n, n)
+
+The constructor takes an inner distance, the numeric type and the length of the two measures.
+"""
 function DiscreteGridTransportDistance(inner::Distances.PreMetric, T, n, m)
     distmat = inner.(one(T):n, (one(T):m)')
     C = zeros(T, n,m)
@@ -549,13 +553,13 @@ function evaluate(d::KernelWassersteinRootDistance, e1::AbstractRoots,e2::Abstra
     # dm12  = exp.(.- λ .* distmat(d.distance, e1,e2))
 
     D = distmat_euclidean(e1,e1)
-    D .= exp.(.- λ .* D)
+    @avx D .= exp.(.- λ .* D)
     c = mean(D)
     distmat_euclidean!(D,e2,e2)
-    D .= exp.(.- λ .* D)
+    @avx D .= exp.(.- λ .* D)
     c += mean(D)
     distmat_euclidean!(D,e1,e2)
-    D .= exp.(.- λ .* D)
+    @avx D .= exp.(.- λ .* D)
     c -= 2mean(D)
     c
 end
@@ -676,8 +680,12 @@ function evaluate(d::DiscreteGridTransportDistance, x1, x2; kwargs...)
     d.C .= 0
     @avx c1 .= x1 ./ sum(x1)
     @avx c2 .= x2 ./ sum(x2)
+    if typeof(inner) ∈ (Cityblock, Euclidean)
+        return discrete_grid_transportcost(c1, c2, 1, inplace=true)
+    elseif inner isa SqEuclidean
+        return discrete_grid_transportcost(c1, c2, 2, inplace=true)
+    end
     C = discrete_grid_transportplan(c1, c2, g=d.C, inplace=true)
-    # plan = sinkhorn_plan_log(distmat, b1, b2; ϵ=1/10, rounds=300)
     dot(d.C, D)
 end
 

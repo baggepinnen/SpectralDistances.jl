@@ -32,7 +32,7 @@ for t = LinRange(0, 1, 7)
     plot!(w, sqrt.(Φ), xscale=:log10, yscale=:log10, line_z = t, lab="", xlabel="", title="W_2", ylims=(1e-3, 1e1), colorbar=false, l=(1,), c=:viridis)
 end
 
-rdist  = EuclideanRootDistance(domain                           =Continuous(), p=2)
+rdist  = EuclideanRootDistance(domain = Continuous(), p = 2)
 interp = SpectralDistances.interpolator(rdist, A1, A2, normalize=false)
 fig2   = plot()
 for t = LinRange(0, 1, 7)
