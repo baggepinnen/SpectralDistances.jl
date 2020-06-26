@@ -118,6 +118,11 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         Γ,u,v = @inferred sinkhorn_log(C,a,b,β=0.01)
         @test Γ ≈ [0 0.5; 0 0.5]
 
+        a = [0.5, 0.5]
+        b = [0, 1.]
+        C = Float64.(Matrix(I(2)))
+        Γ,u,v = @inferred sinkhorn_log!(C,a,b,β=0.01)
+        @test Γ ≈ [0 0.5; 0 0.5]
 
         a = [1., 0]
         b = [0, 1.]
@@ -254,6 +259,7 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 @testset "modeldistance" begin
     t = 1:300
     ϵ = 1e-7
+    fitmethod = LS
     for fitmethod in [LS, TLS]
         @info "Testing fitmethod $(string(fitmethod))"
         ls_loss = ModelDistance(fitmethod(na=2), EuclideanRootDistance(domain=Discrete()))
