@@ -29,14 +29,22 @@ end
 
 normalize x sums to 1
 """
-s1(x, dims=:) = x./sum(x, dims=dims)
+function s1(x, dims=:)
+    m = minimum(x, dims=dims)
+    x = copy(x)
+    if any(<(0), m)
+        x .-= m
+    end
+    x ./= sum(x, dims=dims)
+end
+
 """
     n1(x)
 
 normalize x norm 1
 """
 n1(x) = x./norm(x)
-n1(x::AbstractMatrix, dims=:) = mapslices(n1, x, dims=dims)
+n1(x::AbstractMatrix, dims) = mapslices(n1, x, dims=dims)
 """
     v1(x, dims=:)
 
