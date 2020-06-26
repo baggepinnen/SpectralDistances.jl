@@ -153,6 +153,10 @@ end
     isinteractive() && plot(D)
     @test 40 <= argmin(D) <= 70
 
+    dslide = SlidingConvOptimalTransportDistance(d)
+    @test dslide(A1, A3; tol=1e-6, stride=15) ≈ minimum(D)
+    @test SlidingConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0).d.β == SlidingConvOptimalTransportDistance(ConvOptimalTransportDistance(β=0.05, dynamic_floor=-3.0)).d.β
+
 
 
 

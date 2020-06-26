@@ -630,6 +630,8 @@ It's important to tune the two parameters below, see the docstring for [`sinkhor
 - `β = 0.001`
 - `dynamic_floor = -10.0`
 - `invariant_axis::Int = 0` If this is set to 1 or 2, the distance will be approximately invariant to translations along the invariant axis. As an example, to be invariant to a spectrogram being shifted slightly in time, set `invariant_axis = 2`.
+
+See also [`SlidingConvOptimalTransportDistance`](@ref)
 """
 ConvOptimalTransportDistance
 Base.@kwdef mutable struct ConvOptimalTransportDistance{T} <: AbstractDistance
@@ -663,6 +665,52 @@ function evaluate(d::ConvOptimalTransportDistance, A::AbstractMatrix, B::Abstrac
     end
     return c
 end
+
+"""
+    SlidingConvOptimalTransportDistance
+
+Similar to [`ConvOptimalTransportDistance`](@ref) but lets the shorter signal slide across the longer signal and returns the minimum distance.
+Equivalent to calling
+```julia
+minimum(distance_profile(d::ConvOptimalTransportDistance, a, b; kwargs...))
+```
+"""
+struct SlidingConvOptimalTransportDistance{D} <: AbstractDistance
+    d::D
+end
+
+function SlidingConvOptimalTransportDistance(;β = 0.001,
+    dynamic_floor = NaN,
+    invariant_axis::Int = 0,
+    workspace = nothing)
+
+    SlidingConvOptimalTransportDistance(
+        ConvOptimalTransportDistance(β, dynamic_floor, invariant_axis, workspace)
+    )
+end
+
+function Distances.evaluate(d::SlidingConvOptimalTransportDistance, a, b; kwargs...)
+    if size(a,2) > size(b,2)
+        a,b = b,a
+    end
+    minimum(distance_profile(d.d, a, b; kwargs...))
+end
+
+function Distances.evaluate(
+    d::SlidingConvOptimalTransportDistance,
+    a::DSP.Periodograms.TFR,
+    b::DSP.Periodograms.TFR;
+    kwargs...,
+)
+    evaluate(
+        d,
+        normalize_spectrogram(a, d.d.dynamic_floor),
+        normalize_spectrogram(b, d.d.dynamic_floor);
+        kwargs...,
+    )
+end
+
+
 
 """
     normalize_spectrogram(S, dynamic_floor = default_dynamic_floor(S))
