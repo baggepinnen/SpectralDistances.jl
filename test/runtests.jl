@@ -569,7 +569,6 @@ end
     @test tr(D) == 0
     @test @inferred(SpectralDistances.distmat_euclidean(e,e)) ≈ D
 
-
     A = randn(10,10)
     A[diagind(A)] .= rand(10);
     A = A + A';
@@ -579,8 +578,6 @@ end
     symmetrize!(B)
     @test A == B
     @test issymmetric(A)
-
-
 end
 
 
@@ -746,16 +743,12 @@ end
     @test mean(SpectralDistances.m1(x1)) ≈ 0 atol=0.08
     @test var(SpectralDistances.m1(x1)) ≈ 1 atol=0.2
 
-
     # @test norm(n1(X,1)) ≈ 1
     @test  all(sum(s1(abs.(X),1), dims=1) .≈ 1)
     @test  all(var(v1(X,1), dims=1) .≈ 1)
     @test  mean(v1(X,1)) ≈ 0 atol = sqrt(eps())
     @test  mean(SpectralDistances.m1(X,1)) ≈ 0 atol=0.08
     @test  var(SpectralDistances.m1(X,1)) ≈ 1 atol=0.2
-
-
-
 end
 
 
@@ -776,7 +769,6 @@ end
     d4 = evaluate(dist,m1,m2)
 
     @test d1 > d3 > d2 > d4
-
 end
 
 end

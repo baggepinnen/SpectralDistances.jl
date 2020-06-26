@@ -1,5 +1,5 @@
 """
-This is a time-aware distance. It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) supported), and some parameters that are specific to the time dimension, example:
+This is a time-aware distance. It contains an inner distance (currently only [`OptimalTransportRootDistance`](@ref) and [`KernelWassersteinRootDistance`](@ref)supported), and some parameters that are specific to the time dimension, example:
 ```
 dist = TimeDistance(
     inner = OptimalTransportRootDistance(
@@ -14,7 +14,7 @@ dist = TimeDistance(
 `tp` is the same as `p` but for the time dimension, and `c` trades off the distance along the time axis with the distance along the frequency axis. A smaller `c` makes it cheaper to transport mass across time. The frequency axis spans `[-π,π]` and the time axis is the non-negative integers, which should give you an idea for how to make this trade-off.
 """
 TimeDistance
-@kwdef struct TimeDistance{D<:OptimalTransportRootDistance,T} <: AbstractDistance
+@kwdef struct TimeDistance{D,T} <: AbstractDistance
     inner::D
     tp::Int = 2
     c::T    = 0.1
@@ -82,15 +82,21 @@ TimeWindow
     noverlap::Int = n÷2
 end
 
-function fitmodel(fm::TimeWindow, x)
+function fitmodel(fm::TimeWindow, x; showprogress = true)
     n,na,noverlap = fm.n, fm.inner.na, fm.noverlap
     if fm.inner.λ > 0
         AS = similar(x, n, na+1)
     else
         AS = similar(x, n-na, na+1)
     end
-    models = @showprogress 1 "Model estimation" map(arraysplit(x,n,noverlap)) do slice
-        fitmodel!(AS, fm.inner, slice)
+    if showprogress
+        models = @showprogress 1 "Model estimation" map(arraysplit(x,n,noverlap)) do slice
+            fitmodel!(AS, fm.inner, slice)
+        end
+    else
+        models = map(arraysplit(x,n,noverlap)) do slice
+            fitmodel!(AS, fm.inner, slice)
+        end
     end
     TimeVaryingAR(models)
 end
@@ -121,7 +127,7 @@ function _distmat_kernel!(D,m1,m2,c,f1::F1,f2::F2) where {F1,F2}
 end
 
 
-function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=sinkhorn_log!, kwargs...)
+function evaluate(od::TimeDistance{<:OptimalTransportRootDistance}, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=sinkhorn_log!, kwargs...)
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
     D     = distmat_euclidean(m1, m2, d.p, od.tp, od.c)
@@ -138,13 +144,49 @@ function evaluate(od::TimeDistance, m1::TimeVaryingAR,m2::TimeVaryingAR; solver=
 end
 
 
+@inline function Base.resize!(D::AbstractMatrix, s1::Int, s2::Int)
+    l = s1 * s2
+    Dv = resize!(vec(D), l)
+    reshape(Dv, s1, s2)
+end
+
+function evaluate(
+    od::TimeDistance{<:KernelWassersteinRootDistance},
+    m1::TimeVaryingAR,
+    m2::TimeVaryingAR;
+    D = zeros(max(length(m1), length(m2)), max(length(m1), length(m2))),
+    kwargs...,
+)
+    d = od.inner
+    λ = d.λ
+    @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
+
+    D = resize!(D, length(m2), length(m2))
+    distmat_euclidean!(D, m2, m2, 2, od.tp, od.c)
+    @avx @. D = exp(-λ * D)
+    c = mean(D)
+
+    D = resize!(D, length(m1), length(m1))
+    distmat_euclidean!(D, m1, m1, 2, od.tp, od.c)
+    @avx @. D = exp(-λ * D)
+    c += mean(D)
+
+    D = resize!(D, length(m1), length(m2))
+    distmat_euclidean!(D, m1, m2, 2, od.tp, od.c)
+    @avx @. D = exp(-λ * D)
+    c -= 2 * mean(D)
+
+    c
+end
+
+
 
 """
     distance_profile(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...)
 
 Optimized method to compute the distance profile corresponding to sliding the short query `q` over the longer `y`.
 """
-function SlidingDistancesBase.distance_profile(od::TimeDistance, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...)
+function SlidingDistancesBase.distance_profile(od::TimeDistance{<:OptimalTransportRootDistance}, q::TimeVaryingAR, y::TimeVaryingAR; normalize_each_timestep = false, kwargs...)
     d     = od.inner
     @assert d.domain isa Continuous "TimeDistance currently only works in continuous domain, open an issue with a motivation for why you require support for discrete domain and I might be able to add it."
     any(methods(d.weight).ms) do m
@@ -181,23 +223,23 @@ end
 
 
 """
-    SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; stride=1, kwargs...)
+    SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::AbstractMatrix, y::AbstractMatrix; stride=1, kwargs...)
 
 Optimized method for [`ConvOptimalTransportDistance`](@ref). To get smooth distance profiles, a slightly higher β than for barycenters is recommended.  β around 0.01 should do fine.
 - `stride`: allows you to reduce computations by setting `stride > 1`.
-"""
-function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; stride=1, kwargs...)
 
-    df  = d.dynamic_floor
-    Q   = power(q)
-    Y   = power(y)
+See also [`SlidingConvOptimalTransportDistance`](@ref)
+"""
+
+
+function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, Q::AbstractMatrix, Y::AbstractMatrix; stride=1, kwargs...)
+
     T   = eltype(Q)
     m,n = size(Q)
     stride <= n || throw(ArgumentError("The stride can not be longer than the length of `q`"))
     N   = lastlength(Y)
-    ss! = (o,x) -> @avx o .= max.(log.(x), df) .- df
-    A   = ss!(similar(Q), Q)
-    B   = ss!(similar(Q), getwindow(Y, n, 1))
+    A   = copy(Q)
+    B   = copy(getwindow(Y, n, 1))
     A ./= sum(A)
     workspace = SCWorkspace(A,B,d.β)
     U,V = workspace.U, workspace.V
@@ -207,7 +249,7 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
     sB = sum(B) - sum(B[:,n-stride+1:n])
     iD = 0
     @views for i = 1:stride:N-n+1
-        ss!(B, getwindow(Y, n, i)) # TODO: this is wasteful, only update one column and shift the rest
+        B .= getwindow(Y, n, i) # TODO: this is wasteful, only update one column and shift the rest
         sB += sum(B[:,n-stride+1:n])
         sB1 = sum(B[:,1:stride])
         @avx B ./= sB
@@ -230,6 +272,12 @@ function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, 
     D#, Di
 end
 
+function SlidingDistancesBase.distance_profile(d::ConvOptimalTransportDistance, q::DSP.Periodograms.TFR, y::DSP.Periodograms.TFR; kwargs...)
+    df  = d.dynamic_floor
+    Q   = normalize_spectrogram(q, df)
+    Y   = normalize_spectrogram(y, df)
+    distance_profile(d, Q, Y; kwargs...)
+end
 
 
 
@@ -275,7 +323,7 @@ function PrimitiveModel(d::AbstractDistance, m::AbstractModel)
     PrimitiveModel(r.r,w)
 end
 
-function distmat(od::TimeDistance, models::Vector{<:TimeVaryingAR}; normalize=false, kwargs...)
+function distmat(od::TimeDistance{<:OptimalTransportRootDistance}, models::Vector{<:TimeVaryingAR}; normalize=false, kwargs...)
     n = length(models)
     d = od.inner
     T = eltype(models[1].models[1].a)
@@ -307,6 +355,46 @@ function distmat(od::TimeDistance, models::Vector{<:TimeVaryingAR}; normalize=fa
                 kwargs...,
             )[1]
             D[i, j] = dot(Γ, C[id])
+            (D[j, i] = D[i, j])
+        end
+    end
+    normalize && symmetrize!(D)
+    Symmetric(D)
+
+end
+
+function distmat(od::TimeDistance{<:KernelWassersteinRootDistance}, models::Vector{<:TimeVaryingAR}; normalize=false, kwargs...)
+    n = length(models)
+    d = od.inner
+    λ = d.λ
+    T = eltype(models[1].models[1].a)
+    N = length(models[1])
+    C = [Matrix{T}(undef, N, N) for _ = 1:nthreads()]
+    dists = [deepcopy(d) for _ = 1:nthreads()]
+    D = zeros(T, n, n)
+    # error("need to take care of the size of C")
+    @showprogress 1 "distmat" for i = 1:n
+        m1 = models[i]
+        Threads.@threads for j = i:n
+            m2 = models[j]
+            id = threadid()
+
+            C[id] = resize!(C[id], length(m2), length(m2))
+            distmat_euclidean!(C[id], m2, m2, 2, od.tp, od.c)
+            @avx @. C[id] = exp(-λ * C[id])
+            c = mean(C[id])
+
+            C[id] = resize!(C[id], length(m1), length(m1))
+            distmat_euclidean!(C[id], m1, m1, 2, od.tp, od.c)
+            @avx @. C[id] = exp(-λ * C[id])
+            c += mean(C[id])
+
+            C[id] = resize!(C[id], length(m1), length(m2))
+            distmat_euclidean!(C[id], m1, m2, 2, od.tp, od.c)
+            @avx @. C[id] = exp(-λ * C[id])
+            c -= 2 * mean(C[id])
+
+            D[i, j] = c
             (D[j, i] = D[i, j])
         end
     end

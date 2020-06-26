@@ -30,6 +30,7 @@ D = SpectralDistances.distmat_euclidean(m,m,1,1,1)
 fm = TimeWindow(LS(na=2), 1000, 500)
 y = randn(10000)
 m = fm(y)
+fitmodel(fm, y, showprogress=false)
 
 y2 = randn(10000)
 m2 = fm(y2)
@@ -44,9 +45,13 @@ D = SpectralDistances.distmat_euclidean(m,m,2,2,1)
 
 # test that the distance increases as expected with varying frequencies, p=1
 dist = TimeDistance(inner=OptimalTransportRootDistance(domain=Continuous(), p=1, weight=simplex_residueweight), tp=1, c=1.0)
+dist2 = TimeDistance(inner=KernelWassersteinRootDistance(), tp=2, c=1.0)
 
 @test evaluate(dist, m, m) < 1e-3
 @test evaluate(dist, m, m2, iters=10000, tol=1e-3) > 0.1
+
+@test evaluate(dist2, m, m) == 0
+@test evaluate(dist2, m, m2) > 0.0001
 
 fm = TimeWindow(LS(na=2), 1000, 500)
 y = sin.(0:0.1:100)
@@ -95,6 +100,19 @@ D = distmat(dist, [m, m2])
 @test size(D) == (2,2)
 @test D[1,1] ≈ dist(m,m)
 @test D[1,2] ≈ dist(m,m2)
+
+## Test distmat
+
+D2 = distmat(dist2, [m, m2])
+@test size(D2) == (2,2)
+@test D2[1,1] ≈ dist2(m,m)
+@test D2[1,2] ≈ dist2(m,m2)
+
+## Test resize
+
+D = randn(2,2)
+D = resize!(D, 3, 3)
+@test size(D) == (3,3)
 
 
 ## Test chirps
