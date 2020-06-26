@@ -209,7 +209,7 @@ end
 
 
     a = ones(k) |> s1
-    b = [[1,2,3,4] |> s1 for _ in eachindex(Y)]
+    b = [[1.0,2,3,4] |> s1 for _ in eachindex(Y)]
     M = SpectralDistances.distmat_euclidean(X,Y[1])
     g1,a1,b1 = ot_jump(M,a,b[1]) .|> r6
     g2,a2,b2 = sinkhorn_log(M,a,b[1], β=0.001, iters=50000, printerval=5000, tol=1e-9) .|> r6

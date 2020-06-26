@@ -30,12 +30,20 @@ end
 normalize x sums to 1
 """
 function s1(x, dims=:)
-    m = minimum(x, dims=dims)
-    x = copy(x)
-    if any(<(0), m)
-        x .-= m
+    if isderiving()
+        m = minimum(real(x), dims=dims)
+        if any(<(0), m)
+            x = x .- m
+        end
+        return x ./ sum(x, dims=dims)
+    else
+        m = minimum(x, dims=dims)
+        x = float.(x)
+        if any(<(0), m)
+            x .-= m
+        end
+        x ./= sum(x, dims=dims)
     end
-    x ./= sum(x, dims=dims)
 end
 
 """
