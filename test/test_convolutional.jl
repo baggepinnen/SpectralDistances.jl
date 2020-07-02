@@ -132,6 +132,9 @@ end
 
     o = similar(A1.power)
     @test normalize_spectrogram!(o,A1) == normalize_spectrogram(A1)
+    A1n = normalize_spectrogram(A1)
+    A1f = mask_filter(A1n)
+    @test sum(A1f) < sum(A1n)
 
 
     B = barycenter_convolutional(A,λ,β=β, dynamic_floor=-3)

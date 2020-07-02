@@ -730,3 +730,76 @@ normalize_spectrogram!(o, x::Periodograms.TFR, args...) = normalize_spectrogram!
 default_dynamic_floor(x::AbstractArray{T}) where T = max(log(quantile(vec(x), 0.5)), T(-100))
 default_dynamic_floor(x::Periodograms.TFR) = default_dynamic_floor(power(x))
 default_dynamic_floor(models::Vector{<:Periodograms.TFR}) = mean(default_dynamic_floor(m) for m in models)
+
+
+function n01(x)
+    x = x .- minimum(x)
+    x ./ maximum(x)
+end
+
+function largest_mass_interval(x, th, mi = argmax(x))
+    n = length(x)
+    mv = x[mi]
+    mv < th && return 0:0
+    inds = mi:mi
+    l,h = mi,mi
+    growing_l = l > 1
+    growing_h = h < n
+    while growing_l || growing_h
+        l -= growing_l
+        h += growing_h
+        l == 0 && (growing_l = false)
+        h == n && (growing_h = false)
+        if growing_l && x[l] > th
+            inds = max(1,inds.start-1):inds.stop
+        else
+            growing_l = false
+        end
+        if growing_h && x[h] > th
+            inds = inds.start:min(n,inds.stop+1)
+        else
+            growing_h = false
+        end
+    end
+    inds
+end
+
+function rowentropy(x::AbstractArray{T}) where T
+    rs = zeros(T, size(x,2))
+    map(eachrow(x)) do r
+        rs .= r ./ sum(r)
+        sum(x->-x*log(x + eps(T)), rs)
+    end
+end
+
+complement_interval(x,int) = setdiff(1:length(x), int)
+
+
+function mask_filter!(Y, X=Y, th=0.25)
+    x = n01(vec(sum(X, dims=2)))
+    int = largest_mass_interval(x, th)
+    # possibly add another peak? Only do this if both the peak and the entropy is high
+    x[int] .= 0 # Zero out the parts that are already in interval
+    th2 = 1-(1-th)*0.8
+    ent = n01(rowentropy(X))
+    xent = x.*ent
+    mv,mi = findmax(xent) # Find when both mass and entropy is high
+    if mv > th2
+        int2 = largest_mass_interval(x, th, mi) # seed using the highest entropy*mass product index
+        int = sort([int; int2])
+    end
+    # Apply filter
+    comp_int = complement_interval(x,int)
+    Y[comp_int,:] .= 0
+    Y
+end
+
+"""
+    mask_filter(X::Matrix, th=0.25)
+    mask_filter!(Y, X=Y, th=0.25)
+
+Mask out parts of a spectrogram that only contains impulsive noise.
+´th ∈ (0,1) determines the amount of masking, a higher value masks out more. This function is to be applied after
+something like [`normalize_spectrogram`](@ref).
+"""
+mask_filter(X, th=0.25) = mask_filter!(copy(X), X, th)

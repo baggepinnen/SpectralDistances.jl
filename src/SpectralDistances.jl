@@ -116,6 +116,8 @@ sinkhorn_convolutional,
 SCWorkspace,
 normalize_spectrogram,
 normalize_spectrogram!
+mask_filter,
+mask_filter!
 
 
 using UnbalancedOptimalTransport: KL, TV, Balanced, RG
