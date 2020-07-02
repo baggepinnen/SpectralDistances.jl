@@ -115,7 +115,7 @@ transport_plan,
 sinkhorn_convolutional,
 SCWorkspace,
 normalize_spectrogram,
-normalize_spectrogram!
+normalize_spectrogram!,
 mask_filter,
 mask_filter!
 
