@@ -65,6 +65,8 @@ Another clustering approach is to use [`kbarycenters`](@ref), see example [K-Bar
 
 
 ## Nearest Neighbor classification
+
+### Using embeddings
 Here, we will classify a signal based on it's nearest neighbor in a training dataset. The example assumes that the matrix `X` from the previous example is available, and that there is a similar matrix `Xt` created from a test dataset. We will classify the entries in the test set using the entries in the training set. The example also assumes that there are two vectors `labels::Vector{Int}` and `labelst::Vector{Int}` that contain the class labels.
 ```julia
 using AMD # For permutation of the confusion matrix to more easily identity similar classes.
@@ -94,6 +96,25 @@ anns = [(reverse(ci.I)..., text(val,8)) for (ci,val) in zip(CartesianIndices(cm)
 annotate!(anns)
 ```
 
+### Using spectrograms
+
+See [AudioClustering docs](https://github.com/baggepinnen/AudioClustering.jl#spectrogram-based) for instructions on how to preprocess data for spectrogram-based clustering. When a number of spectrogram patterns are available, the following function may be used to classify spectrograms in `X` according to `patterns`.
+
+A suitable distance for this classification is
+```julia
+using DynamicAxisWarping
+normalizer = NormNormalizer
+d = DTW(radius=4, dist = Euclidean(), transportcost=1.005, normalizer=normalizer)
+```
+
+When a number of spectrogram patterns are available, the following function may be used to classify spectrograms in `X` according to `patterns`.
+```julia
+@time labels, D = AudioClustering.pattern_classify(d, patterns, X)
+```
+
+
+
+
 ## Pairwise distance matrix
 Many algorithms make use of a matrix containing all pairwise distances between points. Given a set of models, we can easily obtain such a matrix:
 ```julia
@@ -119,7 +140,7 @@ function scorefunction(query_model)
     score = minimum(distance_vector)
 end
 ```
-This can be made significantly more effective (but less accurate) using the `knn` approach from the [Nearest Neighbor classification](@ref). If you want to detect a small number of patterns in a much longer signal, see the method using [`SlidingDistancesBase.distance_profile`](@ref) below.
+This can be made significantly more effective (but less accurate) using the `knn`  approach from the [Nearest Neighbor classification](@ref). If you want to detect a small number of patterns in a much longer signal, see the method using [`SlidingDistancesBase.distance_profile`](@ref) below.
 
 ## Computing a spectrogram distance profile
 In this example, we'll search through a long spectrogram `Y` for a short query `Q`. We will compute a *distance profile*, which is a vector with all distance between `Q` and each window into `Y` of the same length as `Q`. The distance profile should have minima roughly where `Y` has the same frequencies as the query, and the global minimum where the chirp has increasing frequency (you can zoon into the figure to verify).
