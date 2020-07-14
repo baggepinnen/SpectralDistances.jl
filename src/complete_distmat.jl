@@ -35,7 +35,7 @@ X  = Diagonal(sqrt.(S.S))*S.Vt
 
 # Verify that reconstructed `X` is correct up to rotation and translation
 A = [X[1:2,:]' ones(size(D,1))]
-P2 = (A*(A \ P'))'
+P2 = (A*(A \\ P'))'
 norm(P-P2)/norm(P) # Should be small
 ```
 
