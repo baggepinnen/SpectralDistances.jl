@@ -188,7 +188,7 @@ Order   = [:function, :macro, :constant]
 ```@autodocs
 Modules = [SpectralDistances]
 Private = false
-Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl", "convex.jl"]
+Pages   = ["losses.jl", "sinkhorn.jl", "jump.jl", "convex.jl", "complete_distmat.jl"]
 ```
 
 ## Details

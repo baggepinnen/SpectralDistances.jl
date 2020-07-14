@@ -129,6 +129,9 @@ assignments = cutree(cr,k=30) # k is desired number of clusters
 ```
 Another clustering approach is to use [`kbarycenters`](@ref), see example in the docstring.
 
+#### Fill in an uncomplete distance matrix
+The function [`complete_distmat`](@ref) takes a distance matrix with missing entries and reconstructs the full matrix. This can be useful if the distances in `D` are noisy and not all of them are available, such as in a microphone calibration problem.
+
 
 ## Detection using examples
 A measure of distance can be used for detection, by selecting a few positive examples and calculating the distance to the nearest neighbor within these examples from a new query point, a simple example:

@@ -20,10 +20,17 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         W[diagind(W)] .= true
         D0 = W .* D                 # Remove missing entries
 
-        D2 = complete_distmat(D0, W)
+        D2,S = complete_distmat(D0, W)
 
         @test (norm(D-D2)/norm(D)) < 1e-5
         @test (norm(W .* (D-D2))/norm(D)) < 1e-5
+
+        X  = Diagonal(sqrt.(S.S))*S.Vt
+
+        # Verify that reconstructed `X` is correct up to rotation and translation
+        A = [X[1:2,:]' ones(size(D,1))]
+        P2 = (A*(A \ P'))'
+        @test norm(P-P2)/norm(P) < 1e-3
 
     end
 
