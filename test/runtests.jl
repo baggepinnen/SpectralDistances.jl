@@ -2,12 +2,30 @@
 using SpectralDistances# Distributions
 using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils, SparseArrays # For subtypes
 using DSP, Distances, DoubleFloats
-import GLPK, Convex, JuMP
+import GLPK, Convex, JuMP, SCS
 
 using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
 
 @testset "SpectralDistances.jl" begin
+
+
+    @testset "complete distmat" begin
+        @info "Testing complete distmat"
+
+        P = randn(2,40)
+        D = pairwise(SqEuclidean(), P, dims=2)
+        W = rand(size(D)...) .> 0.3 # Create a random mask
+        W = (W + W') .> 0           # It makes sense for the mask to be symmetric
+        W[diagind(W)] .= true
+        D0 = W .* D                 # Remove missing entries
+
+        D2 = complete_distmat(D0, W)
+
+        @test (norm(D-D2)/norm(D)) < 1e-5
+        @test (norm(W .* (D-D2))/norm(D)) < 1e-5
+
+    end
 
 
     @testset "Convolutional" begin

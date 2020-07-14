@@ -176,6 +176,13 @@ function __init__()
         end
     end
 
+    Requires.@require SCS = "c946c3f1-0d1f-5ce8-9dea-7daa1f7e2d13" begin
+        Requires.@require Convex = "f65535da-76fb-5f13-bab9-19810c17039a" begin
+            export complete_distmat
+            include("complete_distmat.jl")
+        end
+    end
+
     Requires.@require Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5" begin
         export kbarycenters
         include("kbarycenters.jl")
