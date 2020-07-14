@@ -15,7 +15,7 @@ There are two main approaches for time-frequency representations supported
 We define a custom fit method for fitting time varying spectra, [`TimeWindow`](@ref). It takes as arguments an inner fitmethod, the number of points that form a time window, and the number of points that overlap between two consecutive time windows:
 ```@repl time
 fitmethod = TimeWindow(LS(na=2), 1000, 500)
-y = sin.(0:0.1:100);
+y = sin.(0:0.1:1000);
 model = fitmethod(y)
 ```
 This produces a custom model type, [`TimeVaryingAR`](@ref) that internally stores a vector of [`ContinuousRoots`](@ref).
