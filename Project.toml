@@ -42,7 +42,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 BackwardsLinalg = "0.1.1"
-ControlSystems = "0.5.8, 0.6"
+ControlSystems = "0.5.8, 0.6, 0.8"
 DSP = "0.6"
 Distances = "0.8, 0.9, 0.10"
 DocStringExtensions = "0.8"
