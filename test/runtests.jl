@@ -410,7 +410,7 @@ end
     @test_logs (:error, r"real poles") embedding(ContinuousRoots([0,1]), false)
 
 
-
+    Random.seed!(0)
     @test SpectralDistances.determine_domain(0.1randn(10)) isa Discrete
     @test SpectralDistances.determine_domain(randn(10).-4) isa Continuous
     @test_throws Exception SpectralDistances.determine_domain(0.1randn(10).-0.3)
