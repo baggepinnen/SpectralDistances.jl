@@ -134,7 +134,7 @@ IRLS,
 examplemodels
 
 
-export TimeDomain,
+export TimeEvolution,
 Continuous,
 Discrete,
 SortAssignement,

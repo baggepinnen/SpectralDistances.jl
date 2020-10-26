@@ -1,11 +1,14 @@
-"Abstract type that represents a time-domain, either `Discrete` or `Continuous`"
-abstract type TimeDomain end
-"Continuous time domain"
-struct Continuous <: TimeDomain end
-"Discrete (sampled) time domain"
-struct Discrete <: TimeDomain end
+# "Abstract type that represents a time-domain, either `Discrete` or `Continuous`"
+# abstract type TimeDomain end
+# "Continuous time domain"
+# struct Continuous <: TimeDomain end
+# "Discrete (sampled) time domain"
+# struct Discrete <: TimeDomain end
 
-Base.Broadcast.broadcastable(p::TimeDomain) = Ref(p)
+import ControlSystems: Continuous, Discrete, TimeEvolution
+ControlSystems.Discrete() = Discrete(1)
+Base.Broadcast.broadcastable(p::TimeEvolution) = Ref(p)
+
 
 abstract type AbstractAssignmentMethod end
 

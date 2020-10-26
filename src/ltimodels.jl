@@ -165,9 +165,9 @@ ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
 ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
 ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
 
-Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{<:ControlSystems.SisoRational} = tf(m)
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystems.SisoRational} = tf(m)
 
-Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{<:ControlSystems.SisoZpk} = zpk(tf(m))
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystems.SisoZpk} = zpk(tf(m))
 
 function ARMA(g::ControlSystems.TransferFunction)
     ControlSystems.issiso(g) || error("Can only convert SISO systems to ARMA")
@@ -204,11 +204,11 @@ PolynomialRoots.roots(::Continuous, m::AR) = m.pc
 PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 PolynomialRoots.roots(::Continuous, r::ContinuousRoots) = r
-ControlSystems.pole(d::TimeDomain, m::AbstractModel) = roots(d,m)
+ControlSystems.pole(d::TimeEvolution, m::AbstractModel) = roots(d,m)
 ControlSystems.tzero(::Discrete, m::ARMA) = m.z
 ControlSystems.tzero(::Continuous, m::ARMA) = m.zc
 """
-    ControlSystems.denvec(::TimeDomain, m::AbstractModel)
+    ControlSystems.denvec(::TimeEvolution, m::AbstractModel)
 
 Get the denominator polynomial vector
 """
@@ -234,6 +234,7 @@ function Base.getproperty(m::AbstractModel, p::Symbol)
     p === :nx && return length(m.ac)
     p === :nu && return 1
     p === :ny && return 1
+    p === :timeevol && return Continuous()
     getfield(m,p)
 end
 
@@ -653,9 +654,9 @@ function abs2residues!(rw, a::AbstractVector, b, r::AbstractVector{CT} = hproots
     end
 end
 
-residues(d::TimeDomain, m::AbstractModel) = residues(denvec(d,m), numvec(d,m), roots(d,m))
+residues(d::TimeEvolution, m::AbstractModel) = residues(denvec(d,m), numvec(d,m), roots(d,m))
 
-abs2residues!(rw, d::TimeDomain, m::AbstractModel) = abs2residues!(rw, denvec(d,m), numvec(d,m), roots(d,m))
+abs2residues!(rw, d::TimeEvolution, m::AbstractModel) = abs2residues!(rw, denvec(d,m), numvec(d,m), roots(d,m))
 
 
 """
@@ -726,16 +727,16 @@ function spectralenergy(G::LTISystem)
 end
 
 # spectralenergy(a::AbstractArray) = spectralenergy(determine_domain(roots(reverse(a))), a)
-function spectralenergy(d::TimeDomain, m::AbstractModel)
+function spectralenergy(d::TimeEvolution, m::AbstractModel)
     spectralenergy(d, denvec(d, m), numvec(d,m))
 end
 
 """
-    spectralenergy(d::TimeDomain, a::AbstractVector, b)
+    spectralenergy(d::TimeEvolution, a::AbstractVector, b)
 
 Calculates the energy in the spectrum associated with transfer function `b/a`
 """
-function spectralenergy(d::TimeDomain, ai::AbstractVector{T}, b)::T where T
+function spectralenergy(d::TimeEvolution, ai::AbstractVector{T}, b)::T where T
     a = Double64.(ai)
     ac = a .* (-1).^(length(a)-1:-1:0)
     a2 = polyconv(ac,a)
@@ -772,7 +773,7 @@ function determine_domain(r)
     Discrete()
 end
 
-function AutoRoots(d::TimeDomain, r)
+function AutoRoots(d::TimeEvolution, r)
     d isa Discrete ? DiscreteRoots(r) : ContinuousRoots(r)
 end
 function AutoRoots(r)
@@ -802,16 +803,16 @@ function normalize_energy(r)
 end
 
 """
-    scalefactor(::TimeDomain, a, [b,] σ²)
+    scalefactor(::TimeEvolution, a, [b,] σ²)
 
 Returns `k` such that the system with numerator `kb` and denomenator `a` has spectral energy `σ²`. `σ²` should typically be the variance of the corresponding time signal.
 """
-function scalefactor(d::TimeDomain, a, b, σ²)
+function scalefactor(d::TimeEvolution, a, b, σ²)
     e = spectralenergy(d, a, b)
     (σ²/(e))
 end
 
-function scalefactor(d::TimeDomain, a, σ²)
+function scalefactor(d::TimeEvolution, a, σ²)
     e = spectralenergy(d, a, 1)
     (σ²/(e))
 end
