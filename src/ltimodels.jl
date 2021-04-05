@@ -611,7 +611,7 @@ end
 
 @inline function polyval(ap,r)
     n = length(ap)
-    s = zero(promote_type(eltype(ap), typeof(r)))
+    s = zero(promote_type(Float64, eltype(ap), typeof(r)))
     @inbounds for j = 1:n
         s += ap[j]*r^(n-j)
     end

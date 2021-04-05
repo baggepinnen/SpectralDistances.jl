@@ -1,10 +1,9 @@
 name = "SpectralDistances"
 uuid = "2b0dec9d-f767-4f95-9e73-7df56487de68"
 authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
-version = "0.1.11"
+version = "0.1.12"
 
 [deps]
-BackwardsLinalg = "442b4e1a-8b9d-11e9-03b0-f14b31742153"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
@@ -41,8 +40,7 @@ UnbalancedOptimalTransport = "6f61b460-fd45-461a-bdf7-98edd72e362f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
-BackwardsLinalg = "0.1.1"
-ControlSystems = "0.8"
+ControlSystems = "0.9"
 DSP = "0.6"
 Distances = "0.8, 0.9, 0.10"
 DocStringExtensions = "0.8"
