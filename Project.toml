@@ -41,7 +41,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 ControlSystems = "0.9"
-DSP = "0.6"
+DSP = "0.6, 0.7"
 Distances = "0.8, 0.9, 0.10"
 DocStringExtensions = "0.8"
 DoubleFloats = "1.1"
