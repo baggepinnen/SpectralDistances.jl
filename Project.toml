@@ -1,7 +1,7 @@
 name = "SpectralDistances"
 uuid = "2b0dec9d-f767-4f95-9e73-7df56487de68"
 authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
-version = "0.1.12"
+version = "0.1.13"
 
 [deps]
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
@@ -41,7 +41,7 @@ ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
 ControlSystems = "0.9"
-DSP = "0.6"
+DSP = "0.6, 0.7"
 Distances = "0.8, 0.9, 0.10"
 DocStringExtensions = "0.8"
 DoubleFloats = "1.1"
