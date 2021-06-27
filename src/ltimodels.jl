@@ -205,6 +205,8 @@ PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 PolynomialRoots.roots(::Continuous, r::ContinuousRoots) = r
 ControlSystems.pole(d::TimeEvolution, m::AbstractModel) = roots(d,m)
+ControlSystems.pole(m::AbstractModel) = roots(Continuous(), m)
+ControlSystems.tzero(m::AbstractModel) = []
 ControlSystems.tzero(::Discrete, m::ARMA) = m.z
 ControlSystems.tzero(::Continuous, m::ARMA) = m.zc
 """
@@ -714,6 +716,7 @@ end
     spectralenergy(G::LTISystem)
 
 Calculates the energy in the spectrum associated with `G`
+Ref: Robust and optimal control, Kemin Zhou, John C. Doyle, Keith Glover Lemma 4.6
 """
 function spectralenergy(G::LTISystem)
     sys = ss(G)

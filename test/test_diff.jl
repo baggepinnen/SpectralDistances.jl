@@ -237,7 +237,7 @@ g = a -> real(residues((a), 1)[2])
         EuclideanRootDistance(domain = Continuous(), p = 1, weight = residueweight),
         OptimalTransportRootDistance(domain = Continuous(), p = 2, β = 0.01),
     ]
-        H = SpectralDistances.curvature(dist, a)
+        H = SpectralDistances.curvature(dist, Float64.(a))
         @test all(>(0) ∘ real, eigvals(H[2:end, 2:end]))
         @test all(==(0) ∘ imag, eigvals(H[2:end, 2:end]))
     end
