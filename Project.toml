@@ -40,7 +40,7 @@ UnbalancedOptimalTransport = "6f61b460-fd45-461a-bdf7-98edd72e362f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
 
 [compat]
-ControlSystems = "0.10"
+ControlSystems = "0.10, 1.1"
 DSP = "0.6, 0.7"
 Distances = "0.8, 0.9, 0.10"
 DocStringExtensions = "0.8"
