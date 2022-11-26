@@ -216,7 +216,7 @@ savefig("dist_profile_invariant.html"); nothing # hide
 It should be obvious from the distance profiles that the one corresponding to the distance with an invariant axis is less sensitve to purturbations along the time axis. Both distance profiles should have roughly the same global minimum, and they should also be similar when there is no overlap between `Q` and `Y`. However, when there's a partial overlap, the invariant distance is smaller.
 
 ## The closed-form solution
-In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
+In this example we will simply visualize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
 using ControlSystemsBase, SpectralDistances, Plots
 plotly(grid=false)
@@ -232,8 +232,8 @@ f2c  = w -> abs2(1/sum(j->a2[j]*(im*w)^(n-j), 1:n))
 sol1 = SpectralDistances.c∫(f1c,0,3π)
 sol2 = SpectralDistances.c∫(f2c,0,3π)
 
-fig1 = plot((sol1.t .+ sol1.t[2]).*2π, sqrt.(sol1 ./ sol1[end]), fillrange=sqrt.(sol2(sol1.t) ./ sol2[end]), fill=(0.6,:purple), l=(2,:blue))
-plot!((sol2.t .+ sol2.t[2]).*2π, sqrt.(sol2(sol2.t) ./ sol2[end]), l=(2,:orange), xscale=:log10, legend=false, grid=false, xlabel="Frequency", xlims=(1e-2,2pi))
+fig1 = plot((sol1.t .+ sol1.t[2]).*2π, sqrt.(sol1 ./ sol1[end]).u, fillrange=sqrt.(sol2(sol1.t) ./ sol2[end]).u, fill=(0.6,:purple), l=(2,:blue))
+plot!((sol2.t .+ sol2.t[2]).*2π, sqrt.(sol2(sol2.t) ./ sol2[end]).u, l=(2,:orange), xscale=:log10, legend=false, grid=false, xlabel="Frequency", xlims=(1e-2,2pi))
 
 fig2 = bodeplot([G1, G2], exp10.(LinRange(-1.5, 1, 200)), legend=false, grid=false, title="", linecolor=[:blue :orange], l=(2,), plotphase=false)
 
