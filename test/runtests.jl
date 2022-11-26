@@ -444,7 +444,7 @@ end
     @test ARMA(g).bc == [1]
     @test @inferred(denvec(Continuous(), m)) == denvec(g)[1]
     @test numvec(Continuous(), m) == numvec(g)[1]
-    @test @inferred(pole(Continuous(), m)) == pole(g)
+    @test @inferred(poles(Continuous(), m)) == poles(g)
     @test all(ControlSystemsBase.bode(m) .≈ bode(g))
     @test all(ControlSystemsBase.nyquist(m) .≈ nyquist(g))
     @test ControlSystemsBase.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ ControlSystemsBase.freqresp(g, exp10.(LinRange(-1, 1, 10)))

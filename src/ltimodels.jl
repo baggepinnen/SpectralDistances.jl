@@ -204,11 +204,11 @@ PolynomialRoots.roots(::Continuous, m::AR) = m.pc
 PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 PolynomialRoots.roots(::Continuous, r::ContinuousRoots) = r
-ControlSystemsBase.pole(d::TimeEvolution, m::AbstractModel) = roots(d,m)
-ControlSystemsBase.pole(m::AbstractModel) = roots(Continuous(), m)
-ControlSystemsBase.tzero(m::AbstractModel) = []
-ControlSystemsBase.tzero(::Discrete, m::ARMA) = m.z
-ControlSystemsBase.tzero(::Continuous, m::ARMA) = m.zc
+ControlSystemsBase.poles(d::TimeEvolution, m::AbstractModel) = roots(d,m)
+ControlSystemsBase.poles(m::AbstractModel) = roots(Continuous(), m)
+ControlSystemsBase.tzeros(m::AbstractModel) = []
+ControlSystemsBase.tzeros(::Discrete, m::ARMA) = m.z
+ControlSystemsBase.tzeros(::Continuous, m::ARMA) = m.zc
 """
     ControlSystemsBase.denvec(::TimeEvolution, m::AbstractModel)
 

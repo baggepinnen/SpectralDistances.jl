@@ -430,8 +430,8 @@ function evaluate(d::AbstractRootDistance,w1::AbstractModel,w2::AbstractModel; k
     evaluate(d, r1, r2; kwargs...)
 end
 function evaluate(d::AbstractRootDistance,w1::ARMA,w2::ARMA; kwargs...)
-    d1 = evaluate(d, preprocess_roots(d,pole(domain(d),w1)), preprocess_roots(d,pole(domain(d),w2)))
-    d2 = evaluate(d, preprocess_roots(d,tzero(domain(d),w1)), preprocess_roots(d,tzero(domain(d),w2)))
+    d1 = evaluate(d, preprocess_roots(d,poles(domain(d),w1)), preprocess_roots(d,poles(domain(d),w2)))
+    d2 = evaluate(d, preprocess_roots(d,tzeros(domain(d),w1)), preprocess_roots(d,tzeros(domain(d),w2)))
     d1 + d2
 end
 

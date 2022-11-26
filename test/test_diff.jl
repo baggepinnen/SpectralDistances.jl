@@ -168,7 +168,7 @@ a, b = randn(3), randn(4)
 
 @test_skip let Gc = tf(1, [1, 1, 1, 1])
     w = c2d(Gc, 1).matrix[1] |> ControlSystemsBase.denvec
-    @test d2c(w) ≈ pole(Gc)
+    @test d2c(w) ≈ poles(Gc)
 end
 
 # y = randn(5000)
