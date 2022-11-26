@@ -29,6 +29,7 @@ using DSP,
     TotalLeastSquares,
     ZygoteRules,
     UnbalancedOptimalTransport,
+    Plots,
     UnPack
 
 using SlidingDistancesBase
