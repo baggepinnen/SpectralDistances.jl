@@ -448,7 +448,7 @@ end
     @test all(ControlSystemsBase.bode(m) .≈ bode(g))
     @test all(ControlSystemsBase.nyquist(m) .≈ nyquist(g))
     @test ControlSystemsBase.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ ControlSystemsBase.freqresp(g, exp10.(LinRange(-1, 1, 10)))
-    @test all(ControlSystemsBase.step(m, 10) .≈ step(g, 10))
+    @test all(ControlSystemsBase.step(m, 10).y .≈ step(g, 10).y)
 
     bodeplot(m)
     pzmap(m)
