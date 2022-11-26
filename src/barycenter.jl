@@ -993,30 +993,38 @@ function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractM
     @views for l = 1:L
         for s in 1:S
             K(C,b[l][:,:,s])
-            @turbo @. C = p[s] / C
+            # @turbo
+            @. C = p[s] / C
             K(φ[l][:,:,s], C)
         end
         P = dropdims(prod(φ[l].^reshape(λ,1,1,:), dims=3), dims=3)
-        @turbo b[l+1] .= P ./ φ[l]
+        # @turbo
+        b[l+1] .= P ./ φ[l]
     end
 
     cost,a,_ = sinkhorn_convolutional(scw, P, q; β=β)
 
-    @turbo ∇W = @. (a = β * a)
+    # @turbo
+    ∇W = @. (a = β * a)
     # ∇W = bb
-    @turbo g = (∇W .= ∇W .* P)
+    # @turbo
+    g = (∇W .= ∇W .* P)
 
     for l = L:-1:1
         @views for s in 1:S
-            @turbo S2 .= log.(φ[l][:,:,s])
+            # @turbo 
+            S2 .= log.(φ[l][:,:,s])
             w[s] += dot(S2, g)
             K(C,b[l][:,:,s])
             @turbo @. C = abs2(C)
-            @turbo @. C4 = (λ[s]* g - r[:,:,s]) / φ[l][:,:,s]
+            # @turbo 
+            @. C4 = (λ[s]* g - r[:,:,s]) / φ[l][:,:,s]
             K(C2,C4)
-            @turbo @. C2 = C2 * p[s] / C
+            # @turbo
+            @. C2 = C2 * p[s] / C
             K(C3,C2)
-            @turbo @. r[:,:,s] = -C3 * b[l][:,:,s]
+            # @turbo 
+            @. r[:,:,s] = -C3 * b[l][:,:,s]
         end
         g = dropdims(sum(r, dims=3), dims=3)
     end
