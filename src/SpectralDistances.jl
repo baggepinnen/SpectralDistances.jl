@@ -32,6 +32,7 @@ using DSP,
     Plots,
     UnPack
 
+freqresp = ControlSystemsBase.freqresp
 using SlidingDistancesBase
 import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!
 

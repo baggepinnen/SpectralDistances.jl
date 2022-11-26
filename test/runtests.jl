@@ -447,7 +447,7 @@ end
     @test @inferred(pole(Continuous(), m)) == pole(g)
     @test all(ControlSystemsBase.bode(m) .≈ bode(g))
     @test all(ControlSystemsBase.nyquist(m) .≈ nyquist(g))
-    @test ControlSystemsBase.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
+    @test ControlSystemsBase.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ ControlSystemsBase.freqresp(g, exp10.(LinRange(-1, 1, 10)))
     @test all(ControlSystemsBase.step(m, 10) .≈ step(g, 10))
 
     bodeplot(m)
