@@ -1,4 +1,4 @@
-using Test, SpectralDistances, DSP, ControlSystems, Optim
+using Test, SpectralDistances, DSP, ControlSystemsBase, Optim
 import SpectralDistances: softmax
 ip(x,y) = x'y/norm(x)/norm(y)
 # const Continuous = SpectralDistances.Continuous

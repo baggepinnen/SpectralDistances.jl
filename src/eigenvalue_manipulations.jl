@@ -5,8 +5,8 @@
 # "Discrete (sampled) time domain"
 # struct Discrete <: TimeDomain end
 
-import ControlSystems: Continuous, Discrete, TimeEvolution
-ControlSystems.Discrete() = Discrete(1)
+import ControlSystemsBase: Continuous, Discrete, TimeEvolution
+ControlSystemsBase.Discrete() = Discrete(1)
 Base.Broadcast.broadcastable(p::TimeEvolution) = Ref(p)
 
 
@@ -109,7 +109,7 @@ function Base.log(r::DiscreteRoots)
     ContinuousRoots(log.(r.r))
 end
 Base.exp(r::ContinuousRoots) = DiscreteRoots(exp.(r.r))
-ControlSystems.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log(r) ./ h)
+ControlSystemsBase.c2d(r::DiscreteRoots,h=1) = ContinuousRoots(log(r) ./ h)
 d2c(r::ContinuousRoots,h=1) = DiscreteRoots(exp.(h .* r.r))
 
 Lazy.@forward DiscreteRoots.r (Base.length, Base.getindex, Base.setindex!, Base.size, Base.enumerate)

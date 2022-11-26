@@ -8,7 +8,7 @@ module SpectralDistances
 
 using LinearAlgebra, SparseArrays, Statistics, Printf
 using DSP,
-    ControlSystems,
+    ControlSystemsBase,
     Distances,
     DocStringExtensions,
     DoubleFloats,

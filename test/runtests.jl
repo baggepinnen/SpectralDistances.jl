@@ -1,6 +1,6 @@
 @info "Running tests"
 using SpectralDistances# Distributions
-using Test, LinearAlgebra, Statistics, Random, ControlSystems, InteractiveUtils, SparseArrays # For subtypes
+using Test, LinearAlgebra, Statistics, Random, ControlSystemsBase, InteractiveUtils, SparseArrays # For subtypes
 using DSP, Distances, DoubleFloats
 import GLPK, Convex, JuMP, SCS
 
@@ -433,8 +433,8 @@ end
 
 end
 
-@testset "ControlSystems interoperability" begin
-    @info "Testing ControlSystems interoperability"
+@testset "ControlSystemsBase interoperability" begin
+    @info "Testing ControlSystemsBase interoperability"
     m = @inferred AR(ContinuousRoots([-1]))
     g = tf(1,[1.,1])
     @test tf(m) == g
@@ -445,10 +445,10 @@ end
     @test @inferred(denvec(Continuous(), m)) == denvec(g)[1]
     @test numvec(Continuous(), m) == numvec(g)[1]
     @test @inferred(pole(Continuous(), m)) == pole(g)
-    @test all(ControlSystems.bode(m) .≈ bode(g))
-    @test all(ControlSystems.nyquist(m) .≈ nyquist(g))
-    @test ControlSystems.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
-    @test all(ControlSystems.step(m, 10) .≈ step(g, 10))
+    @test all(ControlSystemsBase.bode(m) .≈ bode(g))
+    @test all(ControlSystemsBase.nyquist(m) .≈ nyquist(g))
+    @test ControlSystemsBase.freqresp(m, exp10.(LinRange(-1, 1, 10))) ≈ freqresp(g, exp10.(LinRange(-1, 1, 10)))
+    @test all(ControlSystemsBase.step(m, 10) .≈ step(g, 10))
 
     bodeplot(m)
     pzmap(m)

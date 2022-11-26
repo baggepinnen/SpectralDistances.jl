@@ -831,23 +831,23 @@ function c∫(f,a,b;kwargs...)
     sol
 end
 
-@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, b::AbstractVector) =
+@inline ControlSystemsBase.evalfr(::Discrete, m::Identity, w, a::AbstractArray, b::AbstractVector) =
         (n=length(a);m=length(b);abs2(sum(j->b[j]*cis(w*(m-j)), 1:m)/sum(j->a[j]*cis(w*(n-j)), 1:n)))
-@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, b::AbstractVector) =
+@inline ControlSystemsBase.evalfr(::Continuous, m::Identity, w, a::AbstractArray, b::AbstractVector) =
         (n=length(a);m=length(b);abs2(sum(j->b[j]*(im*w)^(m-j), 1:m)/sum(j->a[j]*(im*w)^(n-j), 1:n)))
 
-@inline ControlSystems.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
+@inline ControlSystemsBase.evalfr(::Discrete, m::Identity, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);abs2(scale/sum(j->a[j]*cis(w*(n-j)), 1:n)))
-@inline ControlSystems.evalfr(::Continuous, m::Identity, w, a::AbstractArray, scale::Number=1) =
+@inline ControlSystemsBase.evalfr(::Continuous, m::Identity, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);abs2(scale/sum(j->a[j]*(im*w)^(n-j), 1:n)))
-@inline ControlSystems.evalfr(::Discrete, m::Log, w, a::AbstractArray, scale::Number=1) =
+@inline ControlSystemsBase.evalfr(::Discrete, m::Log, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);-log(abs2(sum(j->a[j]*cis(w*(n-j)), 1:n))) + scale/(2π))
-@inline ControlSystems.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
+@inline ControlSystemsBase.evalfr(::Continuous, m::Log, w, a::AbstractArray, scale::Number=1) =
         (n=length(a);-log(abs2(sum(j->a[j]*(im*w)^(n-j), 1:n))) + scale/(2π))
 
-@inline ControlSystems.evalfr(d, m, w, a::ARMA, scale=1) = evalfr(d,m,w,denvec(d, a), scale*denvec(d,a))
-@inline ControlSystems.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale)
-@inline ControlSystems.evalfr(r::AbstractRoots, m, w, scale=1) = evalfr(domain(r),m,w,roots2poly(r), scale)
+@inline ControlSystemsBase.evalfr(d, m, w, a::ARMA, scale=1) = evalfr(d,m,w,denvec(d, a), scale*denvec(d,a))
+@inline ControlSystemsBase.evalfr(d, m, w, a::AR, scale=1) = evalfr(d,m,w,denvec(d, a), scale)
+@inline ControlSystemsBase.evalfr(r::AbstractRoots, m, w, scale=1) = evalfr(domain(r),m,w,roots2poly(r), scale)
 
 
 function invfunctionbarrier(sol1::T1,sol2::T2,p,interval) where {T1,T2}

@@ -1,7 +1,7 @@
 const AbstractTuple = Tuple #Union{Tuple, Flux.Tracker.TrackedTuple}
 
-"abstract type AbstractModel <: ControlSystems.LTISystem end"
-abstract type AbstractModel <: ControlSystems.LTISystem end
+"abstract type AbstractModel <: ControlSystemsBase.LTISystem end"
+abstract type AbstractModel <: ControlSystemsBase.LTISystem{ControlSystemsBase.TimeEvolution} end
 Base.Broadcast.broadcastable(p::AbstractModel) = Ref(p)
 
 """
@@ -151,33 +151,33 @@ end
 hproots(a::AbstractVector{T}) where T = eigsort(Complex{float(T)}.(roots(Double64.(a))))
 hproots(a::AbstractVector{<:Double64}) = eigsort(roots(a))
 """
-    ControlSystems.tf(m::AR, ts)
+    ControlSystemsBase.tf(m::AR, ts)
 
-Convert model to a transfer function compatible with ControlSystems.jl
+Convert model to a transfer function compatible with ControlSystemsBase.jl
 """
-ControlSystems.tf(m::AR, ts) = tf(1, Vector(m.a), ts)
+ControlSystemsBase.tf(m::AR, ts) = tf(1, Vector(m.a), ts)
 """
-    ControlSystems.tf(m::AR)
+    ControlSystemsBase.tf(m::AR)
 
-Convert model to a transfer function compatible with ControlSystems.jl
+Convert model to a transfer function compatible with ControlSystemsBase.jl
 """
-ControlSystems.tf(m::AR) = tf(1, Vector(m.ac))
-ControlSystems.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
-ControlSystems.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
+ControlSystemsBase.tf(m::AR) = tf(1, Vector(m.ac))
+ControlSystemsBase.tf(m::ARMA, ts) = tf(Vector(m.c), Vector(m.a), ts)
+ControlSystemsBase.tf(m::ARMA) = tf(Vector(m.cc), Vector(m.ac))
 
-Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystems.SisoRational} = tf(m)
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystemsBase.SisoRational} = tf(m)
 
-Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystems.SisoZpk} = zpk(tf(m))
+Base.convert(::Type{T}, m::AbstractModel) where T <: TransferFunction{Continuous, <:ControlSystemsBase.SisoZpk} = zpk(tf(m))
 
-function ARMA(g::ControlSystems.TransferFunction)
-    ControlSystems.issiso(g) || error("Can only convert SISO systems to ARMA")
+function ARMA(g::ControlSystemsBase.TransferFunction)
+    ControlSystemsBase.issiso(g) || error("Can only convert SISO systems to ARMA")
     b,a = numvec(g)[], denvec(g)[]
-    ControlSystems.iscontinuous(g) && return ARMA(Continuous(), b, a)
+    ControlSystemsBase.iscontinuous(g) && return ARMA(Continuous(), b, a)
     ARMA(b, a)
 end
 
-Base.convert(::Type{ControlSystems.TransferFunction}, m::AbstractModel) = tf(m)
-Base.promote_rule(::Type{<:ControlSystems.TransferFunction}, ::Type{<:AbstractModel}) = ControlSystems.TransferFunction
+Base.convert(::Type{ControlSystemsBase.TransferFunction}, m::AbstractModel) = tf(m)
+Base.promote_rule(::Type{<:ControlSystemsBase.TransferFunction}, ::Type{<:AbstractModel}) = ControlSystemsBase.TransferFunction
 
 function Base.isapprox(m1::AR, m2::AR, args...; kwargs...)
     all(isapprox(getfield(m1,field), getfield(m2,field), args...; kwargs...) for field in fieldnames(typeof(m1)))
@@ -204,30 +204,30 @@ PolynomialRoots.roots(::Continuous, m::AR) = m.pc
 PolynomialRoots.roots(::Discrete, m::ARMA) = m.p
 PolynomialRoots.roots(::Continuous, m::ARMA) = m.pc
 PolynomialRoots.roots(::Continuous, r::ContinuousRoots) = r
-ControlSystems.pole(d::TimeEvolution, m::AbstractModel) = roots(d,m)
-ControlSystems.pole(m::AbstractModel) = roots(Continuous(), m)
-ControlSystems.tzero(m::AbstractModel) = []
-ControlSystems.tzero(::Discrete, m::ARMA) = m.z
-ControlSystems.tzero(::Continuous, m::ARMA) = m.zc
+ControlSystemsBase.pole(d::TimeEvolution, m::AbstractModel) = roots(d,m)
+ControlSystemsBase.pole(m::AbstractModel) = roots(Continuous(), m)
+ControlSystemsBase.tzero(m::AbstractModel) = []
+ControlSystemsBase.tzero(::Discrete, m::ARMA) = m.z
+ControlSystemsBase.tzero(::Continuous, m::ARMA) = m.zc
 """
-    ControlSystems.denvec(::TimeEvolution, m::AbstractModel)
+    ControlSystemsBase.denvec(::TimeEvolution, m::AbstractModel)
 
 Get the denominator polynomial vector
 """
-ControlSystems.denvec(::Discrete, m::AbstractModel) = m.a
-ControlSystems.numvec(::Discrete, m::AR) = error("Not yet implemented")#[m.b]
-ControlSystems.numvec(::Continuous, m::AR) = [m.b]
-ControlSystems.numvec(::Discrete, m::ARMA) = m.b
-ControlSystems.denvec(::Continuous, m::AbstractModel) = m.ac
-ControlSystems.numvec(::Continuous, m::ARMA) = m.bc
+ControlSystemsBase.denvec(::Discrete, m::AbstractModel) = m.a
+ControlSystemsBase.numvec(::Discrete, m::AR) = error("Not yet implemented")#[m.b]
+ControlSystemsBase.numvec(::Continuous, m::AR) = [m.b]
+ControlSystemsBase.numvec(::Discrete, m::ARMA) = m.b
+ControlSystemsBase.denvec(::Continuous, m::AbstractModel) = m.ac
+ControlSystemsBase.numvec(::Continuous, m::ARMA) = m.bc
 
 
 for T in (:AR, :ARMA)
     @eval begin
-        ControlSystems.bode(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = bode(tf(m), w, args...; kwargs...)
-        ControlSystems.nyquist(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = nyquist(tf(m), w, args...; kwargs...)
-        ControlSystems.freqresp(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = freqresp(tf(m), w, args...; kwargs...)
-        ControlSystems.step(m::$T, Tf::Real, args...; kwargs...) = step(tf(m), Tf, args...; kwargs...)
+        ControlSystemsBase.bode(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = bode(tf(m), w, args...; kwargs...)
+        ControlSystemsBase.nyquist(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = nyquist(tf(m), w, args...; kwargs...)
+        ControlSystemsBase.freqresp(m::$T, w::AbstractVector{<:Real}, args...; kwargs...) = freqresp(tf(m), w, args...; kwargs...)
+        ControlSystemsBase.step(m::$T, Tf::Real, args...; kwargs...) = step(tf(m), Tf, args...; kwargs...)
     end
 end
 

@@ -218,7 +218,7 @@ It should be obvious from the distance profiles that the one corresponding to th
 ## The closed-form solution
 In this example we will simply visalize two spectra, the locations of their poles and the cumulative spectrum functions.
 ```@example
-using ControlSystems, SpectralDistances, Plots
+using ControlSystemsBase, SpectralDistances, Plots
 plotly(grid=false)
 
 G1   = tf(1,[1,0.12,1])*tf(1,[1,0.1,0.1])

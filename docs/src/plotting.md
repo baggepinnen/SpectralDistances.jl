@@ -19,7 +19,7 @@ savefig("flowplot.html"); nothing # hide
 <object type="text/html" data="../flowplot.html" style="width:100%;height:450px;"></object>
 ```
 
-Apart from the functions above, the plotting facilities from ControlSystems.jl should also work on models from this package, e.g., `bodeplot, pzmap` etc.
+Apart from the functions above, the plotting facilities from ControlSystemsBase.jl should also work on models from this package, e.g., `bodeplot, pzmap` etc.
 
 ```@index
 Pages = ["plotting.md"]

@@ -5,7 +5,7 @@ Some distances distance define the existence of a shortest path, a *geodesic*. A
 Below is an example usage of interpolations. We initially create two random systems, we then define the distance under which to interpolate and then calculate the frequency response for some different values of the interpolation parameter $t \in (0,1)$
 
 ```@example
-using SpectralDistances, ControlSystems, Distances, Plots, Random
+using SpectralDistances, ControlSystemsBase, Distances, Plots, Random
 plotly()
 Random.seed!(0)
 
@@ -68,12 +68,12 @@ bc = barycenter(distance, models; options...)
 ```
 We can plot the barycenters:
 ```@example
-using SpectralDistances, ControlSystems, Plots
+using SpectralDistances, ControlSystemsBase, Plots
 models   = examplemodels(3)
 distance = OptimalTransportRootDistance(domain=Continuous())
 bc       = barycenter(distance, models)
 w        = exp10.(LinRange(-0.5, 0.5, 350)) # Frequency vector
-G        = tf.(models) # Convert models to transfer functions from ControlSystems.jl
+G        = tf.(models) # Convert models to transfer functions from ControlSystemsBase.jl
 plot()
 bodeplot!.(G, Ref(w), plotphase=false, lab="Input models", linestyle=:auto)
 bodeplot!(tf(bc), w, plotphase=false, lab="Barycenter", xscale=:identity, c=:green)
@@ -164,7 +164,7 @@ savefig("barycentric_coords_sg.html"); nothing # hide
 ## K-Barycenters
 Below, we show an example of how one can run the K-barycenter algorithm on a collection of sound signals. `sounds` is expected to be of type `Vector{Vector{T}}`. The example further assumes that there is a vector of `labels::Vector{Int}` that contain the true classes of the datapoints, which you do not have in an unsupervised setting.
 ```julia
-using SpectralDistances, ControlSystems
+using SpectralDistances, ControlSystemsBase
 fitmethod = TLS(na=12)
 models = SpectralDistances.fitmodel.(fitmethod, sounds)
 G = tf.(models) # Convert to transfer functions for visualization etc.

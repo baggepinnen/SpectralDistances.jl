@@ -212,7 +212,7 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 
 # Example:
 ```julia
-using SpectralDistances, ControlSystems, Optim
+using SpectralDistances, ControlSystemsBase, Optim
 models = examplemodels(10)
 
 d = OptimalTransportRootDistance(
@@ -685,17 +685,17 @@ function barycenter_convolutional(
         copyto!(bold, b)
         iter = iter + 1
         b .= 0
-        for r = 1:N # TODO: if S storage is expanded, this loop can be split into several and @avx or @tullio can be put on some. Maybe even K can be manually inlined here to make everythin avx-able. Can also be run on GPU easily.
+        for r = 1:N # TODO: if S storage is expanded, this loop can be split into several and @turbo or @tullio can be put on some. Maybe even K can be manually inlined here to make everythin avx-able. Can also be run on GPU easily.
             K(S, U[:, :, r])
-            @avx S .= A[r] ./ max.(ϵ, S)
+            @turbo S .= A[r] ./ max.(ϵ, S)
             K(KV[:, :, r], S)
-            @avx @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
+            @turbo @. b += λ[r] * log(max(ϵ, U[:, :, r] * KV[:, :, r]))
         end
-        @avx b .= exp.(b)
+        @turbo b .= exp.(b)
         for r = 1:N
-            @avx @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
+            @turbo @. U[:, :, r] = b / max(ϵ, KV[:, :, r])
         end
-        @avx b ./= sum(b)
+        @turbo b ./= sum(b)
 
         if iter % 10 == 1
             @fastmath err = sum(abs(bold - b) for (bold, b) in zip(bold, b))
@@ -993,30 +993,30 @@ function sinkhorn_convolutional_diff(workspace::BCCWorkspace{T}, p, q::AbstractM
     @views for l = 1:L
         for s in 1:S
             K(C,b[l][:,:,s])
-            @avx @. C = p[s] / C
+            @turbo @. C = p[s] / C
             K(φ[l][:,:,s], C)
         end
         P = dropdims(prod(φ[l].^reshape(λ,1,1,:), dims=3), dims=3)
-        @avx b[l+1] .= P ./ φ[l]
+        @turbo b[l+1] .= P ./ φ[l]
     end
 
     cost,a,_ = sinkhorn_convolutional(scw, P, q; β=β)
 
-    @avx ∇W = @. (a = β * a)
+    @turbo ∇W = @. (a = β * a)
     # ∇W = bb
-    @avx g = (∇W .= ∇W .* P)
+    @turbo g = (∇W .= ∇W .* P)
 
     for l = L:-1:1
         @views for s in 1:S
-            @avx S2 .= log.(φ[l][:,:,s])
+            @turbo S2 .= log.(φ[l][:,:,s])
             w[s] += dot(S2, g)
             K(C,b[l][:,:,s])
-            @avx @. C = abs2(C)
-            @avx @. C4 = (λ[s]* g - r[:,:,s]) / φ[l][:,:,s]
+            @turbo @. C = abs2(C)
+            @turbo @. C4 = (λ[s]* g - r[:,:,s]) / φ[l][:,:,s]
             K(C2,C4)
-            @avx @. C2 = C2 * p[s] / C
+            @turbo @. C2 = C2 * p[s] / C
             K(C3,C2)
-            @avx @. r[:,:,s] = -C3 * b[l][:,:,s]
+            @turbo @. r[:,:,s] = -C3 * b[l][:,:,s]
         end
         g = dropdims(sum(r, dims=3), dims=3)
     end
