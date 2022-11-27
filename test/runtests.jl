@@ -22,8 +22,8 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
         D2,S = complete_distmat(D0, W)
 
-        @test (norm(D-D2)/norm(D)) < 1e-5
-        @test (norm(W .* (D-D2))/norm(D)) < 1e-5
+        @test (norm(D-D2)/norm(D)) < 1e-4
+        @test (norm(W .* (D-D2))/norm(D)) < 1e-4
 
         X  = Diagonal(sqrt.(S.S))*S.Vt
 
