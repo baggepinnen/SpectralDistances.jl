@@ -23,6 +23,8 @@ Base.Broadcast.broadcastable(p::Identity) = Ref(p)
 Base.Broadcast.broadcastable(p::Log) = Ref(p)
 magnitude(d) = Identity()
 
+Distances.result_type(::AbstractDistance, a, b) = promote_type(eltype(a), eltype(b))
+
 
 evaluate(d::DistanceCollection,x,y;kwargs...) = sum(evaluate(d,x,y;kwargs...) for d in d)
 Base.:(+)(d::AbstractDistance...) = d
