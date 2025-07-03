@@ -1,7 +1,7 @@
 name = "SpectralDistances"
 uuid = "2b0dec9d-f767-4f95-9e73-7df56487de68"
 authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
-version = "0.1.14"
+version = "0.1.15"
 
 [deps]
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
