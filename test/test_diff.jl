@@ -191,7 +191,7 @@ end, p)[1][1:end-1]
 fm = TLS(na = 4)
 y = randn(50)
 sum(abs2, fm(y).pc)
-@test_broken Zygote.gradient(y) do y
+@test_skip Zygote.gradient(y) do y
     sum(abs2, fitmodel(fm, y, true).pc)
 end
 

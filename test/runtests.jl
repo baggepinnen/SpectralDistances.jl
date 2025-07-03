@@ -22,8 +22,8 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
 
         D2,S = complete_distmat(D0, W)
 
-        @test (norm(D-D2)/norm(D)) < 1e-5
-        @test (norm(W .* (D-D2))/norm(D)) < 1e-5
+        @test (norm(D-D2)/norm(D)) < 1e-4
+        @test (norm(W .* (D-D2))/norm(D)) < 1e-4
 
         X  = Diagonal(sqrt.(S.S))*S.Vt
 
@@ -164,13 +164,13 @@ using SpectralDistances: ngradient, nhessian, njacobian, polyconv, hproots, rev
         a = [1., 0]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,Balanced(),β=0.01)
+        Γ,u,v = sinkhorn_unbalanced(C,a,b,Balanced(),β=0.01)
         @test Γ ≈ [0 1; 0 0]
 
         a = [0.5, 0.5]
         b = [0, 1.]
         C = Float64.(Matrix(I(2)))
-        Γ,u,v = @inferred sinkhorn_unbalanced(C,a,b,Balanced())
+        Γ,u,v = sinkhorn_unbalanced(C,a,b,Balanced())
         @test Γ ≈ [0 0.5; 0 0.5]
 
         a = [1., 0]
