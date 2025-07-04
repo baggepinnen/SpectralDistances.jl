@@ -89,9 +89,9 @@ end
 Band-pass filter, passband is tuple, `fs` assumed = 1
 """
 function bp_filter(x, passband)
-    responsetype = Bandpass(passband..., fs=1)
+    responsetype = Bandpass(passband...)
     designmethod = Butterworth(2)
-    filt(digitalfilter(responsetype, designmethod), x)
+    filt(digitalfilter(responsetype, designmethod; fs=1), x)
 end
 
 """
@@ -100,7 +100,7 @@ end
 Low-pass filter, `fs` assumed = 1
 """
 function lp_filter(x, cutoff)
-    responsetype = Lowpass(cutoff, fs=1)
+    responsetype = Lowpass(cutoff)
     designmethod = Butterworth(2)
-    filt(digitalfilter(responsetype, designmethod), x)
+    filt(digitalfilter(responsetype, designmethod; fs=1), x)
 end
