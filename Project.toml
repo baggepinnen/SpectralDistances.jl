@@ -1,7 +1,7 @@
 name = "SpectralDistances"
 uuid = "2b0dec9d-f767-4f95-9e73-7df56487de68"
-authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
 version = "0.1.17"
+authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
 
 [deps]
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
@@ -52,7 +52,7 @@ Hungarian = "0.7"
 Lazy = "0.14, 0.15"
 LoopVectorization = "0.12"
 MacroTools = "0.5"
-Optim = "0.19, 0.20, 0.21, 0.22, 1.0"
+Optim = "0.19, 0.20, 0.21, 0.22, 1.0, 2"
 OrdinaryDiffEq = "5, 6"
 Plots = "1"
 PolynomialRoots = "0.2, 1.0"
