@@ -33,6 +33,7 @@ using DSP,
     UnPack
 
 using ADTypes: AutoForwardDiff
+using NLSolversBase: only_fg!
 
 freqresp = ControlSystemsBase.freqresp
 using SlidingDistancesBase

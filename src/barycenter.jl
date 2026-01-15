@@ -1102,6 +1102,6 @@ function barycentric_coordinates(
 
     λ = zeros(length(X))
 
-    res = Optim.optimize(Optim.only_fg!(fg!), λ, method, options)
+    res = Optim.optimize(only_fg!(fg!), λ, method, options)
     softmax(res.minimizer), res
 end
