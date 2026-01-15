@@ -327,7 +327,7 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     end
     local λh
     try
-        res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
+        res = Optim.optimize(costfun, λl, method, options; autodiff=AutoForwardDiff())
         λh = softmax(res.minimizer)
     catch err
         @error("Barycentric coordinates: optimization failed, retrying with robust options: ", err)
@@ -397,7 +397,7 @@ function _wrd_barycentric_coordinates(d,models,pl,ql)
         sum(abs2(dot(λ,Diagonal(P[j]),w2[j])/dot(λ,w2[j]) - ql[j]) for j in 1:n)
     end
 
-    res = Optim.optimize(scostfun, zeros(N), LBFGS(m=20), Optim.Options(store_trace=false, show_trace=false, show_every=1, iterations=100, allow_f_increases=false, time_limit=100, x_abstol=0, f_reltol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0), autodiff=:forward)
+    res = Optim.optimize(scostfun, zeros(N), LBFGS(m=20), Optim.Options(store_trace=false, show_trace=false, show_every=1, iterations=100, allow_f_increases=false, time_limit=100, x_abstol=0, f_reltol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0); autodiff=AutoForwardDiff())
 
     softmax(res.minimizer)
 end
