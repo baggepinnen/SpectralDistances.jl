@@ -32,6 +32,9 @@ using DSP,
     Plots,
     UnPack
 
+using ADTypes: AutoForwardDiff
+using NLSolversBase: only_fg!
+
 freqresp = ControlSystemsBase.freqresp
 using SlidingDistancesBase
 import SlidingDistancesBase: floattype, lastlength, distance_profile, distance_profile!

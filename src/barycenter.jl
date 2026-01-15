@@ -204,7 +204,7 @@ This function works best with the `sinkhorn_log!` solver, a large β (around 1) 
 - `ql`: Atoms in measure `q`
 - `p`: Measures `p`, a matrix of weight vectors, size `n_atoms × n_measures` that sums to 1
 - `q`: the veight vector for measure `q`, length is `n_atoms`
-- `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_tol=1e-5, f_tol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
+- `options`: For the Optim solver. Defaults are `options = Optim.Options(store_trace=false, show_trace=false, show_every=0, iterations=20, allow_f_increases=true, time_limit=100, x_abstol=1e-5, f_reltol=1e-6, g_tol=1e-6, f_calls_limit=0, g_calls_limit=0)`
 - `solver`: = [`sinkhorn_log!`](@ref) solver
 - `tol`:    = 1e-7 tolerance
 - `β`:      = 0.1 entropy regularization. This function works best with rather large regularization, hence the large default value.
@@ -234,8 +234,8 @@ options = Optim.Options(store_trace       = true,
                         iterations        = 50,
                         allow_f_increases = true,
                         time_limit        = 100,
-                        x_tol             = 1e-7,
-                        f_tol             = 1e-7,
+                        x_abstol          = 1e-7,
+                        f_reltol          = 1e-7,
                         g_tol             = 1e-7,
                         f_calls_limit     = 0,
                         g_calls_limit     = 0)
@@ -266,8 +266,8 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
                             iterations        = 20,
                             allow_f_increases = true,
                             time_limit        = 100,
-                            x_tol             = 1e-5,
-                            f_tol             = 1e-6,
+                            x_abstol          = 1e-5,
+                            f_reltol          = 1e-6,
                             g_tol             = 1e-6,
                             f_calls_limit     = 0,
                             g_calls_limit     = 0),
@@ -327,7 +327,7 @@ function barycentric_coordinates(pl, ql, p, q::AbstractVector{T}, method=LBFGS()
     end
     local λh
     try
-        res = Optim.optimize(costfun, λl, method, options, autodiff=:forward)
+        res = Optim.optimize(costfun, λl, method, options; autodiff=AutoForwardDiff())
         λh = softmax(res.minimizer)
     catch err
         @error("Barycentric coordinates: optimization failed, retrying with robust options: ", err)
@@ -397,7 +397,7 @@ function _wrd_barycentric_coordinates(d,models,pl,ql)
         sum(abs2(dot(λ,Diagonal(P[j]),w2[j])/dot(λ,w2[j]) - ql[j]) for j in 1:n)
     end
 
-    res = Optim.optimize(scostfun, zeros(N), LBFGS(m=20), Optim.Options(store_trace=false, show_trace=false, show_every=1, iterations=100, allow_f_increases=false, time_limit=100, x_tol=0, f_tol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0), autodiff=:forward)
+    res = Optim.optimize(scostfun, zeros(N), LBFGS(m=20), Optim.Options(store_trace=false, show_trace=false, show_every=1, iterations=100, allow_f_increases=false, time_limit=100, x_abstol=0, f_reltol=0, g_tol=1e-8, f_calls_limit=0, g_calls_limit=0); autodiff=AutoForwardDiff())
 
     softmax(res.minimizer)
 end
@@ -492,7 +492,7 @@ function alg1(X,Y,â::AbstractVector{T},b;β=1, printerval=typemax(Int), tol=1e
     t0 = 1
     t = 0
     𝛂 = similar(a, length(a), N)
-    Mth = [distmat_euclidean(X,Y[1]) for i in 1:Threads.nthreads()]
+    Mth = [distmat_euclidean(X,Y[1]) for i in 1:Threads.maxthreadid()]
     for outer t = 1:iters
         B = (t0+t)/2
         a .= (1-inv(B)).*â .+ inv(B).*ã
@@ -1061,8 +1061,8 @@ options = Optim.Options(
         iterations        = 10,
         allow_f_increases = false,
         time_limit        = 150,
-        x_tol             = 1e-3,
-        f_tol             = 1e-3,
+        x_abstol          = 1e-3,
+        f_reltol          = 1e-3,
         g_tol             = 1e-4,
     )
 ```
@@ -1080,8 +1080,8 @@ function barycentric_coordinates(
         iterations        = 10,
         allow_f_increases = false,
         time_limit        = 150,
-        x_tol             = 1e-3,
-        f_tol             = 1e-3,
+        x_abstol          = 1e-3,
+        f_reltol          = 1e-3,
         g_tol             = 1e-4,
     ),
     kwargs...,
@@ -1102,6 +1102,6 @@ function barycentric_coordinates(
 
     λ = zeros(length(X))
 
-    res = Optim.optimize(Optim.only_fg!(fg!), λ, method, options)
+    res = Optim.optimize(only_fg!(fg!), λ, method, options)
     softmax(res.minimizer), res
 end
