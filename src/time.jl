@@ -328,14 +328,14 @@ function distmat(od::TimeDistance{<:OptimalTransportRootDistance}, models::Vecto
     d = od.inner
     T = eltype(models[1].models[1].a)
     N = length(models[1])
-    C = [Matrix{T}(undef, N, N) for _ = 1:nthreads()]
+    C = [Matrix{T}(undef, N, N) for _ = 1:Threads.maxthreadid()]
 
     weights = map(models) do q
         s1(reduce(vcat,map(d.weight, q.models)))
     end
 
-    workspace = [SinkhornLogWorkspace(T, N, N) for _ = 1:nthreads()]
-    dists = [deepcopy(d) for _ = 1:nthreads()]
+    workspace = [SinkhornLogWorkspace(T, N, N) for _ = 1:Threads.maxthreadid()]
+    dists = [deepcopy(d) for _ = 1:Threads.maxthreadid()]
     D = zeros(T, n, n)
     @showprogress 1 "distmat" for i = 1:n
         m1 = models[i]
@@ -369,8 +369,8 @@ function distmat(od::TimeDistance{<:KernelWassersteinRootDistance}, models::Vect
     λ = d.λ
     T = eltype(models[1].models[1].a)
     N = length(models[1])
-    C = [Matrix{T}(undef, N, N) for _ = 1:nthreads()]
-    dists = [deepcopy(d) for _ = 1:nthreads()]
+    C = [Matrix{T}(undef, N, N) for _ = 1:Threads.maxthreadid()]
+    dists = [deepcopy(d) for _ = 1:Threads.maxthreadid()]
     D = zeros(T, n, n)
     # error("need to take care of the size of C")
     @showprogress 1 "distmat" for i = 1:n

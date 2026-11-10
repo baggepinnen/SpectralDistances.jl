@@ -113,11 +113,13 @@ end
     @test sum(b) ≈ 1
 
     d = ConvOptimalTransportDistance(β=0.01)
+    # The softmax parametrization of the coordinates makes the gradient vanish at the boundary of
+    # the simplex, so the default iteration limit yields coordinates close to, but not at, [1, 0]
     l = barycentric_coordinates(d, A, a1)[1]
-    @test l ≈ [1, 0]
+    @test l ≈ [1, 0] atol=0.02
     @test sum(l) ≈ 1
     l = barycentric_coordinates(d, A, a2)[1]
-    @test l ≈ [0, 1]
+    @test l ≈ [0, 1] atol=0.02
 
     l = barycentric_coordinates(d, A, b)[1]
     @test l ≈ [0.5, 0.5]

@@ -616,7 +616,7 @@ end
 Distance between matrices caluclated using [`sinkhorn_convolutional`](@ref). This type automatically creates a workspace object that is reused between invocations. Functions that internally performs threaded computations copy this object to each thread, but if manual threading is performed, this must be handled manually, e.g.:
 ```julia
 using ThreadTools
-dists = [deepcopy(dist) for _ in 1:Threads.nthreads()]
+dists = [deepcopy(dist) for _ in 1:Threads.maxthreadid()]
 D = tmap(eachindex(X)) do i
     evaluate(dists[Threads.threadid()], Q, X[i]; kwargs...)
 end
